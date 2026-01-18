@@ -14,6 +14,7 @@ import PuntosVenta from './modulos/fast-food/PuntosVenta';
 import ShiftManager from './modulos/fast-food/ShiftManager';
 import Impresoras from './modulos/fast-food/Impresoras';
 import DisenoFastFood from './modulos/fast-food/DisenoFastFood';
+import LandingPage from './modulos/pagina-web/LandingPage';
 import './App.css';
 
 // Componente para proteger rutas
@@ -62,7 +63,9 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
 
-          <Route path="/" element={
+          <Route path="/" element={<LandingPage />} />
+
+          <Route path="/dashboard" element={
             <PrivateRoute>
               <Dashboard />
             </PrivateRoute>
