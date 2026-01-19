@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-
 import api from '../../services/api';
-import './LandingPage.css'; // Usar estilos de la landing page para consistencia
+import './BoutiqueLanding.css'; // Use Boutique Styles
+import logo from '../../assets/logo_luxury.png'; // Import Logo
 
 const Registro = () => {
     const [formData, setFormData] = useState({
@@ -21,6 +20,7 @@ const Registro = () => {
     const [msg, setMsg] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const navigate = useNavigate();
 
@@ -30,6 +30,8 @@ const Registro = () => {
             [e.target.name]: e.target.value
         });
     };
+
+    const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -43,28 +45,16 @@ const Registro = () => {
         }
 
         try {
-            // Ajustar URL según el entorno
-            // const baseURL = process.env.REACT_APP_AUTH_SERVICE || 'http://localhost:8000/api/authentication';
-            // Se asume que el proxy o la ruta completa se maneja correctamente
-            // Pero dado AuthContext usa /api/authentication/login/, usaremos algo similar
-            // NOTA: AuthContext usa `api` con una baseURL configurada. Aquí usaremos direct fetch o la instancia `api` si estuviera exportada.
-            // Para simplificar y evitar dependencias circulares, usaremos api si es posible, o axios directo.
-            // Usar la instancia api configurada
             await api.post('/api/authentication/register/', formData);
-
             setMsg("Registro exitoso. Redirigiendo al inicio de sesión...");
-
             setTimeout(() => {
                 navigate('/login');
             }, 2000);
 
         } catch (err) {
             if (err.response && err.response.data) {
-                // Formatear errores del backend
                 const errorData = err.response.data;
                 let errorMsg = "Error en el registro: ";
-
-                // Si es un objeto con errores de campos
                 if (typeof errorData === 'object') {
                     Object.keys(errorData).forEach(key => {
                         const messages = Array.isArray(errorData[key]) ? errorData[key].join(' ') : errorData[key];
@@ -73,7 +63,6 @@ const Registro = () => {
                 } else {
                     errorMsg += JSON.stringify(errorData);
                 }
-
                 setError(errorMsg);
             } else {
                 setError("Error de conexión. Por favor intente más tarde.");
@@ -84,95 +73,138 @@ const Registro = () => {
     };
 
     return (
-        <div className="landing-page">
-            <header className="landing-header">
-                <div className="logo-container">
-                    <div className="logo">Luxe</div>
+        <div className="boutique-container">
+            {/* BOUTIQUE HEADER (Reused structure) */}
+            <header className="boutique-header">
+                <div className="header-content">
+                    <div className="logo-container">
+                        <Link to="/">
+                            <img src={logo} alt="Luxe" className="boutique-logo" />
+                        </Link>
+                    </div>
+
+                    <button className={`menu-toggle ${isMenuOpen ? 'open' : ''}`} onClick={toggleMenu}>
+                        <span className="bar"></span>
+                        <span className="bar"></span>
+                        <span className="bar"></span>
+                    </button>
+
+                    <nav className={`main-nav ${isMenuOpen ? 'open' : ''}`}>
+                        <Link to="/" className="nav-link">INICIO</Link>
+                        <Link to="/login" className="nav-link">INICIAR SESIÓN</Link>
+                    </nav>
                 </div>
-                <nav className="landing-nav">
-                    <Link to="/" className="nav-link">Inicio</Link>
-                    <Link to="/login" className="nav-link btn-login">Iniciar Sesión</Link>
-                </nav>
             </header>
 
-            <div className="landing-hero" style={{ minHeight: 'calc(100vh - 80px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div className="registro-container" style={{
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    padding: '2rem',
-                    borderRadius: '12px',
-                    maxWidth: '500px',
-                    width: '100%',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                    color: '#333'
+            {/* MAIN CONTENT CENTERED */}
+            <div style={{
+                minHeight: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingTop: '80px', // Reduced top padding
+                paddingBottom: '20px',
+                backgroundColor: '#E8C4C4' // Solid Rose
+            }}>
+                <div className="hover-float" style={{
+                    backgroundColor: '#FFFFFF',
+                    padding: '25px', // Reduced padding
+                    borderRadius: '4px',
+                    boxShadow: '0 15px 35px rgba(160, 144, 134, 0.1)',
+                    maxWidth: '400px', // Smaller width
+                    width: '95%',
+                    borderTop: '4px solid #CFB3A9' // Cinna accent
                 }}>
-                    <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', color: '#1a1a1a' }}>Crear Cuenta</h2>
+                    <h2 style={{
+                        textAlign: 'center',
+                        marginBottom: '20px',
+                        fontFamily: "'Cinzel', serif",
+                        color: '#2C2C2C',
+                        fontSize: '22px' // Smaller title
+                    }}>Crear Cuenta</h2>
 
-                    {error && <div className="alert alert-danger" style={{ color: 'red', marginBottom: '1rem', whiteSpace: 'pre-line' }}>{error}</div>}
-                    {msg && <div className="alert alert-success" style={{ color: 'green', marginBottom: '1rem' }}>{msg}</div>}
+                    {error && <div style={{
+                        backgroundColor: '#FFF0F0', color: '#D32F2F', padding: '15px', borderRadius: '4px', marginBottom: '20px', fontSize: '0.9rem'
+                    }}>{error}</div>}
 
-                    <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem' }}>
-                        <div className="form-group">
-                            <label>Nombre *</label>
-                            <input type="text" name="first_name" required className="form-control" onChange={handleChange} value={formData.first_name} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }} />
-                        </div>
+                    {msg && <div style={{
+                        backgroundColor: '#F0F9F0', color: '#2E7D32', padding: '15px', borderRadius: '4px', marginBottom: '20px', fontSize: '0.9rem'
+                    }}>{msg}</div>}
 
-                        <div className="form-group">
-                            <label>Apellido *</label>
-                            <input type="text" name="last_name" required className="form-control" onChange={handleChange} value={formData.last_name} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }} />
-                        </div>
-
-                        <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <div className="form-group">
-                                <label>Cédula/ID *</label>
-                                <input type="text" name="identification_number" required className="form-control" onChange={handleChange} value={formData.identification_number} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }} />
+                    <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '8px' }}> {/* Tight gap */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '2px', color: '#A09086', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Nombre</label>
+                                <input type="text" name="first_name" required onChange={handleChange} value={formData.first_name}
+                                    style={{ width: '100%', padding: '8px', border: '1px solid #E4D8CB', borderRadius: '0', backgroundColor: '#FAFAFA', fontSize: '0.85rem' }} />
                             </div>
-                            <div className="form-group">
-                                <label>Fecha Nacimiento *</label>
-                                <input type="date" name="date_of_birth" required className="form-control" onChange={handleChange} value={formData.date_of_birth} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }} />
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '2px', color: '#A09086', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Apellido</label>
+                                <input type="text" name="last_name" required onChange={handleChange} value={formData.last_name}
+                                    style={{ width: '100%', padding: '8px', border: '1px solid #E4D8CB', borderRadius: '0', backgroundColor: '#FAFAFA', fontSize: '0.85rem' }} />
                             </div>
                         </div>
 
-                        <div className="form-group">
-                            <label>Email *</label>
-                            <input type="email" name="email" required className="form-control" onChange={handleChange} value={formData.email} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }} />
-                        </div>
-
-                        <div className="form-group">
-                            <label>Teléfono</label>
-                            <input type="tel" name="phone" className="form-control" onChange={handleChange} value={formData.phone} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }} />
-                        </div>
-
-                        <div className="form-group">
-                            <label>Usuario *</label>
-                            <input type="text" name="username" required className="form-control" onChange={handleChange} value={formData.username} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }} />
-                        </div>
-
-                        <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <div className="form-group">
-                                <label>Contraseña *</label>
-                                <input type="password" name="password" required className="form-control" onChange={handleChange} value={formData.password} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }} />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '2px', color: '#A09086', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cédula</label>
+                                <input type="text" name="identification_number" required onChange={handleChange} value={formData.identification_number}
+                                    style={{ width: '100%', padding: '8px', border: '1px solid #E4D8CB', borderRadius: '0', backgroundColor: '#FAFAFA', fontSize: '0.85rem' }} />
                             </div>
-                            <div className="form-group">
-                                <label>Confirmar Password *</label>
-                                <input type="password" name="password_confirm" required className="form-control" onChange={handleChange} value={formData.password_confirm} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }} />
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '2px', color: '#A09086', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>F. Nacimiento</label>
+                                <input type="date" name="date_of_birth" required onChange={handleChange} value={formData.date_of_birth}
+                                    style={{ width: '100%', padding: '8px', border: '1px solid #E4D8CB', borderRadius: '0', backgroundColor: '#FAFAFA', fontSize: '0.85rem' }} />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '2px', color: '#A09086', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email</label>
+                                <input type="email" name="email" required onChange={handleChange} value={formData.email}
+                                    style={{ width: '100%', padding: '8px', border: '1px solid #E4D8CB', borderRadius: '0', backgroundColor: '#FAFAFA', fontSize: '0.85rem' }} />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '2px', color: '#A09086', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Usuario</label>
+                                <input type="text" name="username" required onChange={handleChange} value={formData.username}
+                                    style={{ width: '100%', padding: '8px', border: '1px solid #E4D8CB', borderRadius: '0', backgroundColor: '#FAFAFA', fontSize: '0.85rem' }} />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '2px', color: '#A09086', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Contraseña</label>
+                                <input type="password" name="password" required onChange={handleChange} value={formData.password}
+                                    style={{ width: '100%', padding: '8px', border: '1px solid #E4D8CB', borderRadius: '0', backgroundColor: '#FAFAFA', fontSize: '0.85rem' }} />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '2px', color: '#A09086', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Confirmar</label>
+                                <input type="password" name="password_confirm" required onChange={handleChange} value={formData.password_confirm}
+                                    style={{ width: '100%', padding: '8px', border: '1px solid #E4D8CB', borderRadius: '0', backgroundColor: '#FAFAFA', fontSize: '0.85rem' }} />
                             </div>
                         </div>
 
                         <button type="submit" disabled={loading} style={{
-                            background: '#000',
-                            color: '#fff',
-                            padding: '10px',
+                            background: '#CFB3A9', // Cinna
+                            color: '#FFFFFF',
+                            padding: '15px',
                             border: 'none',
-                            borderRadius: '4px',
                             cursor: 'pointer',
-                            marginTop: '1rem',
-                            fontSize: '1rem'
-                        }}>
-                            {loading ? 'Registrando...' : 'Registrarse'}
+                            marginTop: '10px',
+                            fontSize: '14px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '2px',
+                            fontWeight: '600',
+                            transition: 'all 0.3s'
+                        }} className="hover-float">
+                            {loading ? 'REGISTRANDO...' : 'CREAR CUENTA'}
                         </button>
                     </form>
-                    <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-                        <Link to="/login" style={{ color: '#666', textDecoration: 'none' }}>¿Ya tienes cuenta? Inicia Sesión</Link>
+
+                    <div style={{ textAlign: 'center', marginTop: '25px', borderTop: '1px solid #F1EEEB', paddingTop: '20px' }}>
+                        <Link to="/login" style={{ color: '#A09086', textDecoration: 'none', fontSize: '0.9rem' }}>
+                            ¿Ya tienes cuenta? <span style={{ color: '#CFB3A9', fontWeight: 'bold' }}>INICIA SESIÓN</span>
+                        </Link>
                     </div>
                 </div>
             </div>

@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../services/api'; // Import api service
-import logo from '../../assets/logo_luxury.png'; // Start using logo again if needed, or use their colored box
+import api from '../../services/api';
+import logo from '../../assets/logo_luxury.png';
 import { useAuth } from '../../context/AuthContext';
+import './BoutiqueLanding.css';
 
 const BoutiqueLanding = () => {
     const { user, logout } = useAuth();
     const [categories, setCategories] = useState([]);
     const [products, setProducts] = useState([]);
     const [activeCategory, setActiveCategory] = useState(null);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-    // Cargar categorías y productos
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -25,8 +26,7 @@ const BoutiqueLanding = () => {
                     setActiveCategory(activeCats[0].id);
                 }
 
-                // 2. Fetch Products (Initially all or first category? User snippet implies all mixed? Let's fetch all active)
-                // Or fetch by category if strictly needed. For now, let's fetch all active products.
+                // 2. Fetch Products
                 const prodResponse = await api.get('/api/menu/products/', {
                     baseURL: process.env.REACT_APP_LUXE_SERVICE
                 });
@@ -40,68 +40,51 @@ const BoutiqueLanding = () => {
         fetchData();
     }, []);
 
+    const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+
     return (
-        <div style={{ margin: 0, padding: 0, width: '100%' }}>
+        <div className="boutique-container">
             {/* HEADER */}
-            <header style={{
-                backgroundColor: '#F1EEEB', // FROTH
-                padding: '20px 40px',
-                borderBottom: '2px solid #CFB3A9', // CINNA (More visible)
-                position: 'sticky',
-                top: 0,
-                zIndex: 1000
-            }}>
-                <div style={{
-                    maxWidth: '1400px',
-                    margin: '0 auto',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        {/* Usa el logo real si existe, o el placeholder del usuario */}
-                        <img src={logo} alt="Luxe" style={{ height: '60px', width: 'auto' }} />
-                        <h1 style={{
-                            fontFamily: 'serif',
-                            fontSize: '32px',
-                            letterSpacing: '6px',
-                            color: '#A09086',
-                            margin: 0
-                        }}>LUXE</h1>
+            <header className="boutique-header">
+                <div className="header-content">
+                    <div className="logo-container">
+                        {/* LOGO ONLY */}
+                        <img src={logo} alt="Luxe" className="boutique-logo" />
                     </div>
-                    <nav style={{ display: 'flex', gap: '30px' }}>
-                        <a href="#collection" style={{
-                            textDecoration: 'none',
-                            color: '#2C2C2C',
-                            fontSize: '14px',
-                            letterSpacing: '1.5px'
-                        }}>COLECCIÓN</a>
-                        <a href="#about" style={{
-                            textDecoration: 'none',
-                            color: '#2C2C2C',
-                            fontSize: '14px',
-                            letterSpacing: '1.5px'
-                        }}>BOUTIQUE</a>
+
+                    <button className={`menu-toggle ${isMenuOpen ? 'open' : ''}`} onClick={toggleMenu}>
+                        <span className="bar"></span>
+                        <span className="bar"></span>
+                        <span className="bar"></span>
+                    </button>
+
+                    <nav className={`main-nav ${isMenuOpen ? 'open' : ''}`}>
+                        <a href="#collection" className="nav-link" onClick={() => setIsMenuOpen(false)}>COLECCIÓN</a>
+                        <a href="#about" className="nav-link" onClick={() => setIsMenuOpen(false)}>NOSOTROS</a>
+                        <a href="#contact" className="nav-link" onClick={() => setIsMenuOpen(false)}>CONTACTO</a>
                         {user ? (
-                            <button onClick={logout} style={{
-                                background: 'none', border: '1px solid #A09086', padding: '8px 20px', cursor: 'pointer',
-                                textDecoration: 'none', color: '#2C2C2C', fontSize: '14px', letterSpacing: '1.5px'
-                            }}>
-                                CERRAR SESIÓN
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                <a href="/perfil" className="nav-link" onClick={() => setIsMenuOpen(false)} title="Mi Perfil">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="12" cy="7" r="4"></circle>
+                                    </svg>
+                                </a>
+                                <button onClick={logout} className="btn-logout" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}>
+                                    CERRAR SESIÓN
+                                </button>
+                            </div>
                         ) : (
-                            <a href="/login" style={{
-                                textDecoration: 'none',
-                                color: '#2C2C2C',
-                                fontSize: '14px',
-                                letterSpacing: '1.5px'
-                            }}>INICIAR SESIÓN</a>
+                            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                                <a href="/login" className="nav-link">INICIAR SESIÓN</a>
+                                <a href="/registro" className="nav-link" style={{ fontWeight: '700' }}>REGISTRARTE</a>
+                            </div>
                         )}
                     </nav>
                 </div>
             </header>
 
-            {/* HERO SECTION - SUPER SIMPLE */}
+            {/* HERO SECTION - SUPER SIMPLE (Restaurado) */}
             <section style={{
                 width: '100%',
                 minHeight: '70vh',
@@ -109,7 +92,8 @@ const BoutiqueLanding = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: '60px 20px'
+                padding: '60px 20px',
+                marginTop: '120px' // Compensate for fixed header height
             }}>
                 <div style={{
                     maxWidth: '800px',
@@ -148,7 +132,7 @@ const BoutiqueLanding = () => {
                         Descubre la colección diseñada para resaltar tu esencia única.
                     </p>
 
-                    <a href="#collection" style={{
+                    <a href="#collection" className="hero-btn-simple" style={{
                         display: 'inline-block',
                         padding: '18px 40px',
                         backgroundColor: '#CFB3A9', // Solid CINNA
@@ -167,133 +151,69 @@ const BoutiqueLanding = () => {
                 </div>
             </section>
 
-            {/* SECCIÓN DE COLECCIÓN - Backend Integration */}
-            <section id="collection" style={{
-                maxWidth: '1400px',
-                width: '90%',
-                margin: '80px auto',
-                padding: '0 20px'
-            }}>
-                <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-                    <h2 style={{
-                        fontFamily: 'serif',
-                        fontSize: '48px',
-                        color: '#2C2C2C',
-                        marginBottom: '20px',
-                        fontWeight: 600,
-                        letterSpacing: '3px'
-                    }}>Nuestra Colección</h2>
-                    <div style={{
-                        width: '80px',
-                        height: '3px',
-                        backgroundColor: '#CFB3A9',
-                        margin: '0 auto'
-                    }}></div>
+            {/* SECCIÓN DE COLECCIÓN */}
+            <section id="collection" className="collection-section">
+                <div className="section-header">
+                    <h2 className="section-title">Nuestra Colección</h2>
+                    <div className="divider-line"></div>
+                </div>
+
+                {/* TABS (If needed, CSS has .tabs-container) - kept empty/simple based on 719 but CSS supports it */}
+                <div className="tabs-container">
+                    <div className="tabs-scroll">
+                        {categories.map(cat => (
+                            <button
+                                key={cat.id}
+                                className={`tab-btn ${activeCategory === cat.id ? 'active' : ''}`}
+                                onClick={() => setActiveCategory(cat.id)}
+                            >
+                                {cat.name}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* PRODUCT GRID */}
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                    gap: '40px'
-                }}>
+                <div className="product-grid">
                     {products.length > 0 ? products.map(product => (
-                        <div key={product.id} style={{
-                            backgroundColor: '#FFFFFF',
-                            borderRadius: '4px',
-                            overflow: 'hidden',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                            transition: 'transform 0.3s ease',
-                            cursor: 'pointer'
-                        }}>
-                            <div style={{
-                                width: '100%',
-                                aspectRatio: '3/4',
-                                backgroundColor: '#E4D8CB', // Fallback color
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '48px',
-                                color: '#A09086',
-                                fontFamily: 'serif',
-                                backgroundImage: `url(${product.image})`,
-                                backgroundSize: 'cover',
-                                backgroundPosition: 'center'
-                            }}>
-                                {!product.image && (product.name ? product.name.charAt(0) : 'L')}
+                        <div key={product.id} className="product-card">
+                            <div className="product-image-container">
+                                {product.image ? (
+                                    <img src={product.image} alt={product.name} className="product-image" />
+                                ) : (
+                                    <div className="placeholder-image">
+                                        {product.name ? product.name.charAt(0) : 'L'}
+                                    </div>
+                                )}
+                                <div className="quick-add-btn">+</div>
                             </div>
-                            <div style={{ padding: '24px', textAlign: 'center' }}>
-                                <h3 style={{
-                                    fontSize: '16px',
-                                    margin: '0 0 12px',
-                                    color: '#2C2C2C',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '1px'
-                                }}>{product.name}</h3>
-                                <p style={{
-                                    fontFamily: 'serif',
-                                    fontSize: '20px',
-                                    color: '#A09086',
-                                    margin: 0,
-                                    fontWeight: 700
-                                }}>${parseFloat(product.price).toFixed(2)}</p>
+                            <div className="product-info">
+                                <h3 className="product-name">{product.name}</h3>
+                                <p className="product-price">${parseFloat(product.price).toFixed(2)}</p>
                             </div>
                         </div>
                     )) : (
-                        <p style={{ gridColumn: '1/-1', textAlign: 'center', color: '#888' }}>
+                        <div className="no-products">
                             Cargando productos...
-                        </p>
+                        </div>
                     )}
                 </div>
             </section>
 
             {/* FOOTER */}
-            <footer style={{
-                backgroundColor: '#CFB3A9', // CINNA Background
-                padding: '60px 20px 30px',
-                marginTop: '80px',
-                color: '#FFF'
-            }}>
-                <div style={{
-                    maxWidth: '1400px',
-                    width: '90%',
-                    margin: '0 auto',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                    gap: '40px',
-                    marginBottom: '40px'
-                }}>
-                    <div>
-                        <h4 style={{
-                            fontFamily: 'serif',
-                            fontSize: '20px',
-                            marginBottom: '20px',
-                            color: '#FFFFFF', // White title
-                            letterSpacing: '2px'
-                        }}>LUXURY BOUTIQUE</h4>
-                        <p style={{ color: '#F1EEEB', lineHeight: '1.8' }}>
-                            Redefiniendo el estilo desde 2025.
-                        </p>
+            <footer className="boutique-footer">
+                <div className="footer-content">
+                    <div className="footer-column">
+                        <h4>LUXURY BOUTIQUE</h4>
+                        <p>Redefiniendo el estilo desde 2025.</p>
                     </div>
-                    <div>
-                        <h4 style={{
-                            fontFamily: 'serif',
-                            fontSize: '20px',
-                            marginBottom: '20px',
-                            color: '#FFFFFF', // White title
-                            letterSpacing: '2px'
-                        }}>Contacto</h4>
-                        <p style={{ color: '#F1EEEB', margin: '8px 0' }}>info@luxuryboutique.com</p>
-                        <p style={{ color: '#F1EEEB', margin: '8px 0' }}>+593 99 999 9999</p>
+                    <div className="footer-column">
+                        <h4>Contacto</h4>
+                        <p>info@luxuryboutique.com</p>
+                        <p>+593 99 999 9999</p>
                     </div>
                 </div>
-                <div style={{
-                    textAlign: 'center',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.3)',
-                    paddingTop: '20px',
-                    fontSize: '14px',
-                    color: '#F1EEEB'
-                }}>
+                <div className="footer-bottom">
                     <p>&copy; 2026 Luxury Boutique. Todos los derechos reservados.</p>
                 </div>
             </footer>
