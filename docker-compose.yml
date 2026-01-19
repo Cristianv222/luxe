@@ -46,9 +46,10 @@ services:
         python manage.py migrate --noinput
         echo "🔄 Collecting static files..."
         python manage.py collectstatic --noinput
-        echo "🚀 Starting Gunicorn..."
-        exec gunicorn auth_service.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120 --access-logfile - --error-logfile -
+        echo "🚀 Starting Django (Dev Mode)..."
+        exec python manage.py runserver 0.0.0.0:8000
     volumes:
+      - ./auth-service:/app
       - auth-static:/app/staticfiles
     environment:
       - SECRET_KEY=luxe-production-secret-key-2025-ultra-secure-change-this
@@ -94,9 +95,10 @@ services:
         python manage.py migrate --noinput
         echo "🔄 Collecting static files..."
         python manage.py collectstatic --noinput
-        echo "🚀 Starting Gunicorn..."
-        exec gunicorn luxe_service.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120 --access-logfile - --error-logfile -
+        echo "🚀 Starting Django (Dev Mode)..."
+        exec python manage.py runserver 0.0.0.0:8000
     volumes:
+      - ./luxe-service:/app
       - luxe-static:/app/staticfiles
       - luxe-media:/app/media
     environment:
@@ -134,9 +136,13 @@ services:
         - REACT_APP_LUXE_SERVICE=http://luxe.local/api/luxe
     container_name: luxe_frontend
     volumes:
+      - ./frontend:/app
       - /app/node_modules
     environment:
-      - NODE_ENV=production
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - NODE_ENV=development
+      - NODE_OPTIONS=--max-old-space-size=4096
       - REACT_APP_API_BASE_URL=http://luxe.local/api
       - REACT_APP_AUTH_SERVICE=http://luxe.local/api/auth
       - REACT_APP_LUXE_SERVICE=http://luxe.local/api/luxe

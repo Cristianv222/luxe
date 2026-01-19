@@ -15,6 +15,7 @@ import ShiftManager from './modulos/fast-food/ShiftManager';
 import Impresoras from './modulos/fast-food/Impresoras';
 import DisenoFastFood from './modulos/fast-food/DisenoFastFood';
 import LandingPage from './modulos/pagina-web/LandingPage';
+import Registro from './modulos/pagina-web/Registro';
 import './App.css';
 
 // Componente para proteger rutas
@@ -27,6 +28,11 @@ const PrivateRoute = ({ children }) => {
 
   if (!user) {
     return <Navigate to="/login" />;
+  }
+
+  // Si es cliente, no puede acceder a rutas privadas y se redirige al home
+  if (user.role_details?.name === 'CLIENTE') {
+    return <Navigate to="/" />;
   }
 
   return <Diseno>{children}</Diseno>;
@@ -64,6 +70,7 @@ function App() {
           <Route path="/login" element={<Login />} />
 
           <Route path="/" element={<LandingPage />} />
+          <Route path="/registro" element={<Registro />} />
 
           <Route path="/dashboard" element={
             <PrivateRoute>

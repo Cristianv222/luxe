@@ -18,10 +18,12 @@ const Login = () => {
 
         if (result.success) {
             const roleName = result.user.role_details?.name;
-            if (roleName === 'ADMIN_FAST_FOOD') {
+            if (roleName === 'CLIENTE') {
+                navigate('/');
+            } else if (roleName === 'ADMIN_FAST_FOOD') {
                 navigate('/fast-food');
             } else {
-                navigate('/');
+                navigate('/dashboard');
             }
         } else {
             setError(result.error);

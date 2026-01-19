@@ -17,22 +17,7 @@ const formatCurrency = (amount) => {
     }).format(num || 0);
 };
 
-const formatDate = (dateString) => {
-    try {
-        if (!dateString) return 'Fecha no disponible';
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return dateString;
-
-        return date.toLocaleDateString('es-MX', {
-            weekday: 'short',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-    } catch (e) {
-        return dateString;
-    }
-};
+// formatDate removed as unused
 
 // Constantes para áreas táctiles (mínimo 44x44px)
 const TOUCH_MIN_SIZE = '44px';
@@ -60,11 +45,11 @@ const PuntosVenta = () => {
     const [discountCode, setDiscountCode] = useState('');
     const [appliedDiscount, setAppliedDiscount] = useState(null);
 
-    const [showReviewModal, setShowReviewModal] = useState(false);
-
     // 3.5 ESTADO DE CALCULADORA DE VUELTO
     const [cashGiven, setCashGiven] = useState(null);
     const [inputCash, setInputCash] = useState('');
+
+    const [showReviewModal, setShowReviewModal] = useState(false);
 
     // 3. ESTADO DE CLIENTES
     const [customers, setCustomers] = useState([]);

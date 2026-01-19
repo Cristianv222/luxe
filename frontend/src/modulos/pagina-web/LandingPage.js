@@ -4,7 +4,7 @@ import { AuthContext } from '../../context/AuthContext';
 import './LandingPage.css';
 
 const LandingPage = () => {
-    const { user } = useContext(AuthContext);
+    const { user, logout } = useContext(AuthContext);
 
     return (
         <div className="landing-container">
@@ -14,9 +14,12 @@ const LandingPage = () => {
                 </div>
                 <nav>
                     {user ? (
-                        <Link to="/dashboard" className="login-btn">Ir al Panel</Link>
+                        <button onClick={logout} className="login-btn">Cerrar Sesión</button>
                     ) : (
-                        <Link to="/login" className="login-btn">Iniciar Sesión</Link>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <Link to="/registro" className="login-btn">Registrarse</Link>
+                            <Link to="/login" className="login-btn">Iniciar Sesión</Link>
+                        </div>
                     )}
                 </nav>
             </header>
@@ -26,10 +29,11 @@ const LandingPage = () => {
                     <h2>Bienvenido a Luxe</h2>
                     <p>Sistema Integral de Gestión para Restaurantes y Hoteles</p>
                     <div className="cta-container">
-                        {user ? (
-                            <Link to="/dashboard" className="cta-button">Ir al Dashboard</Link>
-                        ) : (
-                            <Link to="/login" className="cta-button">Acceder al Sistema</Link>
+                        {!user && (
+                            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                                <Link to="/registro" className="cta-button">Crear Cuenta</Link>
+                                <Link to="/login" className="cta-button" style={{ background: 'transparent', border: '1px solid #fff' }}>Acceder al Sistema</Link>
+                            </div>
                         )}
                     </div>
                 </section>

@@ -10,8 +10,9 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { format, subDays, startOfWeek, endOfWeek, startOfMonth, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import jsPDF from 'jspdf';
+// jsPDF import removed
 import 'jspdf-autotable';
+
 import { formatCurrency, formatDate, getValidDate, generateDetailedPDF, getEcuadorDate } from '../../utils/reportUtils';
 
 // ====================================================================
@@ -178,10 +179,10 @@ const Reportes = () => {
 
         setProcessingShift(true);
         try {
-            // Enviamos solo el nombre del encargado. El backend se encarga de la caja.
+            // Enviamos el nombre del encargado y el efectivo inicial
             await api.post('/api/pos/shifts/', {
                 manager_name: managerName,
-                opening_cash: 0,
+                opening_cash: parseFloat(openingCash) || 0,
                 notes: shiftNotes || 'Apertura Simplificada'
             }, { baseURL: getFastFoodBaseURL() });
 
@@ -210,7 +211,7 @@ const Reportes = () => {
         setProcessingShift(true);
         try {
             await api.post(`/api/pos/shifts/${currentShift.id}/close/`, {
-                closing_cash: 0,
+                closing_cash: parseFloat(closingCash) || 0,
                 closing_notes: 'Cierre desde Reportes'
             }, { baseURL: getFastFoodBaseURL() });
 
@@ -461,6 +462,7 @@ const Reportes = () => {
 
             setConnectionError(true);
             setDebugInfo(`URL: ${getFastFoodBaseURL()}\nFecha: ${format(date, 'yyyy-MM-dd')}\nError: ${err.message}`);
+            setError(errorMessage);
 
         } finally {
             setLoadingData(false);
@@ -612,43 +614,9 @@ const Reportes = () => {
         };
 
         initializeReports();
-    }, []);
+    }, [fetchDashboardStats, fetchReports, fetchDayShifts]);
 
-    // Cerrar día
-    const closeDay = async () => {
-        if (!window.confirm('¿Estás seguro de cerrar el día? Esta acción generará un reporte final y cerrará todos los turnos abiertos.')) {
-            return;
-        }
-
-        try {
-            setConnectionError(false);
-            setError('');
-            setDebugInfo('');
-
-            await api.post('/api/pos/daily-summaries/close_day/', {
-                date: format(getEcuadorDate(), 'yyyy-MM-dd'),
-                closing_notes: 'Cierre manual del día'
-            }, {
-                baseURL: getFastFoodBaseURL(),
-                timeout: 15000
-            });
-
-            alert('Día cerrado exitosamente. Reporte final generado.');
-
-            await fetchReports();
-            await fetchDashboardStats();
-
-            // Recargar el reporte de hoy
-            const today = getEcuadorDate();
-            await loadDailyReport(today, true);
-
-        } catch (err) {
-            console.error('Error closing day:', err);
-            setError('Error al cerrar el día: ' + (err.response?.data?.error || err.message));
-            setConnectionError(true);
-            alert('Error al cerrar el día. Verifica que tengas permisos.');
-        }
-    };
+    // closeDay removed as unused
 
     // ========== FUNCIÓN MODIFICADA: SOLO FILTRA, NO CREA ==========
     const applyQuickFilter = (filter) => {
@@ -711,44 +679,10 @@ const Reportes = () => {
         setDateRange(newRange);
     };
 
-    // ========== FUNCIÓN PARA OBTENER TURNOS ==========
-    const fetchShifts = useCallback(async (date) => {
-        try {
-            setLoadingData(true);
-            setConnectionError(false);
-            setReports([]); // Limpiar lista actual
-
-            const dateStr = format(date, 'yyyy-MM-dd');
-            console.log('Buscando turnos para:', dateStr);
-
-            const response = await api.get('/api/pos/shifts/by_date/', {
-                baseURL: getFastFoodBaseURL(),
-                params: { date: dateStr }
-            });
-
-            console.log('Turnos encontrados:', response.data.shifts);
-            setReports(response.data.shifts || []);
-
-        } catch (err) {
-            console.error('Error fetching shifts:', err);
-            setNoReportMessage('Error al cargar los turnos.');
-        } finally {
-            setLoadingData(false);
-        }
-    }, []);
+    // fetchShifts removed as unused
     // =================================================
 
-    // Función para forzar la generación de un reporte (solo cuando el usuario lo pida explícitamente)
-    const forceGenerateReport = () => {
-        setNoReportMessage('');
-        if (reportType === 'daily') {
-            loadDailyReport(dateRange.startDate, true);
-        } else if (reportType === 'shift') {
-            fetchShifts(dateRange.startDate);
-        } else {
-            generateReport(reportType, dateRange, true);
-        }
-    };
+    // forceGenerateReport removed as unused
 
     // ========== REFRESCAMIENTO SILENCIOSO DE DATOS (POLLING) ==========
     const refreshCurrentData = useCallback(async () => {
@@ -1076,78 +1010,7 @@ const Reportes = () => {
         generateDetailedPDF(currentReport, typeStr, rangeStr);
     };
 
-    // Renderizado del Detalle de Órdenes en la Web
-    const renderDetailedOrdersTable = () => {
-        const ordersDetail = currentReport?.orders_detail || [];
-
-        if (ordersDetail.length === 0) {
-            return (
-                <div style={{ padding: '20px', textAlign: 'center', color: '#666', border: '1px dashed #ccc', borderRadius: 8 }}>
-                    No hay registros de órdenes creadas para este día.
-                </div>
-            );
-        }
-
-        return (
-            <div style={{ marginTop: 20 }}>
-                <h4 style={{ marginBottom: 15, color: '#333', borderBottom: '1px solid #eee', paddingBottom: 10 }}>Desglose de Órdenes por Cliente</h4>
-                {ordersDetail.map((order, index) => {
-                    const orderDateValue = order.timestamp || currentReport.date;
-                    const validOrderDate = getValidDate(orderDateValue);
-                    const timeFormatted = validOrderDate ? format(validOrderDate, 'HH:mm:ss') : 'N/A';
-
-                    return (
-                        <div key={order.order_id || index} style={{ marginBottom: 20, padding: 15, border: '1px solid #f3f4f6', borderRadius: 8 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f9fafb', padding: '10px 15px', borderRadius: 6 }}>
-                                <h5 style={{ margin: 0, color: '#1f77b4', fontSize: '1rem' }}>
-                                    ORDEN #{order.order_number || order.order_id || index + 1} ({order.customer_name || 'Anónimo'})
-                                </h5>
-                                <span style={{ fontSize: '0.9rem', color: '#333', fontWeight: 'bold' }}>
-                                    Total: {formatCurrency(order.total_amount || 0)}
-                                </span>
-                            </div>
-                            <p style={{ margin: '10px 0 5px 0', fontSize: '0.85rem', color: '#666' }}>
-                                **Método de Pago:** {order.payment_method_display || 'N/A'} | **Estado:** {order.status || 'Completada'} | **Hora:** {timeFormatted}
-                            </p>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 10 }}>
-                                <thead>
-                                    <tr style={{ backgroundColor: '#eef' }}>
-                                        <th style={{ padding: 8, border: '1px solid #ddd', textAlign: 'left', fontSize: '0.85rem' }}>Ítem</th>
-                                        <th style={{ padding: 8, border: '1px solid #ddd', textAlign: 'right', fontSize: '0.85rem' }}>Cantidad</th>
-                                        <th style={{ padding: 8, border: '1px solid #ddd', textAlign: 'right', fontSize: '0.85rem' }}>P. Unitario</th>
-                                        <th style={{ padding: 8, border: '1px solid #ddd', textAlign: 'right', fontSize: '0.85rem' }}>Subtotal</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {(order.items || []).map((item, itemIndex) => (
-                                        <tr key={itemIndex}>
-                                            <td style={{ padding: 8, border: '1px solid #eee', fontSize: '0.8rem' }}>
-                                                {item.product_details?.name || 'Producto Desconocido'}
-                                                {item.size_details?.name && ` (${item.size_details.name})`}
-                                                {item.extras && item.extras.length > 0 &&
-                                                    <span style={{ display: 'block', fontSize: '0.7rem', color: '#999' }}>
-                                                        + {item.extras.map(e => e.extra_name).join(', ')}
-                                                    </span>
-                                                }
-                                                {item.note && (
-                                                    <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic', marginTop: '2px' }}>
-                                                        Nota: {item.note}
-                                                    </div>
-                                                )}
-                                            </td>
-                                            <td style={{ padding: 8, border: '1px solid #eee', textAlign: 'right', fontSize: '0.8rem' }}>{(item.quantity || 1).toLocaleString()}</td>
-                                            <td style={{ padding: 8, border: '1px solid #eee', textAlign: 'right', fontSize: '0.8rem' }}>{formatCurrency(item.unit_price || 0)}</td>
-                                            <td style={{ padding: 8, border: '1px solid #eee', textAlign: 'right', fontSize: '0.8rem' }}>{formatCurrency(item.line_total || 0)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    );
-                })}
-            </div>
-        );
-    };
+    // renderDetailedOrdersTable removed as unused
 
 
     if (loading) {
@@ -1182,6 +1045,10 @@ const Reportes = () => {
                     </button>
                 </div>
             </div>
+
+            {/* Alertas de error */}
+            {error && <div className="alert warning-alert" style={{ marginBottom: '20px' }}>{error}</div>}
+            {loadingData && <div className="alert notes-alert" style={{ marginBottom: '20px' }}>Actualizando datos...</div>}
 
             {/* ========== GESTIÓN DE TURNOS (NUEVO) ========== */}
             <div className="card" style={{ backgroundColor: '#f0f9ff', borderColor: '#bae6fd', borderWidth: '1px', borderStyle: 'solid' }}>

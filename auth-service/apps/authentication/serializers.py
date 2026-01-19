@@ -2,6 +2,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from apps.users.models import User
 from apps.users.serializers import UserSerializer
+from apps.roles.models import Role
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -36,7 +37,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'first_name', 'last_name', 'phone']
+        fields = ['username', 'email', 'password', 'password_confirm', 'first_name', 'last_name', 'phone', 'identification_number', 'date_of_birth']
     
     def validate(self, data):
         if data['password'] != data['password_confirm']:
@@ -45,6 +46,15 @@ class RegisterSerializer(serializers.ModelSerializer):
         return data
     
     def create(self, validated_data):
+        # Asignar rol de CLIENTE por defecto
+        try:
+            cliente_role = Role.objects.get(name='CLIENTE')
+        except Role.DoesNotExist:
+            # Si no existe, se podría crear o lanzar error. 
+            # Para robustez, lo creamos si no existe (aunque idealmente debería existir por fixture)
+            cliente_role = Role.objects.create(name='CLIENTE', description='Rol para clientes registrados desde la web')
+            
+        validated_data['role'] = cliente_role
         user = User.objects.create_user(**validated_data)
         return user
 

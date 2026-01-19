@@ -1,11 +1,17 @@
 import React, { useState, useContext } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 const BarraLateral = () => {
     const location = useLocation();
+    const navigate = useNavigate();
     const { user, logout } = useContext(AuthContext);
     const [isCollapsed, setIsCollapsed] = useState(false);
+
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
 
     const isActive = (path) => {
         return location.pathname === path || location.pathname.startsWith(path) ? 'active' : '';
@@ -299,7 +305,7 @@ const BarraLateral = () => {
                 <div style={styles.sidebarFooter}>
                     <button
                         style={styles.logoutButton}
-                        onClick={logout}
+                        onClick={handleLogout}
                         title="Cerrar Sesión"
                         onMouseEnter={(e) => {
                             e.target.style.background = 'rgba(239, 68, 68, 0.2)';

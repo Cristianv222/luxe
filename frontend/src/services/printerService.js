@@ -40,4 +40,5 @@ class PrinterService {
   }
 }
 
-export default new PrinterService();
+const printerServiceInstance = new PrinterService();
+export default printerServiceInstance;

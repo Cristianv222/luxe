@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import { generateDetailedPDF } from '../../utils/reportUtils';
 
@@ -11,11 +11,8 @@ const ShiftManager = ({ onShiftActive }) => {
     const [error, setError] = useState('');
     const [closedShiftReport, setClosedShiftReport] = useState(null);
 
-    useEffect(() => {
-        checkCurrentShift();
-    }, []);
-
-    const checkCurrentShift = async () => {
+    // Add useCallback to checkCurrentShift to avoid infinite loop
+    const checkCurrentShift = useCallback(async () => {
         try {
             const response = await api.get('/api/pos/shifts/current/', {
                 baseURL: process.env.REACT_APP_LUXE_SERVICE
@@ -39,7 +36,11 @@ const ShiftManager = ({ onShiftActive }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [onShiftActive]);
+
+    useEffect(() => {
+        checkCurrentShift();
+    }, [checkCurrentShift]);
 
     const handleOpenShift = async (e) => {
         e.preventDefault();
