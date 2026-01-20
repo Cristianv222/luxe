@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import logo from '../../assets/logo_luxury.png';
+import heroBg from '../../assets/hero_store.jpg';
 import { useAuth } from '../../context/AuthContext';
 import './BoutiqueLanding.css';
 
@@ -84,68 +85,99 @@ const BoutiqueLanding = () => {
                 </div>
             </header>
 
-            {/* HERO SECTION - SUPER SIMPLE (Restaurado) */}
+            {/* HERO SECTION - IMAGE BACKGROUND */}
             <section style={{
                 width: '100%',
-                minHeight: '70vh',
-                backgroundColor: '#CFB3A9', // CINNA
+                minHeight: '85vh',
+                backgroundImage: `url(${heroBg})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: '60px 20px',
-                marginTop: '120px' // Compensate for fixed header height
+                marginTop: '80px', // Header height
+                position: 'relative'
             }}>
+                {/* Overlay oscuro suave para mejorar legibilidad */}
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.2)'
+                }}></div>
+
                 <div style={{
                     maxWidth: '800px',
                     width: '100%',
-                    backgroundColor: '#F1EEEB', // FROTH
+                    backgroundColor: 'rgba(241, 238, 235, 0.4)', // Much more transparent FROTH (40% opacity)
+                    backdropFilter: 'blur(5px)', // Softer blur to see more detail behind
+                    WebkitBackdropFilter: 'blur(5px)',
                     padding: '80px 60px',
-                    borderRadius: '8px',
+                    borderRadius: '4px',
                     textAlign: 'center',
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
+                    boxShadow: '0 20px 60px rgba(0,0,0,0.1)', // Softer shadow
+                    position: 'relative',
+                    border: '1px solid rgba(255,255,255,0.3)' // More subtle border
                 }}>
                     <p style={{
                         fontSize: '14px',
-                        letterSpacing: '4px',
-                        color: '#A09086',
+                        letterSpacing: '5px',
+                        color: '#2C2C2C', // Darker for better contrast on transparent bg
                         marginBottom: '20px',
-                        textTransform: 'uppercase'
+                        textTransform: 'uppercase',
+                        fontWeight: '700',
+                        textShadow: '0 1px 2px rgba(255,255,255,0.8)' // Text shadow for readability
                     }}>Luxury Boutique</p>
 
                     <h2 style={{
                         fontFamily: 'serif',
                         fontSize: '56px',
-                        color: '#2C2C2C',
+                        color: '#1a1a1a', // Almost black for maximum contrast
                         margin: '0 0 30px 0',
                         fontWeight: 600,
-                        letterSpacing: '2px'
+                        letterSpacing: '2px',
+                        lineHeight: '1.2',
+                        textShadow: '0 2px 4px rgba(255,255,255,0.6)' // Text shadow for readability
                     }}>Colección Exclusiva</h2>
 
                     <p style={{
                         fontSize: '18px',
                         lineHeight: '1.8',
-                        color: '#A09086',
-                        marginBottom: '40px',
+                        color: '#333333', // Darker text for readability on transparent bg
+                        marginBottom: '45px',
                         maxWidth: '500px',
-                        margin: '0 auto 40px'
+                        margin: '0 auto 45px',
+                        fontWeight: '500',
+                        textShadow: '0 1px 2px rgba(255,255,255,0.8)' // Light shadow to pop against background
                     }}>
                         Descubre la colección diseñada para resaltar tu esencia única.
                     </p>
 
                     <a href="#collection" className="hero-btn-simple" style={{
                         display: 'inline-block',
-                        padding: '18px 40px',
-                        backgroundColor: '#CFB3A9', // Solid CINNA
+                        padding: '16px 45px',
+                        backgroundColor: '#2C2C2C',
                         color: '#FFFFFF',
                         textDecoration: 'none',
                         textTransform: 'uppercase',
                         letterSpacing: '2px',
-                        fontSize: '14px',
+                        fontSize: '13px',
                         fontWeight: 600,
-                        border: '2px solid #CFB3A9',
                         transition: 'all 0.3s ease',
-                        boxShadow: '0 4px 15px rgba(207, 179, 169, 0.4)'
-                    }}>
+                        border: '1px solid #2C2C2C'
+                    }}
+                        onMouseEnter={(e) => {
+                            e.target.style.backgroundColor = 'transparent';
+                            e.target.style.color = '#2C2C2C';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.target.style.backgroundColor = '#2C2C2C';
+                            e.target.style.color = '#FFFFFF';
+                        }}
+                    >
                         Ver Colección
                     </a>
                 </div>

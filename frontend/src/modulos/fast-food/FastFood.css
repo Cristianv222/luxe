@@ -40,91 +40,123 @@
     background-color: var(--color-froth);
 }
 
-/* Sidebar Styling */
+/* Sidebar Styling - Elegant Boutique Redesign */
 .sidebar {
-    width: 260px;
-    background-color: var(--color-white);
-    border-right: 1px solid var(--color-chai);
+    width: 280px;
+    background-color: var(--color-creme);
+    /* Matching body bg */
+    border-right: 1px solid rgba(160, 144, 134, 0.2);
+    /* Subtle separation */
     display: flex;
     flex-direction: column;
-    box-shadow: 2px 0 15px rgba(0, 0, 0, 0.03);
+    box-shadow: 2px 0 20px rgba(0, 0, 0, 0.02);
     z-index: 10;
 }
 
 .sidebar-header {
-    background-color: var(--color-white);
-    padding: 2rem 1.5rem;
+    background-color: transparent;
+    padding: 3rem 2rem;
     font-family: var(--font-serif);
-    font-size: 1.4rem;
-    font-weight: 700;
+    font-size: 1.6rem;
+    font-weight: 600;
     color: var(--color-dark);
-    border-bottom: 2px solid var(--color-cinna);
     text-align: center;
-    letter-spacing: 1px;
+    letter-spacing: 4px;
+    /* Wide spacing like Landing */
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(160, 144, 134, 0.1);
+    /* Very subtle divider */
 }
 
 .sidebar-nav {
     list-style: none;
-    padding: 2rem 1rem;
+    padding: 2rem 0;
+    /* Removing side padding for full separators */
     margin: 0;
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    /* Gap handled by padding/borders */
 }
 
 .sidebar-nav li {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0;
+    width: 100%;
 }
 
 .sidebar-nav a {
-    display: block;
-    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    padding: 1.2rem 2.5rem;
+    /* Spacious padding */
     text-decoration: none;
     color: var(--color-latte);
-    font-size: 1rem;
-    border-radius: 4px;
-    /* Slightly softer */
+    /* Inactive color */
+    font-size: 0.9rem;
     transition: all 0.3s ease;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 400;
-    border-left: 3px solid transparent;
+    letter-spacing: 2px;
+    font-weight: 500;
+    border-bottom: 1px solid rgba(160, 144, 134, 0.1);
+    /* "Elegant separator" for vertical list */
+    position: relative;
+    background: transparent;
+}
+
+.sidebar-nav li:last-child a {
+    border-bottom: none;
 }
 
 .sidebar-nav li.active a,
 .sidebar-nav a:hover {
-    background-color: var(--color-froth);
     color: var(--color-dark);
-    border-left-color: var(--color-cinna);
-    padding-left: 2rem;
-    /* Slide effect */
+    /* Darker on active/hover */
+    background-color: rgba(255, 255, 255, 0.5);
+    /* Very subtle highlight */
+    padding-left: 2.8rem;
+    /* Slight movement */
+}
+
+.sidebar-nav li.active a {
+    color: var(--color-cinna);
+    /* Cinna for active state */
+    font-weight: 700;
 }
 
 /* Sidebar Footer */
 .sidebar-footer {
-    padding: 1rem;
-    border-top: 1px solid var(--color-chai);
+    padding: 2rem;
+    border-top: 1px solid rgba(160, 144, 134, 0.1);
     margin-top: auto;
+    background-color: transparent;
 }
 
 .sidebar-footer button {
     background: none;
     border: none;
     width: 100%;
-    text-align: left;
+    text-align: center;
+    /* Centered like Landing nav */
     padding: 10px;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 10px;
     cursor: pointer;
     font-family: var(--font-sans);
     text-transform: uppercase;
-    letter-spacing: 1px;
-    font-size: 0.9rem;
-    color: var(--color-latte);
-    transition: color 0.3s;
+    letter-spacing: 2px;
+    /* Matching Landing */
+    font-size: 0.85rem;
+    color: var(--color-dark);
+    font-weight: 500;
+    transition: all 0.3s ease;
 }
 
 .sidebar-footer button:hover {
-    color: var(--color-dark);
+    color: var(--color-cinna);
+    transform: translateY(-2px);
 }
 
 /* Dashboard Cards (Panel) */
