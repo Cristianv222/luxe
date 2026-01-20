@@ -20,7 +20,7 @@ const BarraLateralFastFood = () => {
     return (
         <aside className="sidebar">
             <div className="sidebar-header">
-                Comida Rápida
+                LUXURY BOUTIQUE
             </div>
             <ul className="sidebar-nav">
                 <li className={isActive('/fast-food')}>
@@ -42,21 +42,9 @@ const BarraLateralFastFood = () => {
                     <Link to="/fast-food/shift">Caja (Turnos)</Link>
                 </li>
             </ul>
-            <div className="sidebar-footer" style={{ padding: '1rem', borderTop: '1px solid #444' }}>
+            <div className="sidebar-footer">
                 <button
                     onClick={handleLogout}
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'inherit',
-                        cursor: 'pointer',
-                        width: '100%',
-                        textAlign: 'left',
-                        padding: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px'
-                    }}
                 >
                     <i className="bi bi-box-arrow-right"></i>
                     Cerrar Sesión

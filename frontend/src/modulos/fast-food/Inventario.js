@@ -78,7 +78,7 @@ const Inventario = () => {
             description: product.description,
             price: product.price,
             category: product.category,
-            image: null, // Reset image input, keep existing if not changed
+            image: null,
             is_active: product.is_active !== undefined ? product.is_active : true,
             is_available: product.is_available !== undefined ? product.is_available : true
         });
@@ -88,12 +88,10 @@ const Inventario = () => {
     const handleDeleteProduct = async (id) => {
         if (window.confirm('¿Estás seguro de eliminar este producto? (Se archivará para no afectar reportes históricos)')) {
             try {
-                // "Soft Delete": Desactivar en lugar de borrar físicamente para mantener integridad referencial
                 const formData = new FormData();
                 formData.append('is_active', 'false');
                 formData.append('is_available', 'false');
 
-                // Backend usa lookup_field = 'pk' (UUID), así que usamos el ID.
                 await api.patch(`/api/menu/products/${id}/`, formData, {
                     baseURL: process.env.REACT_APP_LUXE_SERVICE,
                     headers: { 'Content-Type': 'multipart/form-data' },
@@ -121,7 +119,6 @@ const Inventario = () => {
             formData.append('image', newProduct.image);
         }
 
-        // Solo generar SLUG si es un producto nuevo.
         if (!editingProduct) {
             const slug = newProduct.name.toLowerCase()
                 .replace(/ /g, '-')
@@ -131,7 +128,6 @@ const Inventario = () => {
 
         try {
             if (editingProduct) {
-                // Usar ID para el PATCH ya que el backend espera PK
                 await api.patch(`/api/menu/products/${editingProduct.id}/`, formData, {
                     baseURL: process.env.REACT_APP_LUXE_SERVICE,
                     headers: { 'Content-Type': 'multipart/form-data' },
@@ -154,68 +150,68 @@ const Inventario = () => {
     };
 
     return (
-        <div className="page-container">
-            <div className="page-header">
-                <h2>Inventario (Menú)</h2>
+        <div>
+            <div className="ff-welcome-header" style={{ padding: '2rem', marginBottom: '2rem' }}>
+                <h2 style={{ fontSize: '2rem', margin: 0 }}>Inventario (Menú)</h2>
             </div>
 
-            {/* Tabs de Navegación */}
-            <div className="tabs" style={{ marginBottom: '20px', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px' }}>
+            {/* Tabs */}
+            <div className="ff-tabs-container">
                 <button
-                    className={`btn ${activeTab === 'products' ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`ff-tab ${activeTab === 'products' ? 'active' : ''}`}
                     onClick={() => setActiveTab('products')}
                 >
                     Productos
                 </button>
                 <button
-                    className={`btn ${activeTab === 'categories' ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`ff-tab ${activeTab === 'categories' ? 'active' : ''}`}
                     onClick={() => setActiveTab('categories')}
                 >
                     Categorías
                 </button>
                 <button
-                    className={`btn ${activeTab === 'combos' ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`ff-tab ${activeTab === 'combos' ? 'active' : ''}`}
                     onClick={() => setActiveTab('combos')}
                 >
                     Combos
                 </button>
                 <button
-                    className={`btn ${activeTab === 'extras' ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`ff-tab ${activeTab === 'extras' ? 'active' : ''}`}
                     onClick={() => setActiveTab('extras')}
                 >
                     Extras
                 </button>
                 <button
-                    className={`btn ${activeTab === 'sizes' ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`ff-tab ${activeTab === 'sizes' ? 'active' : ''}`}
                     onClick={() => setActiveTab('sizes')}
                 >
                     Tamaños
                 </button>
             </div>
 
-            {/* Contenido de Pestañas */}
+            {/* Content Cache */}
             {activeTab === 'categories' && <Categorias />}
             {activeTab === 'extras' && <Extras />}
             {activeTab === 'combos' && <Combos />}
             {activeTab === 'sizes' && <Tamanos />}
 
-            {/* Contenido de Productos */}
-            {
-                activeTab === 'products' && (
-                    <>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-                            <button className="btn btn-primary" onClick={() => {
-                                setEditingProduct(null);
-                                setNewProduct({ name: '', description: '', price: '', category: '', image: null });
-                                setIsModalOpen(true);
-                            }}>
-                                Nuevo Producto
-                            </button>
-                        </div>
+            {/* Products Content */}
+            {activeTab === 'products' && (
+                <>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
+                        <button className="ff-button ff-button-primary" onClick={() => {
+                            setEditingProduct(null);
+                            setNewProduct({ name: '', description: '', price: '', category: '', image: null });
+                            setIsModalOpen(true);
+                        }}>
+                            Nuevo Producto
+                        </button>
+                    </div>
 
-                        {loading ? <div>Cargando inventario...</div> : error ? <div className="alert alert-error">{error}</div> : (
-                            <div className="table-responsive">
-                                <table className="table">
+                    {loading ? <div style={{ textAlign: 'center', padding: '2rem' }}>Cargando inventario...</div> :
+                        error ? <div style={{ color: 'red', textAlign: 'center' }}>{error}</div> : (
+                            <div className="ff-table-container">
+                                <table className="ff-table">
                                     <thead>
                                         <tr>
                                             <th>Imagen</th>
@@ -228,7 +224,7 @@ const Inventario = () => {
                                     </thead>
                                     <tbody>
                                         {products.length === 0 ? (
-                                            <tr><td colSpan="5">No hay productos registrados</td></tr>
+                                            <tr><td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>No hay productos registrados</td></tr>
                                         ) : (
                                             products.map(product => (
                                                 <tr key={product.id}>
@@ -237,34 +233,39 @@ const Inventario = () => {
                                                             <img
                                                                 src={product.image.startsWith('http') ? product.image : `${process.env.REACT_APP_LUXE_SERVICE}${product.image}`}
                                                                 alt={product.name}
-                                                                style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '5px' }}
+                                                                style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }}
                                                             />
                                                         ) : (
-                                                            <span style={{ color: '#888' }}>Sin imagen</span>
+                                                            <span style={{ color: '#ccc', fontStyle: 'italic' }}>Sin img</span>
                                                         )}
                                                     </td>
-                                                    <td>{product.name}</td>
+                                                    <td>
+                                                        <strong>{product.name}</strong>
+                                                    </td>
                                                     <td>{product.category_name || product.category}</td>
                                                     <td>${product.price}</td>
-                                                    <td>{product.is_available ? 'Sí' : 'No'}</td>
+                                                    <td>
+                                                        <span className={`status-badge ${product.is_available ? 'completed' : 'pending'}`}>
+                                                            {product.is_available ? 'Sí' : 'No'}
+                                                        </span>
+                                                    </td>
                                                     <td>
                                                         <button
-                                                            className="btn btn-secondary"
+                                                            className="ff-button ff-button-secondary"
                                                             onClick={() => handleEditProduct(product)}
-                                                            style={{ marginRight: '5px', padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                                                            style={{ marginRight: '8px', padding: '0.5rem 1rem', fontSize: '0.8rem' }}
                                                         >
                                                             Editar
                                                         </button>
                                                         <button
-                                                            className="btn btn-danger"
+                                                            className="ff-button ff-button-danger"
                                                             onClick={() => handleDeleteProduct(product.id)}
-                                                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                                                            style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
                                                         >
                                                             Eliminar
                                                         </button>
                                                     </td>
                                                 </tr>
-
                                             ))
                                         )}
                                     </tbody>
@@ -272,275 +273,99 @@ const Inventario = () => {
                             </div>
                         )}
 
-
-                        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingProduct ? "Editar Producto" : "Nuevo Producto"}>
-                            <form onSubmit={handleSubmit}>
-                                <div className="form-group">
-                                    <label>Nombre</label>
+                    <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingProduct ? "Editar Producto" : "Nuevo Producto"}>
+                        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1rem' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Nombre</label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    className="ff-search-input"
+                                    value={newProduct.name}
+                                    onChange={handleInputChange}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Descripción</label>
+                                <textarea
+                                    name="description"
+                                    className="ff-search-input"
+                                    value={newProduct.description}
+                                    onChange={handleInputChange}
+                                    required
+                                    style={{ minHeight: '100px' }}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Precio</label>
+                                <input
+                                    type="number"
+                                    name="price"
+                                    className="ff-search-input"
+                                    value={newProduct.price}
+                                    onChange={handleInputChange}
+                                    step="0.01"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Categoría</label>
+                                <select
+                                    className="ff-search-input"
+                                    name="category"
+                                    value={newProduct.category}
+                                    onChange={handleInputChange}
+                                    required
+                                >
+                                    <option value="">Seleccione una categoría</option>
+                                    {categories.map(cat => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div style={{ display: 'flex', gap: '2rem' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                                     <input
-                                        type="text"
-                                        name="name"
-                                        value={newProduct.name}
+                                        type="checkbox"
+                                        name="is_active"
+                                        checked={newProduct.is_active}
                                         onChange={handleInputChange}
-                                        required
+                                        style={{ marginRight: '8px' }}
                                     />
-                                </div>
-                                <div className="form-group">
-                                    <label>Descripción</label>
-                                    <textarea
-                                        name="description"
-                                        value={newProduct.description}
-                                        onChange={handleInputChange}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Precio</label>
+                                    Activo
+                                </label>
+                                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                                     <input
-                                        type="number"
-                                        name="price"
-                                        value={newProduct.price}
+                                        type="checkbox"
+                                        name="is_available"
+                                        checked={newProduct.is_available}
                                         onChange={handleInputChange}
-                                        step="0.01"
-                                        required
+                                        style={{ marginRight: '8px' }}
                                     />
-                                </div>
-                                <div className="form-group">
-                                    <label>Categoría</label>
-                                    <select
-                                        className="form-control"
-                                        name="category"
-                                        value={newProduct.category}
-                                        onChange={handleInputChange}
-                                        required
-                                    >
-                                        <option value="">Seleccione una categoría</option>
-                                        {categories.map(cat => (
-                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label>
-                                        <input
-                                            type="checkbox"
-                                            name="is_active"
-                                            checked={newProduct.is_active}
-                                            onChange={handleInputChange}
-                                            style={{ marginRight: '8px' }}
-                                        />
-                                        Activo
-                                    </label>
-                                </div>
-                                <div className="form-group">
-                                    <label>
-                                        <input
-                                            type="checkbox"
-                                            name="is_available"
-                                            checked={newProduct.is_available}
-                                            onChange={handleInputChange}
-                                            style={{ marginRight: '8px' }}
-                                        />
-                                        Disponible
-                                    </label>
-                                </div>
-                                <div className="form-group">
-                                    <label>Imagen</label>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleImageChange}
-                                        required={!editingProduct}
-                                    />
-                                </div>
-                                <div className="form-actions">
-                                    <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancelar</button>
-                                    <button type="submit" className="btn btn-primary">Guardar</button>
-                                </div>
-                            </form>
-                        </Modal>
-                    </>
-                )
-            }
-        </div >
+                                    Disponible
+                                </label>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Imagen</label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageChange}
+                                    style={{ fontFamily: 'var(--font-sans)' }}
+                                    required={!editingProduct}
+                                />
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                                <button type="button" className="ff-button ff-button-secondary" onClick={() => setIsModalOpen(false)}>Cancelar</button>
+                                <button type="submit" className="ff-button ff-button-primary">Guardar</button>
+                            </div>
+                        </form>
+                    </Modal>
+                </>
+            )}
+        </div>
     );
 };
 
 export default Inventario;
-
-const styles = `
-    .page-container {
-        padding: 20px;
-        max-width: 1600px;
-        margin: 0 auto;
-    }
-    .page-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-    }
-    .page-header h2 {
-        margin: 0;
-        color: #1f2937;
-    }
-    
-    /* Tabs */
-    .tabs {
-        display: flex;
-        gap: 10px;
-        border-bottom: 1px solid #e2e8f0;
-        margin-bottom: 20px;
-        overflow-x: auto;
-        padding-bottom: 5px;
-        white-space: nowrap;
-        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-    }
-    .tabs::-webkit-scrollbar {
-        height: 4px;
-    }
-    .tabs::-webkit-scrollbar-thumb {
-        background-color: #ccc;
-        border-radius: 4px;
-    }
-
-    .btn {
-        padding: 0.5rem 1rem;
-        border-radius: 0.375rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s;
-        border: 1px solid transparent;
-    }
-    .btn-primary {
-        background-color: #3b82f6;
-        color: white;
-        border-color: #3b82f6;
-    }
-    .btn-primary:hover {
-        background-color: #2563eb;
-    }
-    .btn-secondary {
-        background-color: #f3f4f6;
-        color: #374151;
-        border-color: #d1d5db;
-    }
-    .btn-secondary:hover {
-        background-color: #e5e7eb;
-    }
-    .btn-danger {
-        background-color: #fee2e2;
-        color: #dc2626;
-        border-color: #fca5a5;
-    }
-    .btn-danger:hover {
-        background-color: #fecaca;
-    }
-
-    /* Table */
-    .table-responsive {
-        width: 100%;
-        overflow-x: auto;
-        overflow-y: auto; /* Scroll vertical */
-        max-height: 70vh; /* Altura máxima para permitir scroll */
-        -webkit-overflow-scrolling: touch;
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        border: 1px solid #e5e7eb;
-        position: relative; /* Para sticky header */
-    }
-    .table {
-        width: 100%;
-        border-collapse: collapse;
-        background-color: white;
-        min-width: 600px; 
-    }
-    .table th, .table td {
-        padding: 0.75rem 1rem;
-        text-align: left;
-        border-bottom: 1px solid #e5e7eb;
-    }
-    .table th {
-        background-color: #f9fafb;
-        font-weight: 600;
-        color: #374151;
-        font-size: 0.875rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        position: sticky; /* Header fijo */
-        top: 0;
-        z-index: 10;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    .table td {
-        font-size: 0.875rem;
-        color: #4b5563;
-    }
-    .table tr:last-child td {
-        border-bottom: none;
-    }
-
-    /* Form */
-    .form-group {
-        margin-bottom: 1rem;
-    }
-    .form-group label {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-weight: 500;
-        color: #374151;
-    }
-    .form-control, input[type="text"], input[type="number"], textarea, select {
-        width: 100%;
-        padding: 0.5rem;
-        border: 1px solid #d1d5db;
-        border-radius: 0.375rem;
-        font-size: 1rem;
-    }
-    .form-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 1rem;
-        margin-top: 1.5rem;
-    }
-
-    /* Alerts */
-    .alert {
-        padding: 1rem;
-        margin-bottom: 1rem;
-        border-radius: 0.375rem;
-    }
-    .alert-error {
-        background-color: #fee2e2;
-        color: #991b1b;
-        border: 1px solid #fecaca;
-    }
-
-    /* Responsive Media Queries */
-    @media (max-width: 768px) {
-        .page-container {
-            padding: 10px;
-        }
-        .page-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 10px;
-        }
-        .page-header h2 {
-            font-size: 1.5rem;
-        }
-        .tabs {
-            padding-bottom: 10px;
-        }
-        .btn {
-            padding: 0.4rem 0.8rem;
-            font-size: 0.9rem;
-        }
-    }
-`;
-
-// Inject styles
-const styleSheet = document.createElement("style");
-styleSheet.innerText = styles;
-document.head.appendChild(styleSheet);
-

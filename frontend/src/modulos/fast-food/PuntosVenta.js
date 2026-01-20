@@ -514,87 +514,37 @@ const PuntosVenta = () => {
     const renderReviewDetails = () => (
         <div style={{ padding: screenWidth <= 1366 ? '0.5rem' : '0 1rem' }}>
             {/* Sección de configuración de orden */}
-            <div style={{
-                backgroundColor: '#f3f4f6',
-                borderRadius: '8px',
-                padding: screenWidth <= 1366 ? '0.75rem' : '1rem',
-                marginBottom: '1rem'
-            }}>
+            <div className="ff-card" style={{ padding: screenWidth <= 1366 ? '0.75rem' : '1.5rem', marginBottom: '1.5rem' }}>
+
                 {/* Cliente */}
-                <div style={{ marginBottom: '1rem' }}>
-                    <label style={{
-                        display: 'block',
-                        fontSize: screenWidth <= 1366 ? '0.875rem' : '0.875rem',
-                        fontWeight: '600',
-                        color: '#374151',
-                        marginBottom: '0.5rem'
-                    }}>
-                        Cliente
-                    </label>
+                <div style={{ marginBottom: '1.5rem' }}>
+                    <label className="ff-label">Cliente</label>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <div style={{ position: 'relative', flex: 1 }}>
                             <input
                                 type="text"
                                 placeholder="Buscar por nombre, cédula o teléfono..."
-                                style={{
-                                    width: '100%',
-                                    padding: screenWidth <= 1366 ? '0.5rem' : '0.75rem',
-                                    border: '2px solid #d1d5db',
-                                    borderRadius: '8px',
-                                    fontSize: screenWidth <= 1366 ? '0.875rem' : '0.9375rem',
-                                    transition: 'all 0.2s',
-                                    minHeight: TOUCH_MIN_SIZE
-                                }}
+                                className="ff-search-input"
                                 value={customerSearch}
                                 onChange={(e) => searchCustomers(e.target.value)}
                             />
                             {customers.length > 0 && (
-                                <div style={{
-                                    position: 'absolute',
-                                    zIndex: 10,
-                                    width: '100%',
-                                    backgroundColor: '#ffffff',
-                                    border: '2px solid #d1d5db',
-                                    borderRadius: '8px',
-                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-                                    marginTop: '0.25rem',
-                                    maxHeight: '200px',
-                                    overflowY: 'auto'
-                                }}>
+                                <div className="ff-autocomplete-dropdown">
                                     {customers.map(c => (
                                         <div
                                             key={c.id}
-                                            style={{
-                                                padding: '0.75rem',
-                                                cursor: 'pointer',
-                                                borderBottom: '1px solid #f3f4f6',
-                                                transition: 'background-color 0.15s',
-                                                minHeight: TOUCH_MIN_SIZE,
-                                                display: 'flex',
-                                                alignItems: 'center'
-                                            }}
+                                            className="ff-autocomplete-item"
                                             onClick={() => {
                                                 setSelectedCustomer(c);
                                                 setCustomerSearch(`${c.first_name} ${c.last_name}`);
                                                 setCustomers([]);
                                             }}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
                                         >
                                             <div>
-                                                <p style={{
-                                                    fontWeight: '600',
-                                                    color: '#1f2937',
-                                                    marginBottom: '0.25rem',
-                                                    fontSize: screenWidth <= 1366 ? '0.875rem' : '0.9375rem'
-                                                }}>
+                                                <p style={{ fontWeight: '600', color: 'var(--color-dark)', marginBottom: '0.25rem' }}>
                                                     {c.first_name} {c.last_name}
                                                 </p>
-                                                <p style={{
-                                                    fontSize: screenWidth <= 1366 ? '0.75rem' : '0.8125rem',
-                                                    color: '#6b7280',
-                                                    margin: 0
-                                                }}>
+                                                <p style={{ fontSize: '0.8rem', color: 'var(--color-latte)', margin: 0 }}>
                                                     {c.email} {c.cedula && `(${c.cedula})`}
                                                 </p>
                                             </div>
@@ -604,21 +554,14 @@ const PuntosVenta = () => {
                             )}
                         </div>
                         <button
+                            className="ff-button ff-button-primary"
                             style={{
-                                width: TOUCH_MIN_SIZE,
-                                height: TOUCH_MIN_SIZE,
-                                backgroundColor: '#8b5cf6',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '8px',
-                                fontSize: '1.5rem',
-                                fontWeight: '300',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
+                                width: '45px',
+                                padding: 0,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                flexShrink: 0
+                                fontSize: '1.5rem'
                             }}
                             onClick={() => setShowCustomerModal(true)}
                             title="Agregar nuevo cliente"
@@ -629,29 +572,10 @@ const PuntosVenta = () => {
                 </div>
 
                 {/* Mesa/Tipo de Orden */}
-                <div style={{ marginBottom: '1rem' }}>
-                    <label style={{
-                        display: 'block',
-                        fontSize: screenWidth <= 1366 ? '0.875rem' : '0.875rem',
-                        fontWeight: '600',
-                        color: '#374151',
-                        marginBottom: '0.5rem'
-                    }}>
-                        Mesa / Tipo de Orden
-                    </label>
+                <div style={{ marginBottom: '1.5rem' }}>
+                    <label className="ff-label">Mesa / Tipo de Orden</label>
                     <select
-                        style={{
-                            width: '100%',
-                            padding: screenWidth <= 1366 ? '0.5rem' : '0.75rem',
-                            border: '2px solid #d1d5db',
-                            borderRadius: '8px',
-                            fontSize: screenWidth <= 1366 ? '0.875rem' : '0.9375rem',
-                            color: '#1f2937',
-                            backgroundColor: '#ffffff',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            minHeight: TOUCH_MIN_SIZE
-                        }}
+                        className="ff-search-input"
                         value={selectedTable}
                         onChange={(e) => setSelectedTable(e.target.value)}
                     >
@@ -671,61 +595,33 @@ const PuntosVenta = () => {
 
                 {/* Código de Descuento */}
                 <div>
-                    <label style={{
-                        display: 'block',
-                        fontSize: screenWidth <= 1366 ? '0.875rem' : '0.875rem',
-                        fontWeight: '600',
-                        color: '#374151',
-                        marginBottom: '0.5rem'
-                    }}>
-                        Código de Descuento
-                    </label>
+                    <label className="ff-label">Código de Descuento</label>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <input
                             type="text"
                             placeholder="Ingresa el código"
-                            style={{
-                                flex: 1,
-                                padding: screenWidth <= 1366 ? '0.5rem' : '0.75rem',
-                                border: '2px solid #d1d5db',
-                                borderRadius: '8px',
-                                fontSize: screenWidth <= 1366 ? '0.875rem' : '0.9375rem',
-                                transition: 'all 0.2s',
-                                minHeight: TOUCH_MIN_SIZE
-                            }}
+                            className="ff-search-input"
                             value={discountCode}
                             onChange={(e) => setDiscountCode(e.target.value)}
                         />
                         <button
-                            style={{
-                                padding: screenWidth <= 1366 ? '0 0.75rem' : '0 1.5rem',
-                                backgroundColor: '#fbbf24',
-                                border: 'none',
-                                borderRadius: '8px',
-                                color: '#78350f',
-                                fontWeight: '600',
-                                fontSize: screenWidth <= 1366 ? '0.875rem' : '0.9375rem',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                whiteSpace: 'nowrap',
-                                minHeight: TOUCH_MIN_SIZE,
-                                minWidth: TOUCH_MIN_SIZE
-                            }}
+                            className="ff-button ff-button-secondary"
+                            style={{ whiteSpace: 'nowrap' }}
                             onClick={handleApplyDiscount}
                         >
-                            {screenWidth <= 1366 ? 'Aplicar' : 'Aplicar'}
+                            Aplicar
                         </button>
                     </div>
                     {appliedDiscount && (
                         <div style={{
                             marginTop: '0.75rem',
                             padding: '0.75rem',
-                            backgroundColor: '#d1fae5',
-                            border: '2px solid #86efac',
-                            borderRadius: '8px',
-                            fontSize: screenWidth <= 1366 ? '0.75rem' : '0.875rem',
+                            backgroundColor: 'var(--color-froth)',
+                            border: '1px solid var(--color-chai)',
+                            borderRadius: '4px',
+                            fontSize: '0.9rem',
                             fontWeight: '600',
-                            color: '#065f46'
+                            color: 'var(--color-dark)'
                         }}>
                             Descuento aplicado: {appliedDiscount.name}
                         </div>
@@ -734,81 +630,35 @@ const PuntosVenta = () => {
             </div>
 
             {/* Resumen de productos */}
-            <div style={{ marginBottom: '1rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '10px' }}>
-                <p style={{ fontSize: screenWidth <= 1366 ? '0.875rem' : '1rem', fontWeight: 'bold', color: '#1f2937' }}>
+            <div style={{ marginBottom: '1rem', borderBottom: '1px solid var(--color-froth)', paddingBottom: '10px' }}>
+                <p style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-dark)', fontFamily: 'var(--font-serif)' }}>
                     Cliente: {selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : 'CONSUMIDOR FINAL'}
                 </p>
-                <p style={{ fontSize: screenWidth <= 1366 ? '0.75rem' : '0.9rem', color: '#4b5563' }}>
+                <p style={{ fontSize: '0.9rem', color: 'var(--color-latte)' }}>
                     Mesa/Tipo: {selectedTable === 'takeout' ? 'Para Llevar' : selectedTable || 'Mesa Genérica (DINE-IN)'}
                 </p>
             </div>
 
-            <div style={{
-                maxHeight: screenWidth <= 1366 ? '40vh' : '30vh',
-                overflowY: 'auto',
-                marginBottom: '1rem',
-                fontSize: screenWidth <= 1366 ? '0.875rem' : '0.9rem'
-            }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead style={{ backgroundColor: '#f3f4f6' }}>
+            {/* Tabla de Productos */}
+            <div className="ff-table-container " style={{ maxHeight: '30vh', overflowY: 'auto', marginBottom: '1.5rem' }}>
+                <table className="ff-table">
+                    <thead>
                         <tr>
-                            <th style={{
-                                textAlign: 'left',
-                                padding: screenWidth <= 1366 ? '0.25rem' : '0.5rem',
-                                fontSize: screenWidth <= 1366 ? '0.75rem' : '0.8rem',
-                                color: '#4b5563'
-                            }}>PRODUCTO</th>
-                            <th style={{
-                                width: '15%',
-                                textAlign: 'right',
-                                padding: screenWidth <= 1366 ? '0.25rem' : '0.5rem',
-                                fontSize: screenWidth <= 1366 ? '0.75rem' : '0.8rem',
-                                color: '#4b5563'
-                            }}>CANT.</th>
-                            <th style={{
-                                width: '25%',
-                                textAlign: 'right',
-                                padding: screenWidth <= 1366 ? '0.25rem' : '0.5rem',
-                                fontSize: screenWidth <= 1366 ? '0.75rem' : '0.8rem',
-                                color: '#4b5563'
-                            }}>TOTAL</th>
+                            <th style={{ textAlign: 'left' }}>PRODUCTO</th>
+                            <th style={{ textAlign: 'right', width: '15%' }}>CANT.</th>
+                            <th style={{ textAlign: 'right', width: '25%' }}>TOTAL</th>
                         </tr>
                     </thead>
                     <tbody>
                         {cart.map((item, index) => (
-                            <React.Fragment key={index}>
-                                <tr>
-                                    <td style={{
-                                        padding: screenWidth <= 1366 ? '0.25rem 0' : '0.5rem 0',
-                                        fontSize: screenWidth <= 1366 ? '0.875rem' : '0.9rem'
-                                    }}>
-                                        <div>
-                                            {item.name}
-                                            {item.note && (
-                                                <div style={{
-                                                    fontSize: screenWidth <= 1366 ? '0.75rem' : '0.8rem',
-                                                    color: '#6b7280',
-                                                    fontStyle: 'italic',
-                                                    marginTop: '2px'
-                                                }}>
-                                                    ({item.note})
-                                                </div>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td style={{
-                                        textAlign: 'right',
-                                        fontSize: screenWidth <= 1366 ? '0.875rem' : '0.9rem'
-                                    }}>{item.quantity}</td>
-                                    <td style={{
-                                        textAlign: 'right',
-                                        fontSize: screenWidth <= 1366 ? '0.875rem' : '0.9rem',
-                                        fontWeight: '600'
-                                    }}>
-                                        {formatCurrency(item.price * item.quantity)}
-                                    </td>
-                                </tr>
-                            </React.Fragment>
+                            <tr key={index}>
+                                <td>
+                                    <div style={{ fontWeight: '500' }}>{item.name}</div>
+                                    {item.note && <div style={{ fontSize: '0.8rem', color: 'var(--color-latte)', fontStyle: 'italic' }}>({item.note})</div>}
+                                </td>
+                                <td style={{ textAlign: 'right' }}>{item.quantity}</td>
+                                <td style={{ textAlign: 'right' }}>{formatCurrency(item.price * item.quantity)}</td>
+                            </tr>
                         ))}
                     </tbody>
                 </table>
@@ -818,25 +668,27 @@ const PuntosVenta = () => {
             <div style={{
                 marginTop: '1rem',
                 padding: '1rem',
-                backgroundColor: '#eef2ff',
+                backgroundColor: 'var(--color-creme)',
                 borderRadius: '8px',
-                border: '1px solid #c7d2fe'
+                border: '1px solid var(--color-froth)'
             }}>
                 <h4 style={{
                     margin: '0 0 0.5rem 0',
-                    color: '#3730a3',
-                    fontSize: screenWidth <= 1366 ? '0.9rem' : '1rem'
+                    color: 'var(--color-dark)',
+                    fontSize: screenWidth <= 1366 ? '0.9rem' : '1rem',
+                    fontFamily: 'var(--font-serif)'
                 }}>
-                    🧮 Calculadora de Vuelto
+                    Calculadora de Vuelto
                 </h4>
 
                 <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#374151' }}>
+                    <label className="ff-label">
                         Ingreso Manual:
                     </label>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <input
                             type="number"
+                            className="ff-search-input"
                             value={inputCash}
                             onChange={(e) => {
                                 const val = e.target.value;
@@ -844,27 +696,17 @@ const PuntosVenta = () => {
                                 setCashGiven(val ? parseFloat(val) : null);
                             }}
                             placeholder="0.00"
-                            style={{
-                                flex: 1,
-                                padding: '0.5rem',
-                                borderRadius: '6px',
-                                border: '1px solid #d1d5db',
-                                fontSize: '1rem'
-                            }}
                         />
                         <button
+                            className="ff-button ff-button-secondary"
                             onClick={() => {
                                 setCashGiven(null);
                                 setInputCash('');
                             }}
                             style={{
-                                padding: '0.5rem 1rem',
                                 backgroundColor: '#fee2e2',
                                 color: '#b91c1c',
-                                border: '1px solid #ef4444',
-                                borderRadius: '6px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer'
+                                border: '1px solid #ef4444'
                             }}
                         >
                             Borrar
@@ -876,22 +718,13 @@ const PuntosVenta = () => {
                     {[1, 2, 5, 10, 20, 50, 100].map(bill => (
                         <button
                             key={bill}
+                            className="ff-button ff-button-secondary"
                             onClick={() => {
                                 const newVal = (cashGiven || 0) + bill;
                                 setCashGiven(newVal);
                                 setInputCash(newVal.toString());
                             }}
-                            style={{
-                                padding: '0.5rem',
-                                backgroundColor: '#ffffff',
-                                color: '#3730a3',
-                                border: '1px solid #c7d2fe',
-                                borderRadius: '6px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                minHeight: TOUCH_MIN_SIZE
-                            }}
+                            style={{ padding: '0.5rem', minHeight: 'unset' }}
                         >
                             + ${bill}
                         </button>
@@ -901,29 +734,29 @@ const PuntosVenta = () => {
                 {cashGiven !== null && (
                     <div style={{
                         padding: '0.75rem',
-                        backgroundColor: '#ffffff',
+                        backgroundColor: 'var(--color-white)',
                         borderRadius: '6px',
-                        border: '1px solid #e0e7ff',
+                        border: '1px solid var(--color-froth)',
                         textAlign: 'center'
                     }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                            <span style={{ color: '#6b7280' }}>Total a Pagar:</span>
+                            <span style={{ color: 'var(--color-latte)' }}>Total a Pagar:</span>
                             <span style={{ fontWeight: 'bold' }}>{formatCurrency(calculateTotal)}</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                            <span style={{ color: '#6b7280' }}>Efectivo Recibido:</span>
-                            <span style={{ fontWeight: 'bold', color: '#4f46e5' }}>{formatCurrency(cashGiven)}</span>
+                            <span style={{ color: 'var(--color-latte)' }}>Efectivo Recibido:</span>
+                            <span style={{ fontWeight: 'bold', color: 'var(--color-cinna)' }}>{formatCurrency(cashGiven)}</span>
                         </div>
                         <div style={{
                             display: 'flex',
                             justifyContent: 'space-between',
                             marginTop: '0.5rem',
                             paddingTop: '0.5rem',
-                            borderTop: '1px dashed #c7d2fe',
+                            borderTop: '1px dashed var(--color-chai)',
                             fontSize: '1.2rem',
                             fontWeight: '800'
                         }}>
-                            <span style={{ color: '#3730a3' }}>VUELTO:</span>
+                            <span style={{ color: 'var(--color-dark)', fontFamily: 'var(--font-serif)' }}>VUELTO:</span>
                             <span style={{ color: (cashGiven - calculateTotal) < 0 ? '#ef4444' : '#059669' }}>
                                 {formatCurrency(cashGiven - calculateTotal)}
                             </span>
@@ -937,13 +770,14 @@ const PuntosVenta = () => {
                 )}
             </div>
 
-            <div style={{ borderTop: '2px solid #e5e7eb', paddingTop: '1rem', marginTop: '1rem' }}>
+            {/* Totales y Botones de Acción */}
+            <div style={{ borderTop: '2px solid var(--color-froth)', paddingTop: '1rem', marginTop: '1rem' }}>
                 <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
                     marginBottom: '0.5rem',
                     fontSize: screenWidth <= 1366 ? '0.875rem' : '1rem',
-                    color: '#6b7280'
+                    color: 'var(--color-latte)'
                 }}>
                     <span>Subtotal</span>
                     <span>{formatCurrency(calculateSubtotal)}</span>
@@ -954,7 +788,7 @@ const PuntosVenta = () => {
                         display: 'flex',
                         justifyContent: 'space-between',
                         marginBottom: '0.5rem',
-                        color: '#dc2626',
+                        color: 'var(--color-cinna)',
                         fontSize: screenWidth <= 1366 ? '0.875rem' : '1rem'
                     }}>
                         <span>Descuento</span>
@@ -967,14 +801,33 @@ const PuntosVenta = () => {
                     justifyContent: 'space-between',
                     fontSize: screenWidth <= 1366 ? '1.25rem' : '1.5rem',
                     fontWeight: 'bold',
-                    borderTop: '1px solid #ccc',
-                    paddingTop: '0.75rem'
+                    borderTop: '1px solid var(--color-froth)',
+                    paddingTop: '0.75rem',
+                    fontFamily: 'var(--font-serif)',
+                    color: 'var(--color-dark)'
                 }}>
                     <span>Total Final</span>
-                    <span style={{ color: '#059669' }}>{formatCurrency(calculateTotal)}</span>
+                    <span>{formatCurrency(calculateTotal)}</span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.5rem' }}>
+                    <button
+                        className="ff-button ff-button-secondary"
+                        onClick={() => setShowReviewModal(false)}
+                        disabled={processingOrder}
+                    >
+                        Volver / Editar
+                    </button>
+                    <button
+                        className="ff-button ff-button-primary"
+                        onClick={finalPlaceOrder}
+                        disabled={processingOrder}
+                    >
+                        {processingOrder ? 'Procesando...' : 'CONFIRMAR Y PAGAR'}
+                    </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 
     // Modal para agregar nota
@@ -983,6 +836,7 @@ const PuntosVenta = () => {
             position: 'fixed',
             top: 0,
             left: 0,
+
             right: 0,
             bottom: 0,
             backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -1089,34 +943,37 @@ const PuntosVenta = () => {
 
     // Renderizar vista con botones abajo (para pantallas <= 1366px - menos de 16 pulgadas)
     const renderCompactView = () => (
-        <div style={{
+        <div className="fast-food-layout" style={{
             height: '100dvh', // Usar dvh para móviles/tablets
             maxHeight: '-webkit-fill-available', // Fallback iOS
             display: 'flex',
             flexDirection: 'column',
-            backgroundColor: '#f9fafb',
+            backgroundColor: 'var(--color-creme)', // Boutique bg
             overflow: 'hidden',
             position: 'fixed', // Fijar viewport
             top: 0,
             left: 0,
             right: 0,
-            bottom: 0
+            bottom: 0,
+            fontFamily: 'var(--font-sans)',
+            color: 'var(--color-dark)'
         }}>
             {/* Header */}
             <div style={{
-                backgroundColor: '#ffffff',
-                borderBottom: '2px solid #e5e7eb',
+                backgroundColor: 'var(--color-white)',
+                borderBottom: '2px solid var(--color-cinna)',
                 padding: '0.75rem',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.05)',
                 flexShrink: 0,
                 zIndex: 10
             }}>
                 <h1 style={{
                     fontSize: screenWidth <= 768 ? '1.25rem' : '1.5rem',
                     fontWeight: '700',
-                    color: '#111827',
+                    color: 'var(--color-dark)',
                     margin: 0,
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    fontFamily: 'var(--font-serif)' // Boutique font
                 }}>
                     Punto de Venta
                 </h1>
@@ -1135,30 +992,19 @@ const PuntosVenta = () => {
                     {/* Filtros */}
                     <div style={{
                         padding: '0.75rem',
-                        borderBottom: '1px solid #e5e7eb',
-                        backgroundColor: '#fafafa',
+                        borderBottom: '1px solid var(--color-froth)',
+                        backgroundColor: 'var(--color-white)',
                         flexShrink: 0
                     }}>
-                        <div style={{
+                        <div className="ff-tabs-container" style={{
                             display: 'flex',
                             overflowX: 'auto',
                             gap: '0.5rem',
-                            paddingBottom: '0.25rem'
+                            paddingBottom: '0.25rem',
+                            justifyContent: 'flex-start' // Override center for scroll
                         }}>
                             <button
-                                style={{
-                                    padding: '0.5rem 1rem',
-                                    borderRadius: '6px',
-                                    border: selectedCategory === 'all' ? 'none' : '2px solid #d1d5db',
-                                    backgroundColor: selectedCategory === 'all' ? '#3b82f6' : '#ffffff',
-                                    color: selectedCategory === 'all' ? '#ffffff' : '#374151',
-                                    fontWeight: '600',
-                                    fontSize: '0.875rem',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    whiteSpace: 'nowrap',
-                                    minHeight: TOUCH_MIN_SIZE
-                                }}
+                                className={`ff-tab ${selectedCategory === 'all' ? 'active' : ''}`}
                                 onClick={() => setSelectedCategory('all')}
                             >
                                 Todos
@@ -1166,19 +1012,7 @@ const PuntosVenta = () => {
                             {categories.map(cat => (
                                 <button
                                     key={cat.id}
-                                    style={{
-                                        padding: '0.5rem 1rem',
-                                        borderRadius: '6px',
-                                        border: selectedCategory === cat.id ? 'none' : '2px solid #d1d5db',
-                                        backgroundColor: selectedCategory === cat.id ? '#3b82f6' : '#ffffff',
-                                        color: selectedCategory === cat.id ? '#ffffff' : '#374151',
-                                        fontWeight: '600',
-                                        fontSize: '0.875rem',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        whiteSpace: 'nowrap',
-                                        minHeight: TOUCH_MIN_SIZE
-                                    }}
+                                    className={`ff-tab ${selectedCategory === cat.id ? 'active' : ''}`}
                                     onClick={() => setSelectedCategory(cat.id)}
                                 >
                                     {cat.name.length > 12 ? cat.name.substring(0, 10) + '...' : cat.name}
@@ -1192,9 +1026,9 @@ const PuntosVenta = () => {
                         flex: 1,
                         overflowY: 'auto',
                         padding: '0.75rem',
-                        backgroundColor: '#f9fafb'
+                        backgroundColor: 'var(--color-creme)'
                     }}>
-                        <div style={{
+                        <div className="ff-card-grid-compact" style={{
                             display: 'grid',
                             gridTemplateColumns: screenWidth <= 768 ?
                                 'repeat(auto-fill, minmax(140px, 1fr))' :
@@ -1676,28 +1510,28 @@ const PuntosVenta = () => {
         </div>
     );
 
-    // Renderizar vista de escritorio dividida (para pantallas > 1366px - más de 16 pulgadas)
+    // Renderizar vista de escritorio dividida (para pantallas > 1366px)
     const renderDesktopView = () => (
-        <div style={{
+        <div className="fast-food-layout" style={{
             height: '100vh',
             display: 'flex',
             flexDirection: 'column',
-            backgroundColor: '#f9fafb',
             overflow: 'hidden'
         }}>
             {/* Header */}
             <div style={{
-                backgroundColor: '#ffffff',
-                borderBottom: '2px solid #e5e7eb',
+                backgroundColor: 'var(--color-white)',
+                borderBottom: '2px solid var(--color-cinna)',
                 padding: '1rem 1.5rem',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
+                boxShadow: 'var(--shadow-soft)'
             }}>
                 <h1 style={{
                     fontSize: '1.75rem',
                     fontWeight: '700',
-                    color: '#111827',
+                    color: 'var(--color-dark)',
                     margin: 0,
-                    letterSpacing: '-0.025em'
+                    letterSpacing: '-0.025em',
+                    fontFamily: 'var(--font-serif)'
                 }}>
                     Punto de Venta
                 </h1>
@@ -1714,38 +1548,20 @@ const PuntosVenta = () => {
                     flex: '1 1 60%',
                     display: 'flex',
                     flexDirection: 'column',
-                    backgroundColor: '#ffffff',
-                    borderRight: '2px solid #e5e7eb',
+                    backgroundColor: 'var(--color-white)',
+                    borderRight: '2px solid var(--color-froth)',
                     minHeight: 'auto'
                 }}>
                     {/* Filtros */}
                     <div style={{
                         padding: '1rem',
-                        borderBottom: '1px solid #e5e7eb',
-                        backgroundColor: '#fafafa',
+                        borderBottom: '1px solid var(--color-froth)',
+                        backgroundColor: 'var(--color-creme)',
                         flexShrink: 0
                     }}>
-                        <div style={{
-                            display: 'flex',
-                            gap: '0.75rem',
-                            overflowX: 'auto',
-                            paddingBottom: '0.25rem'
-                        }}>
+                        <div className="ff-tabs-container" style={{ margin: 0, border: 'none' }}>
                             <button
-                                style={{
-                                    padding: '0.625rem 1.25rem',
-                                    borderRadius: '6px',
-                                    border: selectedCategory === 'all' ? 'none' : '2px solid #d1d5db',
-                                    backgroundColor: selectedCategory === 'all' ? '#3b82f6' : '#ffffff',
-                                    color: selectedCategory === 'all' ? '#ffffff' : '#374151',
-                                    fontWeight: '600',
-                                    fontSize: '0.9375rem',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    whiteSpace: 'nowrap',
-                                    boxShadow: selectedCategory === 'all' ? '0 2px 4px rgba(59, 130, 246, 0.3)' : 'none',
-                                    minHeight: TOUCH_MIN_SIZE
-                                }}
+                                className={`ff-tab ${selectedCategory === 'all' ? 'active' : ''}`}
                                 onClick={() => setSelectedCategory('all')}
                             >
                                 Todos los productos
@@ -1753,20 +1569,7 @@ const PuntosVenta = () => {
                             {categories.map(cat => (
                                 <button
                                     key={cat.id}
-                                    style={{
-                                        padding: '0.625rem 1.25rem',
-                                        borderRadius: '6px',
-                                        border: selectedCategory === cat.id ? 'none' : '2px solid #d1d5db',
-                                        backgroundColor: selectedCategory === cat.id ? '#3b82f6' : '#ffffff',
-                                        color: selectedCategory === cat.id ? '#ffffff' : '#374151',
-                                        fontWeight: '600',
-                                        fontSize: '0.9375rem',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        whiteSpace: 'nowrap',
-                                        boxShadow: selectedCategory === cat.id ? '0 2px 4px rgba(59, 130, 246, 0.3)' : 'none',
-                                        minHeight: TOUCH_MIN_SIZE
-                                    }}
+                                    className={`ff-tab ${selectedCategory === cat.id ? 'active' : ''}`}
                                     onClick={() => setSelectedCategory(cat.id)}
                                 >
                                     {cat.name}
@@ -1780,36 +1583,21 @@ const PuntosVenta = () => {
                         flex: 1,
                         overflowY: 'auto',
                         padding: '1.5rem',
-                        backgroundColor: '#f9fafb'
+                        backgroundColor: 'var(--color-froth)'
                     }}>
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                            gap: '1rem'
+                        <div className="ff-card-grid-compact" style={{
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))'
                         }}>
                             {filteredProducts.map(product => (
                                 <div
                                     key={product.id}
+                                    className="ff-card"
                                     style={{
-                                        backgroundColor: '#ffffff',
-                                        borderRadius: '10px',
-                                        overflow: 'hidden',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        border: '1px solid #e5e7eb',
-                                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                                        padding: 0,
+                                        display: 'flex',
+                                        flexDirection: 'column'
                                     }}
                                     onClick={() => addToCart(product)}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(-4px)';
-                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-                                        e.currentTarget.style.borderColor = '#3b82f6';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-                                        e.currentTarget.style.borderColor = '#e5e7eb';
-                                    }}
                                 >
                                     <div style={{
                                         height: '140px',
@@ -1817,7 +1605,8 @@ const PuntosVenta = () => {
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        padding: '0.75rem'
+                                        padding: '0.75rem',
+                                        borderBottom: '1px solid var(--color-froth)'
                                     }}>
                                         {product.image ? (
                                             <img
@@ -1831,7 +1620,7 @@ const PuntosVenta = () => {
                                             />
                                         ) : (
                                             <span style={{
-                                                color: '#94a3b8',
+                                                color: 'var(--color-latte)',
                                                 fontSize: '0.75rem',
                                                 textAlign: 'center'
                                             }}>
@@ -1839,22 +1628,20 @@ const PuntosVenta = () => {
                                             </span>
                                         )}
                                     </div>
-                                    <div style={{ padding: '0.875rem' }}>
+                                    <div style={{ padding: '0.875rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                                         <h3 style={{
-                                            fontSize: '0.9375rem',
+                                            fontSize: '1rem',
                                             fontWeight: '600',
-                                            color: '#1f2937',
+                                            color: 'var(--color-dark)',
                                             marginBottom: '0.375rem',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap'
+                                            fontFamily: 'var(--font-serif)'
                                         }}>
                                             {product.name}
                                         </h3>
                                         <p style={{
                                             fontSize: '1.125rem',
                                             fontWeight: '700',
-                                            color: '#059669',
+                                            color: 'var(--color-cinna)',
                                             margin: 0
                                         }}>
                                             ${product.price}
@@ -1869,24 +1656,26 @@ const PuntosVenta = () => {
                 {/* Panel Derecho: Orden Actual */}
                 <div style={{
                     flex: '0 0 400px',
-                    backgroundColor: '#ffffff',
+                    backgroundColor: 'var(--color-white)',
                     display: 'flex',
                     flexDirection: 'column',
-                    boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.05)',
-                    flexShrink: 0
+                    boxShadow: '-2px 0 15px rgba(0, 0, 0, 0.05)',
+                    flexShrink: 0,
+                    zIndex: 20
                 }}>
                     {/* Header de Orden Actual */}
                     <div style={{
                         padding: '1rem 1.5rem',
-                        backgroundColor: '#f3f4f6',
+                        backgroundColor: 'var(--color-froth)',
                         flexShrink: 0,
-                        borderBottom: '1px solid #e5e7eb'
+                        borderBottom: '1px solid var(--color-chai)'
                     }}>
                         <h3 style={{
-                            fontSize: '1.125rem',
+                            fontSize: '1.25rem',
                             fontWeight: '700',
-                            color: '#111827',
-                            margin: 0
+                            color: 'var(--color-dark)',
+                            margin: 0,
+                            fontFamily: 'var(--font-serif)'
                         }}>
                             Orden Actual
                         </h3>
@@ -1898,19 +1687,20 @@ const PuntosVenta = () => {
                         overflowY: 'auto',
                         padding: '1.5rem',
                         display: 'flex',
-                        flexDirection: 'column'
+                        flexDirection: 'column',
+                        backgroundColor: 'var(--color-white)'
                     }}>
                         {cart.length === 0 ? (
                             <div style={{
                                 textAlign: 'center',
                                 padding: '3rem 1rem',
-                                color: '#9ca3af',
-                                fontSize: '0.875rem'
+                                color: 'var(--color-latte)',
+                                fontSize: '0.9rem'
                             }}>
                                 <p style={{ margin: 0 }}>No hay productos en el carrito</p>
                                 <p style={{
                                     margin: '0.5rem 0 0 0',
-                                    fontSize: '0.8125rem'
+                                    fontSize: '0.85rem'
                                 }}>
                                     Selecciona productos para comenzar
                                 </p>
@@ -1925,14 +1715,14 @@ const PuntosVenta = () => {
                                 {cart.map((item, index) => (
                                     <div
                                         key={index}
+                                        className="ff-card"
                                         style={{
-                                            backgroundColor: '#ffffff',
-                                            border: '1px solid #e5e7eb',
-                                            borderRadius: '10px',
                                             padding: '1rem',
                                             display: 'flex',
                                             flexDirection: 'column',
-                                            gap: '0.75rem'
+                                            gap: '0.75rem',
+                                            border: '1px solid var(--color-froth)',
+                                            boxShadow: 'none'
                                         }}
                                     >
                                         {/* Información del producto */}

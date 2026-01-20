@@ -1,11 +1,10 @@
 import React from 'react';
-import BarraNavegacion from '../../comun/BarraNavegacion';
 import BarraLateralFastFood from './BarraLateralFastFood';
+import './FastFood.css';
 
 const DisenoFastFood = ({ children }) => {
     return (
-        <div className="layout">
-            <BarraNavegacion />
+        <div className="fast-food-layout">
             <div className="layout-body">
                 <BarraLateralFastFood />
                 <main className="main-content">
