@@ -3,7 +3,7 @@ import React, { useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 
-const BarraLateralFastFood = () => {
+const BarraLateralLuxe = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { logout } = useContext(AuthContext);
@@ -23,26 +23,26 @@ const BarraLateralFastFood = () => {
                 LUXURY BOUTIQUE
             </div>
             <ul className="sidebar-nav">
-                <li className={isActive('/fast-food')}>
-                    <Link to="/fast-food">
+                <li className={isActive('/luxe')}>
+                    <Link to="/luxe">
                         <i className="bi bi-grid" style={{ marginRight: '10px' }}></i>
                         Panel Principal
                     </Link>
                 </li>
-                <li className={isActive('/fast-food/pos')}>
-                    <Link to="/fast-food/pos">
+                <li className={isActive('/luxe/pos')}>
+                    <Link to="/luxe/pos">
                         <i className="bi bi-shop" style={{ marginRight: '10px' }}></i>
                         Punto de Venta
                     </Link>
                 </li>
-                <li className={isActive('/fast-food/orders')}>
-                    <Link to="/fast-food/orders">
+                <li className={isActive('/luxe/orders')}>
+                    <Link to="/luxe/orders">
                         <i className="bi bi-receipt" style={{ marginRight: '10px' }}></i>
                         Órdenes
                     </Link>
                 </li>
-                <li className={isActive('/fast-food/inventory')}>
-                    <Link to="/fast-food/inventory">
+                <li className={isActive('/luxe/inventory')}>
+                    <Link to="/luxe/inventory">
                         <i className="bi bi-box-seam" style={{ marginRight: '10px' }}></i>
                         Inventario
                     </Link>
@@ -55,8 +55,8 @@ const BarraLateralFastFood = () => {
                     </Link>
                 </li>
                 */}
-                <li className={isActive('/fast-food/shift')}>
-                    <Link to="/fast-food/shift">
+                <li className={isActive('/luxe/shift')}>
+                    <Link to="/luxe/shift">
                         <i className="bi bi-cash-coin" style={{ marginRight: '10px' }}></i>
                         Caja (Turnos)
                     </Link>
@@ -74,4 +74,4 @@ const BarraLateralFastFood = () => {
     );
 };
 
-export default BarraLateralFastFood;
+export default BarraLateralLuxe;

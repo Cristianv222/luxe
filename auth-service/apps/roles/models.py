@@ -4,7 +4,7 @@ class Role(models.Model):
     """Roles del sistema"""
     ROLE_CHOICES = [
         ('SUPER_ADMIN', 'Super Administrador'),
-        ('ADMIN_FAST_FOOD', 'Administrador Comida Rápida'),
+        ('ADMIN_LUXE', 'Administrador Luxe'),
         ('ADMIN_RESTAURANT', 'Administrador Restaurante'),
         ('ADMIN_HOTEL', 'Administrador Hotel'),
         ('ADMIN_POOL', 'Administrador Piscinas'),
@@ -33,12 +33,12 @@ class Role(models.Model):
 class Permission(models.Model):
     """Permisos específicos"""
     PERMISSION_CHOICES = [
-        # Fast Food
-        ('fast_food.view_menu', 'Ver menú comida rápida'),
-        ('fast_food.manage_menu', 'Gestionar menú comida rápida'),
-        ('fast_food.view_orders', 'Ver pedidos comida rápida'),
-        ('fast_food.manage_orders', 'Gestionar pedidos comida rápida'),
-        ('fast_food.view_reports', 'Ver reportes comida rápida'),
+        # Luxe
+        ('luxe.view_menu', 'Ver menú luxe'),
+        ('luxe.manage_menu', 'Gestionar menú luxe'),
+        ('luxe.view_orders', 'Ver pedidos luxe'),
+        ('luxe.manage_orders', 'Gestionar pedidos luxe'),
+        ('luxe.view_reports', 'Ver reportes luxe'),
         
         # Restaurant
         ('restaurant.view_menu', 'Ver menú restaurante'),
@@ -51,7 +51,7 @@ class Permission(models.Model):
         
         # Reporting
         ('reporting.view_all', 'Ver todos los reportes'),
-        ('reporting.view_fast_food', 'Ver reportes comida rápida'),
+        ('reporting.view_luxe', 'Ver reportes luxe'),
         ('reporting.view_restaurant', 'Ver reportes restaurante'),
         ('reporting.export', 'Exportar reportes'),
     ]

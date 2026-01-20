@@ -289,6 +289,7 @@ const Inventario = () => {
                                             <th>Precio</th>
                                             <th>Stock</th>
                                             <th>Disponible</th>
+                                            <th>Destacado</th>
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
@@ -335,6 +336,51 @@ const Inventario = () => {
                                                         <span className={`status-badge ${product.is_available ? 'completed' : 'pending'}`}>
                                                             {product.is_available ? 'Sí' : 'No'}
                                                         </span>
+                                                    </td>
+                                                    <td>
+                                                        <button
+                                                            onClick={async () => {
+                                                                try {
+                                                                    const formData = new FormData();
+                                                                    formData.append('is_featured', !product.is_featured);
+                                                                    await api.patch(`/api/menu/products/${product.id}/`, formData, {
+                                                                        baseURL: process.env.REACT_APP_LUXE_SERVICE,
+                                                                        headers: { 'Content-Type': 'multipart/form-data' },
+                                                                    });
+                                                                    fetchProducts();
+                                                                } catch (err) {
+                                                                    console.error('Error toggling featured:', err);
+                                                                    alert('Error al actualizar destacado');
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                background: 'transparent',
+                                                                border: `2px solid ${product.is_featured ? '#E8C4C4' : '#E4D8CB'}`,
+                                                                borderRadius: '50%',
+                                                                cursor: 'pointer',
+                                                                width: '40px',
+                                                                height: '40px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                padding: 0,
+                                                                transition: 'all 0.3s ease',
+                                                                backgroundColor: product.is_featured ? '#FAE4E4' : 'transparent'
+                                                            }}
+                                                            title={product.is_featured ? 'Quitar de destacados' : 'Marcar como destacado'}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.transform = 'scale(1.1)';
+                                                                e.currentTarget.style.borderColor = '#E8C4C4';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.transform = 'scale(1)';
+                                                                e.currentTarget.style.borderColor = product.is_featured ? '#E8C4C4' : '#E4D8CB';
+                                                            }}
+                                                        >
+                                                            <svg width="20" height="20" viewBox="0 0 24 24" fill={product.is_featured ? '#E8C4C4' : 'none'} stroke={product.is_featured ? '#CFB3A9' : '#A09086'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                                            </svg>
+                                                        </button>
                                                     </td>
                                                     <td>
                                                         <button

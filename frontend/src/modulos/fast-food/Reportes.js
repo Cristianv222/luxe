@@ -20,7 +20,7 @@ import { formatCurrency, formatDate, getValidDate, generateDetailedPDF, getEcuad
 // ====================================================================
 const COLORS = ['#CFB3A9', '#A09086', '#D8C3B9', '#2C2C2C', '#E8C4C4', '#8B7355', '#D2B48C', '#B0C4DE']; // Boutique Palette
 
-const getFastFoodBaseURL = () => {
+const getLuxeBaseURL = () => {
     return process.env.REACT_APP_LUXE_SERVICE || 'http://localhost/api/luxe';
 };
 
@@ -106,7 +106,7 @@ const Reportes = () => {
     const fetchDashboardStats = useCallback(async () => {
         try {
             const response = await api.get('/api/pos/daily-summaries/dashboard/', {
-                baseURL: getFastFoodBaseURL(),
+                baseURL: getLuxeBaseURL(),
                 timeout: 20000
             });
             setDashboardStats(response.data);
@@ -122,7 +122,7 @@ const Reportes = () => {
         if (!dateStr) return;
         try {
             const response = await api.get(`/api/pos/shifts/by_date/?date=${dateStr}`, {
-                baseURL: getFastFoodBaseURL()
+                baseURL: getLuxeBaseURL()
             });
             if (response.data && response.data.shifts) {
                 setDayShifts(response.data.shifts);
@@ -140,7 +140,7 @@ const Reportes = () => {
         if (!shiftId) return;
         try {
             const response = await api.get(`/api/pos/shifts/${shiftId}/report/`, {
-                baseURL: getFastFoodBaseURL()
+                baseURL: getLuxeBaseURL()
             });
             const reportData = response.data;
             // Add flag to satisfy reportUtils check
@@ -158,7 +158,7 @@ const Reportes = () => {
     const checkCurrentShift = useCallback(async () => {
         try {
             const response = await api.get('/api/pos/shifts/current/', {
-                baseURL: getFastFoodBaseURL()
+                baseURL: getLuxeBaseURL()
             });
             // La respuesta es { shift: { ... } } o { message: "...", shift: null }
             setCurrentShift(response.data.shift);
@@ -184,7 +184,7 @@ const Reportes = () => {
                 manager_name: managerName,
                 opening_cash: parseFloat(openingCash) || 0,
                 notes: shiftNotes || 'Apertura Simplificada'
-            }, { baseURL: getFastFoodBaseURL() });
+            }, { baseURL: getLuxeBaseURL() });
 
             await checkCurrentShift();
             setShowShiftModal(false);
@@ -213,12 +213,12 @@ const Reportes = () => {
             await api.post(`/api/pos/shifts/${currentShift.id}/close/`, {
                 closing_cash: parseFloat(closingCash) || 0,
                 closing_notes: 'Cierre desde Reportes'
-            }, { baseURL: getFastFoodBaseURL() });
+            }, { baseURL: getLuxeBaseURL() });
 
             // Reporte y PDF
             try {
                 const reportResponse = await api.get(`/api/pos/shifts/${currentShift.id}/report/`, {
-                    baseURL: getFastFoodBaseURL()
+                    baseURL: getLuxeBaseURL()
                 });
 
                 const shiftData = reportResponse.data;
@@ -260,7 +260,7 @@ const Reportes = () => {
             console.log('Fecha de hoy (cliente):', today.toLocaleDateString('es-MX'), today.toISOString());
 
             const listResponse = await api.get('/api/pos/daily-summaries/', {
-                baseURL: getFastFoodBaseURL(),
+                baseURL: getLuxeBaseURL(),
                 params: { ordering: '-date', limit: 30 },
                 timeout: 10000
             });
@@ -298,7 +298,7 @@ const Reportes = () => {
                 console.log('No se encontró reporte de hoy en lista, intentando endpoint /today/');
                 try {
                     const todayResponse = await api.get('/api/pos/daily-summaries/today/', {
-                        baseURL: getFastFoodBaseURL(),
+                        baseURL: getLuxeBaseURL(),
                         timeout: 5000
                     });
                     todayReport = todayResponse.data;
@@ -354,7 +354,7 @@ const Reportes = () => {
             let response;
             if (isShift) {
                 response = await api.get(`/api/pos/shifts/${reportId}/report/`, {
-                    baseURL: getFastFoodBaseURL()
+                    baseURL: getLuxeBaseURL()
                 });
                 // Normalizar datos del turno para que coincidan con la estructura esperada por el UI y PDF
                 const shiftData = response.data;
@@ -371,7 +371,7 @@ const Reportes = () => {
                 setCurrentReport(normalizedReport);
             } else {
                 response = await api.get(`/api/pos/daily-summaries/${reportId}/detail_with_orders/`, {
-                    baseURL: getFastFoodBaseURL()
+                    baseURL: getLuxeBaseURL()
                 });
                 setCurrentReport(response.data);
                 // Cargar turnos si tenemos fecha disponible
@@ -436,7 +436,7 @@ const Reportes = () => {
                 detailed: true,
                 include_orders_detail: true
             }, {
-                baseURL: getFastFoodBaseURL(),
+                baseURL: getLuxeBaseURL(),
                 timeout: 15000
             });
 
@@ -461,7 +461,7 @@ const Reportes = () => {
             }
 
             setConnectionError(true);
-            setDebugInfo(`URL: ${getFastFoodBaseURL()}\nFecha: ${format(date, 'yyyy-MM-dd')}\nError: ${err.message}`);
+            setDebugInfo(`URL: ${getLuxeBaseURL()}\nFecha: ${format(date, 'yyyy-MM-dd')}\nError: ${err.message}`);
             setError(errorMessage);
 
         } finally {
@@ -533,7 +533,7 @@ const Reportes = () => {
             }
 
             const response = await api.post('/api/pos/daily-summaries/get_report/', payload, {
-                baseURL: getFastFoodBaseURL(),
+                baseURL: getLuxeBaseURL(),
                 timeout: 15000
             });
 
@@ -606,8 +606,8 @@ const Reportes = () => {
             } catch (err) {
                 console.error('Error inicializando reportes:', err);
                 setConnectionError(true);
-                setError('Error al conectar con el backend. Verifica que el servicio fast-food-service esté ejecutándose y migrado.');
-                setDebugInfo(`Error: ${err.message}\nURL: ${getFastFoodBaseURL()}\nStatus: ${err.response?.status}`);
+                setError('Error al conectar con el backend. Verifica que el servicio luxe-service esté ejecutándose y migrado.');
+                setDebugInfo(`Error: ${err.message}\nURL: ${getLuxeBaseURL()}\nStatus: ${err.response?.status}`);
             } finally {
                 setLoading(false);
             }
@@ -692,7 +692,7 @@ const Reportes = () => {
             // 1. Si es REPORTE DE TURNO
             if (currentReport.is_shift_report && currentReport.shift_info?.id) {
                 const response = await api.get(`/api/pos/shifts/${currentReport.shift_info.id}/report/`, {
-                    baseURL: getFastFoodBaseURL()
+                    baseURL: getLuxeBaseURL()
                 });
                 const shiftData = response.data;
                 const normalizedReport = {
@@ -716,7 +716,7 @@ const Reportes = () => {
                     detailed: true,
                     include_orders_detail: true
                 }, {
-                    baseURL: getFastFoodBaseURL()
+                    baseURL: getLuxeBaseURL()
                 });
 
                 // FIX: El backend devuelve { message: "...", summary: { ... } }
@@ -768,10 +768,10 @@ const Reportes = () => {
                 <div className="card alert-card">
                     <h3 style={{ marginBottom: 15, color: '#dc2626' }}>No se pudo conectar al backend</h3>
                     <p style={{ color: '#666', marginBottom: 10 }}>
-                        URL del backend: <strong>{getFastFoodBaseURL()}</strong>
+                        URL del backend: <strong>{getLuxeBaseURL()}</strong>
                     </p>
                     <p style={{ color: '#666', fontSize: '0.875rem', marginBottom: 15 }}>
-                        Para ver reportes reales, verifica que el servicio fast-food-service esté corriendo.
+                        Para ver reportes reales, verifica que el servicio luxe-service esté corriendo.
                     </p>
 
                     <button

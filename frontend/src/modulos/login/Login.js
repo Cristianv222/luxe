@@ -24,8 +24,8 @@ const Login = () => {
             const roleName = result.user.role_details?.name;
             if (roleName === 'CLIENTE') {
                 navigate('/');
-            } else if (roleName === 'ADMIN_FAST_FOOD') {
-                navigate('/fast-food');
+            } else if (roleName === 'ADMIN_LUXE') {
+                navigate('/luxe');
             } else {
                 navigate('/dashboard');
             }

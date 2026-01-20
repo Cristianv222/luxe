@@ -1,32 +1,32 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const PanelFastFood = () => {
+const PanelLuxe = () => {
     const navigate = useNavigate();
 
     const quickAccess = [
         {
             title: 'Punto de Venta',
             description: 'Gestionar ventas y órdenes en tiempo real',
-            path: '/fast-food/pos',
+            path: '/luxe/pos',
             icon: 'bi-cart-check-fill'
         },
         {
             title: 'Órdenes',
             description: 'Ver y gestionar todas las órdenes',
-            path: '/fast-food/orders',
+            path: '/luxe/orders',
             icon: 'bi-receipt-cutoff'
         },
         {
             title: 'Inventario',
             description: 'Administrar productos y stock',
-            path: '/fast-food/inventory',
+            path: '/luxe/inventory',
             icon: 'bi-box-seam-fill'
         },
         {
             title: 'Reportes',
             description: 'Análisis y estadísticas de ventas',
-            path: '/fast-food/reports',
+            path: '/luxe/reports',
             icon: 'bi-graph-up-arrow'
         }
     ];
@@ -91,4 +91,4 @@ const PanelFastFood = () => {
     );
 };
 
-export default PanelFastFood;
+export default PanelLuxe;

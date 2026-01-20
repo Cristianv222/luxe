@@ -5,7 +5,7 @@ import Login from './modulos/login/Login';
 import Diseno from './comun/Diseno';
 import ListaUsuarios from './modulos/usuarios/ListaUsuarios';
 import ServicePlaceholder from './components/ServicePlaceholder';
-import PanelFastFood from './modulos/fast-food/PanelFastFood';
+import PanelLuxe from './modulos/fast-food/PanelFastFood';
 import Inventario from './modulos/fast-food/Inventario';
 import Ordenes from './modulos/fast-food/Ordenes';
 import Clientes from './modulos/fast-food/Clientes';
@@ -13,11 +13,14 @@ import Reportes from './modulos/fast-food/Reportes';
 import PuntosVenta from './modulos/fast-food/PuntosVenta';
 import ShiftManager from './modulos/fast-food/ShiftManager';
 import Impresoras from './modulos/fast-food/Impresoras';
-import DisenoFastFood from './modulos/fast-food/DisenoFastFood';
+import DisenoLuxe from './modulos/fast-food/DisenoFastFood';
 import LandingPage from './modulos/pagina-web/LandingPage'; // Keeping as backup for now or remove? User wanted switch.
 import BoutiqueLanding from './modulos/pagina-web/BoutiqueLanding';
 import Registro from './modulos/pagina-web/Registro';
 import MiPerfil from './modulos/pagina-web/MiPerfil';
+import Nosotros from './modulos/pagina-web/Nosotros';
+import Contacto from './modulos/pagina-web/Contacto';
+import Coleccion from './modulos/pagina-web/Coleccion';
 import './App.css';
 
 // Componente para proteger rutas
@@ -40,8 +43,8 @@ const PrivateRoute = ({ children }) => {
   return <Diseno>{children}</Diseno>;
 };
 
-// Componente para proteger rutas de Comida Rápida con su propio diseño
-const FastFoodRoute = ({ children }) => {
+// Componente para proteger rutas de Luxe con su propio diseño
+const LuxeRoute = ({ children }) => {
   const { user, loading } = useContext(AuthContext);
 
   if (loading) return <div>Cargando...</div>;
@@ -52,8 +55,8 @@ const FastFoodRoute = ({ children }) => {
     return <Diseno>{children}</Diseno>;
   }
 
-  // Si es otro rol (ej. Admin Fast Food), usar el diseño específico
-  return <DisenoFastFood>{children}</DisenoFastFood>;
+  // Si es otro rol (ej. Admin Luxe), usar el diseño específico
+  return <DisenoLuxe>{children}</DisenoLuxe>;
 };
 
 // Componente para proteger rutas de clientes (redirige al home si no hay usuario)
@@ -81,6 +84,9 @@ function App() {
 
           <Route path="/" element={<BoutiqueLanding />} />
           <Route path="/registro" element={<Registro />} />
+          <Route path="/coleccion" element={<Coleccion />} />
+          <Route path="/nosotros" element={<Nosotros />} />
+          <Route path="/contacto" element={<Contacto />} />
           <Route path="/perfil" element={
             <ClientRoute>
               <MiPerfil />
@@ -101,45 +107,45 @@ function App() {
 
           {/* Rutas de creación/edición eliminadas porque ahora son Modales */}
 
-          <Route path="/fast-food" element={
-            <FastFoodRoute>
-              <PanelFastFood />
-            </FastFoodRoute>
+          <Route path="/luxe" element={
+            <LuxeRoute>
+              <PanelLuxe />
+            </LuxeRoute>
           } />
-          <Route path="/fast-food/inventory" element={
-            <FastFoodRoute>
+          <Route path="/luxe/inventory" element={
+            <LuxeRoute>
               <Inventario />
-            </FastFoodRoute>
+            </LuxeRoute>
           } />
-          <Route path="/fast-food/orders" element={
-            <FastFoodRoute>
+          <Route path="/luxe/orders" element={
+            <LuxeRoute>
               <Ordenes />
-            </FastFoodRoute>
+            </LuxeRoute>
           } />
-          <Route path="/fast-food/customers" element={
-            <FastFoodRoute>
+          <Route path="/luxe/customers" element={
+            <LuxeRoute>
               <Clientes />
-            </FastFoodRoute>
+            </LuxeRoute>
           } />
-          <Route path="/fast-food/reports" element={
-            <FastFoodRoute>
+          <Route path="/luxe/reports" element={
+            <LuxeRoute>
               <Reportes />
-            </FastFoodRoute>
+            </LuxeRoute>
           } />
-          <Route path="/fast-food/pos" element={
-            <FastFoodRoute>
+          <Route path="/luxe/pos" element={
+            <LuxeRoute>
               <PuntosVenta />
-            </FastFoodRoute>
+            </LuxeRoute>
           } />
-          <Route path="/fast-food/shift" element={
-            <FastFoodRoute>
+          <Route path="/luxe/shift" element={
+            <LuxeRoute>
               <ShiftManager onShiftActive={() => { }} />
-            </FastFoodRoute>
+            </LuxeRoute>
           } />
-          <Route path="/fast-food/printers" element={
-            <FastFoodRoute>
+          <Route path="/luxe/printers" element={
+            <LuxeRoute>
               <Impresoras />
-            </FastFoodRoute>
+            </LuxeRoute>
           } />
 
           <Route path="/hotel" element={

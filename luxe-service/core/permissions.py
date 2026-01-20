@@ -76,7 +76,7 @@ def require_staff(view_func):
 def require_role(role_name):
     """
     Decorador para requerir un rol específico
-    Uso: @require_role('ADMIN_FAST_FOOD')
+    Uso: @require_role('ADMIN_LUXE')
     """
     def decorator(view_func):
         @wraps(view_func)

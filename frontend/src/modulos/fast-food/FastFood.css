@@ -19,7 +19,7 @@
 }
 
 /* Base Layout */
-.fast-food-layout {
+.luxe-layout {
     font-family: var(--font-sans);
     background-color: var(--color-creme);
     color: var(--color-dark);
@@ -28,12 +28,12 @@
     flex-direction: column;
 }
 
-.fast-food-layout .layout-body {
+.luxe-layout .layout-body {
     display: flex;
     flex: 1;
 }
 
-.fast-food-layout .main-content {
+.luxe-layout .main-content {
     flex: 1;
     padding: 2rem;
     overflow-y: auto;
@@ -541,29 +541,29 @@
 }
 
 /* Common Modal Overrides (nested in layout) */
-.fast-food-layout .modal-content {
+.luxe-layout .modal-content {
     border-radius: 8px;
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
     border-top: 5px solid var(--color-cinna);
     font-family: var(--font-sans);
 }
 
-.fast-food-layout .modal-header {
+.luxe-layout .modal-header {
     border-bottom: 1px solid var(--color-froth);
     padding: 1.5rem 2rem;
 }
 
-.fast-food-layout .modal-header h3 {
+.luxe-layout .modal-header h3 {
     font-family: var(--font-serif);
     color: var(--color-dark);
     font-size: 1.4rem;
 }
 
-.fast-food-layout .btn-close {
+.luxe-layout .btn-close {
     color: var(--color-latte);
 }
 
-.fast-food-layout .btn-close:hover {
+.luxe-layout .btn-close:hover {
     color: var(--color-dark);
 }
 

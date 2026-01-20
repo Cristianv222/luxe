@@ -40,8 +40,8 @@ class IsManagerOrAdmin(permissions.BasePermission):
         if hasattr(request.user, 'role'):
             role = request.user.role
             if isinstance(role, dict):
-                return role.get('name') in ['MANAGER', 'ADMIN_FAST_FOOD']
-            return getattr(role, 'name', '') in ['MANAGER', 'ADMIN_FAST_FOOD']
+                return role.get('name') in ['MANAGER', 'ADMIN_LUXE']
+            return getattr(role, 'name', '') in ['MANAGER', 'ADMIN_LUXE']
         
         return False
 
@@ -64,8 +64,8 @@ class CanManageDiscounts(permissions.BasePermission):
         if hasattr(request.user, 'role'):
             role = request.user.role
             if isinstance(role, dict):
-                return role.get('name') in ['MANAGER', 'ADMIN_FAST_FOOD']
-            return getattr(role, 'name', '') in ['MANAGER', 'ADMIN_FAST_FOOD']
+                return role.get('name') in ['MANAGER', 'ADMIN_LUXE']
+            return getattr(role, 'name', '') in ['MANAGER', 'ADMIN_LUXE']
         
         return False
 
@@ -92,8 +92,8 @@ class CanManageTables(permissions.BasePermission):
         if hasattr(request.user, 'role'):
             role = request.user.role
             if isinstance(role, dict):
-                return role.get('name') in ['MANAGER', 'ADMIN_FAST_FOOD']
-            return getattr(role, 'name', '') in ['MANAGER', 'ADMIN_FAST_FOOD']
+                return role.get('name') in ['MANAGER', 'ADMIN_LUXE']
+            return getattr(role, 'name', '') in ['MANAGER', 'ADMIN_LUXE']
         
         return False
 
@@ -111,7 +111,7 @@ class CanViewReports(permissions.BasePermission):
         if hasattr(request.user, 'role'):
             role = request.user.role
             if isinstance(role, dict):
-                return role.get('name') in ['MANAGER', 'ADMIN_FAST_FOOD']
-            return getattr(role, 'name', '') in ['MANAGER', 'ADMIN_FAST_FOOD']
+                return role.get('name') in ['MANAGER', 'ADMIN_LUXE']
+            return getattr(role, 'name', '') in ['MANAGER', 'ADMIN_LUXE']
         
         return False

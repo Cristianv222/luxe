@@ -85,8 +85,8 @@ class AuthServiceClient(ServiceClient):
     pass
 
 
-class FastFoodServiceClient(ServiceClient):
-    """Cliente para fast-food-service"""
+class LuxeServiceClient(ServiceClient):
+    """Cliente para luxe-service"""
     pass
 
 

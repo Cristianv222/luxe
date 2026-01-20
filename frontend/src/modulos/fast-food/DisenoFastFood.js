@@ -1,12 +1,12 @@
 import React from 'react';
-import BarraLateralFastFood from './BarraLateralFastFood';
+import BarraLateralLuxe from './BarraLateralFastFood';
 import './FastFood.css';
 
-const DisenoFastFood = ({ children }) => {
+const DisenoLuxe = ({ children }) => {
     return (
-        <div className="fast-food-layout">
+        <div className="luxe-layout">
             <div className="layout-body">
-                <BarraLateralFastFood />
+                <BarraLateralLuxe />
                 <main className="main-content">
                     {children}
                 </main>
@@ -15,4 +15,4 @@ const DisenoFastFood = ({ children }) => {
     );
 };
 
-export default DisenoFastFood;
+export default DisenoLuxe;
