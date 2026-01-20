@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
@@ -18,6 +18,8 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     queryset = User.objects.all().select_related('role')
     permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['username', 'email', 'first_name', 'last_name', 'identification_number']
     
     def get_serializer_class(self):
         if self.action == 'create':

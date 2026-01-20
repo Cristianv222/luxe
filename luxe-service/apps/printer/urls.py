@@ -16,10 +16,15 @@ urlpatterns = [
     # ENDPOINTS PARA EL AGENTE DE WINDOWS
     # ============================================================================
     path('agente/registrar/', views.agente_registrar, name='agente-registrar'),
+    path('agente/registrar', views.agente_registrar),  # No slash support
     path('agente/trabajos/', views.agente_trabajos_pendientes, name='agente-trabajos'),
+    path('agente/trabajos', views.agente_trabajos_pendientes),
     path('agente/resultado/', views.agente_reportar_resultado, name='agente-resultado'),
+    path('agente/resultado', views.agente_reportar_resultado),
     path('agente/estado/', views.agente_estado, name='agente-estado'),
+    path('agente/estado', views.agente_estado),
     path('agente/abrir-caja/', views.agente_abrir_caja, name='agente-abrir-caja'),
+    path('agente/abrir-caja', views.agente_abrir_caja),
     
     # ============================================================================
     # APIS DE IMPRESIÓN DIRECTA

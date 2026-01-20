@@ -355,7 +355,7 @@ class OrderCreateSerializer(serializers.Serializer):
         
         try:
             # URL del endpoint de impresión
-            printer_url = 'http://127.0.0.1:8000/api/hardware/print/receipt/'
+            printer_url = 'http://127.0.0.1:8000/luxe/api/hardware/print/receipt/'
             
             # Preparar items en el formato esperado por el printer
             items = []

@@ -59,14 +59,16 @@ const PuntosVenta = () => {
     const [showCustomerModal, setShowCustomerModal] = useState(false);
     const [newCustomer, setNewCustomer] = useState({
         email: '',
+        username: '',
         password: 'Password123!',
-        password_confirmation: 'Password123!',
+        password_confirm: 'Password123!',
         first_name: '',
         last_name: '',
         phone: '',
         address: '',
         city: '',
-        cedula: ''
+        identification_number: '',
+        date_of_birth: ''
     });
 
     // =====================================
@@ -252,26 +254,132 @@ const PuntosVenta = () => {
     };
 
     // =====================================
-    // 7. CLIENTES Y ORDEN
+    // 7. CLIENTES Y USUARIOS (UNIFICADOS - AUTH SERVICE)
     // =====================================
     const searchCustomers = async (query) => {
         setCustomerSearch(query);
         if (query.length < 3) { setCustomers([]); return; }
         try {
-            const res = await api.post('/api/customers/admin/search/', { query }, { baseURL: process.env.REACT_APP_LUXE_SERVICE });
-            setCustomers(res.data.data.customers || []);
-        } catch (e) { console.error(e); }
+            // AHORA BUSCAMOS EN AUTH SERVICE (USUARIOS)
+            const res = await api.get(`/api/users/?search=${query}`);
+            const userData = res.data.results || res.data || [];
+            setCustomers(userData);
+        } catch (e) { console.error("Error al buscar usuarios:", e); }
     };
 
-    // ... handleCreateCustomer y handleInputChange igual que antes ...
+    const syncAndSelectUser = async (user) => {
+        try {
+            console.log("Sincronizando usuario con perfil de cliente...", user.email);
+
+            // 1. Intentar buscar si ya existe el cliente en LUXE SERVICE
+            let existingCustomer = null;
+            try {
+                const searchRes = await api.post('/api/customers/admin/search/', { query: user.email }, { baseURL: process.env.REACT_APP_LUXE_SERVICE || '/api/luxe/api' });
+                // Buscamos exactitud por email
+                existingCustomer = searchRes.data.data.customers.find(c => c.email.toLowerCase() === user.email.toLowerCase());
+            } catch (err) {
+                console.warn("No se pudo consultar clientes existentes en Luxe:", err.message);
+            }
+
+            if (existingCustomer) {
+                console.log("Cliente encontrado en Luxe:", existingCustomer.id);
+                setSelectedCustomer(existingCustomer);
+                setCustomers([]);
+                setCustomerSearch(`${existingCustomer.first_name} ${existingCustomer.last_name}`);
+                return existingCustomer;
+            }
+
+            // 2. Si no existe, crearlo en LUXE SERVICE basado en los datos del USER
+            console.log("Creando perfil de cliente shadow en Luxe...");
+            const customerPayload = {
+                first_name: user.first_name,
+                last_name: user.last_name,
+                email: user.email,
+                phone: user.phone || '0000000000',
+                cedula: user.identification_number || null,
+                identification_number: user.identification_number || null,
+                birth_date: user.date_of_birth || null,
+                date_of_birth: user.date_of_birth || null,
+                address: user.address || '',
+                city: user.city || ''
+            };
+
+            try {
+                const res = await api.post('/api/customers/register/', customerPayload, { baseURL: process.env.REACT_APP_LUXE_SERVICE || '/api/luxe/api' });
+                const createdCustomer = res.data.data.customer;
+
+                setSelectedCustomer(createdCustomer);
+                setCustomers([]);
+                setCustomerSearch(`${createdCustomer.first_name} ${createdCustomer.last_name}`);
+                console.log("Sincronización exitosa.");
+                return createdCustomer;
+            } catch (err) {
+                console.warn("No se pudo crear perfil en Luxe (posiblemente ya existe o error de red):", err.message);
+                // Si falla la creación pero tenemos los datos del usuario, 
+                // lo seleccionamos localmente para el recibo, pero marcamos que no tiene ID de Luxe
+                setSelectedCustomer({ ...user, is_external_only: true });
+                setCustomers([]);
+                setCustomerSearch(`${user.first_name} ${user.last_name}`);
+                return null;
+            }
+
+        } catch (err) {
+            console.error("Fallo silencioso en sincronización:", err);
+            // No alertamos al usuario, permitimos que siga como 'usuario local'
+            setSelectedCustomer({ ...user, is_external_only: true });
+            setCustomers([]);
+            setCustomerSearch(`${user.first_name} ${user.last_name}`);
+            return null;
+        }
+    };
+
     const handleCreateCustomer = async (e) => {
         e.preventDefault();
         try {
-            const res = await api.post('/api/customers/register/', { ...newCustomer, cedula: newCustomer.cedula || null }, { baseURL: process.env.REACT_APP_LUXE_SERVICE });
-            alert('Cliente creado'); setShowCustomerModal(false); setSelectedCustomer(res.data.data.customer);
-            setCustomerSearch(`${res.data.data.customer.first_name} ${res.data.data.customer.last_name}`);
-            setNewCustomer({ email: '', password: 'Password123!', password_confirmation: 'Password123!', first_name: '', last_name: '', phone: '', address: '', city: '', cedula: '' });
-        } catch (err) { alert('Error al crear cliente'); }
+            // 1. Prepare payload for AUTH SERVICE (Identity)
+            console.log("Creando cuenta de usuario web (Ucelis)...");
+            const authPayload = {
+                first_name: newCustomer.first_name,
+                last_name: newCustomer.last_name,
+                identification_number: newCustomer.identification_number,
+                date_of_birth: newCustomer.date_of_birth,
+                email: newCustomer.email,
+                phone: newCustomer.phone,
+                username: newCustomer.username || newCustomer.email,
+                password: newCustomer.password,
+                password_confirm: newCustomer.password_confirm
+            };
+
+            const authRes = await api.post('/api/authentication/register/', authPayload);
+            const createdUser = authRes.data.user;
+
+            // 2. Sync with LUXE SERVICE (Optional background sync)
+            await syncAndSelectUser(createdUser);
+
+            // 3. Success Feedback & Reset
+            alert('¡Usuario creado exitosamente!');
+
+            setShowCustomerModal(false);
+
+            setNewCustomer({
+                email: '',
+                username: '',
+                password: 'Password123!',
+                password_confirm: 'Password123!',
+                first_name: '',
+                last_name: '',
+                phone: '',
+                address: '',
+                city: '',
+                identification_number: '',
+                date_of_birth: ''
+            });
+
+        } catch (err) {
+            console.error('Error principal:', err);
+            const msg = err.response?.data?.message || JSON.stringify(err.response?.data) || err.message;
+            alert('Error al crear usuario: ' + msg);
+        }
     };
     const handleInputChange = (e) => setNewCustomer(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
@@ -288,7 +396,8 @@ const PuntosVenta = () => {
             notes: orderNotes,
             items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity, notes: i.note || '' })),
             discount_code: appliedDiscount?.code || null,
-            customer_id: selectedCustomer?.id || null
+            // IMPORTANTE: Solo enviamos el ID si es un cliente validado en Luxe
+            customer_id: (selectedCustomer && !selectedCustomer.is_external_only) ? selectedCustomer.id : null
         };
 
         try {
@@ -307,7 +416,9 @@ const PuntosVenta = () => {
             // Reset
             setCart([]); setAppliedDiscount(null); setDiscountCode(''); setSelectedCustomer(null); setCustomerSearch(''); setCashGiven(null); setInputCash(''); loadData();
         } catch (e) {
-            console.error(e); alert('Error al procesar orden');
+            console.error(e);
+            const msg = e.response?.data?.detail || JSON.stringify(e.response?.data) || e.message;
+            alert('Error al procesar orden: ' + msg);
         } finally { setProcessingOrder(false); }
     };
 
@@ -523,7 +634,7 @@ const PuntosVenta = () => {
                             <button onClick={() => setShowReviewModal(true)} disabled={cart.length === 0} style={{ padding: '1rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white', fontWeight: '600', cursor: 'pointer' }}>
                                 Opciones
                             </button>
-                            <button onClick={finalPlaceOrder} disabled={cart.length === 0 || processingOrder} style={{ padding: '1rem', borderRadius: '8px', border: 'none', background: '#0f172a', color: 'white', fontWeight: '700', cursor: 'pointer' }}>
+                            <button onClick={() => setShowReviewModal(true)} disabled={cart.length === 0 || processingOrder} style={{ padding: '1rem', borderRadius: '8px', border: 'none', background: '#0f172a', color: 'white', fontWeight: '700', cursor: 'pointer' }}>
                                 COBRAR
                             </button>
                         </div>
@@ -541,55 +652,212 @@ const PuntosVenta = () => {
         <>
             {screenWidth <= 1024 ? renderCompactView() : renderDesktopView()}
 
-            {/* Modal Confirmación (Simplificado) */}
+            {/* Modal Confirmación y Pago */}
             {showReviewModal && (
                 <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-                    <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '12px', width: '500px', maxWidth: '90%' }}>
-                        <h2>Confirmar Venta</h2>
+                    <div style={{ backgroundColor: '#ffffff', width: '900px', maxWidth: '95%', borderRadius: '16px', overflow: 'hidden', display: 'flex', height: '600px', maxHeight: '90vh', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
 
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Cliente</label>
-                            <input type="text" placeholder="Buscar cliente..." value={customerSearch} onChange={e => searchCustomers(e.target.value)} style={{ width: '100%', padding: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '6px' }} />
-                            {customers.length > 0 && <div style={{ border: '1px solid #e2e8f0', marginTop: '0.5rem', maxHeight: '150px', overflowY: 'auto' }}>
-                                {customers.map(c => (
-                                    <div key={c.id} onClick={() => { setSelectedCustomer(c); setCustomers([]); setCustomerSearch(`${c.first_name} ${c.last_name}`); }} style={{ padding: '0.5rem', cursor: 'pointer' }}>
-                                        {c.first_name} {c.last_name}
+                        {/* LEFT: Resumen de Orden */}
+                        <div style={{ width: '40%', backgroundColor: '#f8fafc', padding: '2rem', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
+                            <h3 style={{ margin: '0 0 1.5rem 0', color: '#334155' }}>Resumen del Pedido</h3>
+                            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
+                                {cart.map((item, idx) => (
+                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+                                        <div>
+                                            <div style={{ fontWeight: '600', color: '#1e293b' }}>{item.quantity} x {item.name}</div>
+                                            {item.note && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{item.note}</div>}
+                                        </div>
+                                        <div style={{ fontWeight: '600' }}>{formatCurrency(item.price * item.quantity)}</div>
                                     </div>
                                 ))}
-                            </div>}
-                            <button onClick={() => setShowCustomerModal(true)} style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer' }}>+ Nuevo Cliente</button>
+                            </div>
+                            <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '1rem', marginTop: 'auto' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                    <span style={{ color: '#64748b' }}>Subtotal</span>
+                                    <span>{formatCurrency(calculateSubtotal)}</span>
+                                </div>
+                                {appliedDiscount && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#10b981' }}>
+                                        <span>Descuento</span>
+                                        <span>- {formatCurrency(calculateDiscountAmount)}</span>
+                                    </div>
+                                )}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>
+                                    <span>Total a Pagar</span>
+                                    <span>{formatCurrency(calculateTotal)}</span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Método de Entrega</label>
-                            <select value={selectedDeliveryMethod} onChange={e => setSelectedDeliveryMethod(e.target.value)} style={{ width: '100%', padding: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
-                                <option value="in_store">En Tienda</option>
-                                <option value="pickup">Recogida</option>
-                                <option value="delivery">Envío</option>
-                            </select>
-                        </div>
+                        {/* RIGHT: Métodos de Pago y Datos */}
+                        <div style={{ width: '60%', padding: '2rem', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ marginBottom: '2rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>Cliente</label>
+                                    <input type="text" placeholder="Buscar usuario (Ucelis)..." value={customerSearch} onChange={e => searchCustomers(e.target.value)} style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px' }} />
+                                    {customers.length > 0 && <div style={{ position: 'absolute', backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', width: '300px', zIndex: 10, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                                        {customers.map(u => (
+                                            <div key={u.id} onClick={() => syncAndSelectUser(u)} style={{ padding: '0.75rem', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}>
+                                                <div style={{ fontWeight: '600' }}>{u.first_name} {u.last_name}</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{u.email} {u.identification_number ? `| ${u.identification_number}` : ''}</div>
+                                            </div>
+                                        ))}
+                                    </div>}
+                                    <button onClick={() => setShowCustomerModal(true)} style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>+ Nuevo Usuario (Ucelis)</button>
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>Entrega</label>
+                                    <select value={selectedDeliveryMethod} onChange={e => setSelectedDeliveryMethod(e.target.value)} style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px' }}>
+                                        <option value="in_store">En Tienda</option>
+                                        <option value="pickup">Para Llevar/Recogida</option>
+                                        <option value="delivery">Envío a Domicilio</option>
+                                    </select>
+                                </div>
+                            </div>
 
-                        <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                            <button onClick={() => setShowReviewModal(false)} style={{ flex: 1, padding: '0.75rem', border: '1px solid #cbd5e1', background: 'white', borderRadius: '6px' }}>Volver</button>
-                            <button onClick={finalPlaceOrder} style={{ flex: 1, padding: '0.75rem', border: 'none', background: '#0f172a', color: 'white', borderRadius: '6px' }}>Finalizar Venta</button>
+                            <div style={{ backgroundColor: '#f0f9ff', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem' }}>
+                                <h4 style={{ margin: '0 0 1rem 0', color: '#0369a1' }}><i className="bi bi-cash-coin" style={{ marginRight: '8px' }}></i>Calculadora de Vuelto</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#0369a1' }}>Efectivo Recibido</label>
+                                        <input
+                                            type="number"
+                                            value={inputCash}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setInputCash(val);
+                                                setCashGiven(parseFloat(val));
+                                            }}
+                                            style={{ width: '100%', padding: '0.75rem', fontSize: '1.2rem', border: '2px solid #bae6fd', borderRadius: '8px', color: '#0c4a6e', fontWeight: 'bold' }}
+                                            placeholder="0.00"
+                                        />
+                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                            {[5, 10, 20, 50].map(amt => (
+                                                <button key={amt} onClick={() => { setInputCash(amt.toString()); setCashGiven(amt); }} style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', backgroundColor: 'white', border: '1px solid #bae6fd', borderRadius: '4px', cursor: 'pointer', color: '#0ea5e9' }}>
+                                                    ${amt}
+                                                </button>
+                                            ))}
+                                            <button onClick={() => { setInputCash(calculateTotal.toFixed(2)); setCashGiven(calculateTotal); }} style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', backgroundColor: '#e0f2fe', border: '1px solid #bae6fd', borderRadius: '4px', cursor: 'pointer', color: '#0369a1', fontWeight: 'bold' }}>Exacto</button>
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#0369a1' }}>Su Cambio</label>
+                                        <div style={{
+                                            fontSize: '2rem',
+                                            fontWeight: '800',
+                                            color: (cashGiven && cashGiven >= calculateTotal) ? '#16a34a' : '#64748b'
+                                        }}>
+                                            {formatCurrency((cashGiven || 0) - calculateTotal > 0 ? (cashGiven || 0) - calculateTotal : 0)}
+                                        </div>
+                                        {(cashGiven && cashGiven < calculateTotal) && (
+                                            <div style={{ color: '#ef4444', fontSize: '0.9rem', fontWeight: 'bold' }}>Faltan {formatCurrency(calculateTotal - cashGiven)}</div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ marginTop: 'auto', display: 'flex', gap: '1rem' }}>
+                                <button onClick={() => setShowReviewModal(false)} style={{ flex: 1, padding: '1rem', border: '1px solid #cbd5e1', background: 'white', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', color: '#475569', cursor: 'pointer' }}>
+                                    Seguir Comprando
+                                </button>
+                                <button
+                                    onClick={finalPlaceOrder}
+                                    disabled={processingOrder}
+                                    style={{
+                                        flex: 2,
+                                        padding: '1rem',
+                                        border: 'none',
+                                        background: 'linear-gradient(to right, #0f172a, #334155)',
+                                        color: 'white',
+                                        borderRadius: '8px',
+                                        fontSize: '1.2rem',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+                                    }}
+                                >
+                                    {processingOrder ? 'Procesando...' : 'CONFIRMAR PAGO'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Modal Cliente y Notas (simplificados aquí para brevedad, usando lógica existente) */}
+            {/* Modal Cliente y Notas (Mejorado) */}
             {showCustomerModal && (
                 <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ background: 'white', padding: '2rem', borderRadius: '8px' }}>
-                        <h3>Nuevo Cliente</h3>
-                        <form onSubmit={handleCreateCustomer}>
-                            <input name="first_name" placeholder="Nombre" value={newCustomer.first_name} onChange={handleInputChange} required style={{ display: 'block', marginBottom: '0.5rem', width: '100%', padding: '0.5rem' }} />
-                            <input name="last_name" placeholder="Apellido" value={newCustomer.last_name} onChange={handleInputChange} required style={{ display: 'block', marginBottom: '0.5rem', width: '100%', padding: '0.5rem' }} />
-                            <input name="cedula" placeholder="Cédula" value={newCustomer.cedula} onChange={handleInputChange} style={{ display: 'block', marginBottom: '0.5rem', width: '100%', padding: '0.5rem' }} />
-                            <input name="email" placeholder="Email" value={newCustomer.email} onChange={handleInputChange} required style={{ display: 'block', marginBottom: '1rem', width: '100%', padding: '0.5rem' }} />
-                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                <button type="button" onClick={() => setShowCustomerModal(false)}>Cancelar</button>
-                                <button type="submit">Guardar</button>
+                    <div style={{ background: 'white', padding: '0', borderRadius: '12px', width: '600px', maxWidth: '90%', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+                        <div style={{ padding: '1.5rem', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, color: '#111827', fontSize: '1.25rem' }}>Nuevo Usuario (Ucelis)</h3>
+                            <button onClick={() => setShowCustomerModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>×</button>
+                        </div>
+
+                        <form onSubmit={handleCreateCustomer} style={{ padding: '1.5rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Nombre *</label>
+                                    <input name="first_name" placeholder="Ej. Juan" value={newCustomer.first_name} onChange={handleInputChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Apellido *</label>
+                                    <input name="last_name" placeholder="Ej. Pérez" value={newCustomer.last_name} onChange={handleInputChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Cédula / RUC</label>
+                                    <input name="identification_number" placeholder="Identificación" value={newCustomer.identification_number} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Fecha Nacimiento</label>
+                                    <input type="date" name="date_of_birth" value={newCustomer.date_of_birth} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Email *</label>
+                                    <input type="email" name="email" placeholder="cliente@email.com" value={newCustomer.email} onChange={handleInputChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Usuario (Web) *</label>
+                                    <input name="username" placeholder="Nombre de usuario" value={newCustomer.username} onChange={handleInputChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Teléfono *</label>
+                                    <input name="phone" placeholder="099..." value={newCustomer.phone} onChange={handleInputChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                                </div>
+                                <div style={{ visibility: 'hidden' }}> {/* Spacer */} </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Contraseña Web</label>
+                                    <input type="password" name="password" placeholder="Crear contraseña" value={newCustomer.password} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Confirmar Contraseña</label>
+                                    <input type="password" name="password_confirm" placeholder="Repetir contraseña" value={newCustomer.password_confirm} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                                </div>
+                            </div>
+
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Dirección</label>
+                                <input name="address" placeholder="Dirección completa" value={newCustomer.address} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+                                <button type="button" onClick={() => setShowCustomerModal(false)} style={{ padding: '0.75rem 1.5rem', border: '1px solid #d1d5db', background: 'white', color: '#374151', borderRadius: '6px', fontWeight: '500', cursor: 'pointer' }}>
+                                    Cancelar
+                                </button>
+                                <button type="submit" style={{ padding: '0.75rem 1.5rem', border: 'none', background: '#2563eb', color: 'white', borderRadius: '6px', fontWeight: '500', cursor: 'pointer' }}>
+                                    Crear Cuenta
+                                </button>
                             </div>
                         </form>
                     </div>

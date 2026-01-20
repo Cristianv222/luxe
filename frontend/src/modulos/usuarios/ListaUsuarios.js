@@ -90,6 +90,7 @@ const ListaUsuarios = () => {
                             <th>Usuario</th>
                             <th>Email</th>
                             <th>Nombre</th>
+                            <th>Identificación</th>
                             <th>Rol</th>
                             <th>Acciones</th>
                         </tr>
@@ -101,6 +102,7 @@ const ListaUsuarios = () => {
                                 <td>{user.username}</td>
                                 <td>{user.email}</td>
                                 <td>{`${user.first_name} ${user.last_name}`}</td>
+                                <td>{user.identification_number || '-'}</td>
                                 <td>{user.role_details ? user.role_details.description : `ID: ${user.role}`}</td>
                                 <td>
                                     <button

@@ -10,13 +10,16 @@ const Clientes = () => {
     const [submitting, setSubmitting] = useState(false);
     const [newCustomer, setNewCustomer] = useState({
         email: '',
+        username: '',
         password: 'Password123!',
-        password_confirmation: 'Password123!',
+        password_confirm: 'Password123!',
         first_name: '',
         last_name: '',
         phone: '',
         address: '',
-        city: ''
+        city: '',
+        identification_number: '',
+        date_of_birth: ''
     });
 
     useEffect(() => {
@@ -68,12 +71,45 @@ const Clientes = () => {
         e.preventDefault();
         setSubmitting(true);
         try {
-            await api.post('/api/customers/register/', newCustomer, {
+            // 1. Prepare payload for LUXE SERVICE (Customer Profile)
+            const customerPayload = {
+                ...newCustomer,
+                cedula: newCustomer.identification_number || null,
+                birth_date: newCustomer.date_of_birth || null,
+                password_confirmation: newCustomer.password_confirm
+            };
+
+            console.log("Creando perfil de cliente...");
+            await api.post('/api/customers/register/', customerPayload, {
                 baseURL: process.env.REACT_APP_LUXE_SERVICE
             });
 
-            // Success notification
-            showNotification('Cliente creado exitosamente', 'success');
+            // 2. Prepare payload for AUTH SERVICE (User Login)
+            try {
+                console.log("Creando cuenta de usuario web...");
+                // Send EXACTLY what Registro.js sends
+                const authPayload = {
+                    first_name: newCustomer.first_name,
+                    last_name: newCustomer.last_name,
+                    identification_number: newCustomer.identification_number,
+                    date_of_birth: newCustomer.date_of_birth,
+                    email: newCustomer.email,
+                    phone: newCustomer.phone,
+                    username: newCustomer.username || newCustomer.email, // Fallback to email if empty
+                    password: newCustomer.password,
+                    password_confirm: newCustomer.password_confirm
+                };
+
+                // Call Auth Service (default baseURL is AUTH_SERVICE)
+                await api.post('/api/authentication/register/', authPayload);
+
+                showNotification('¡Cliente y Cuenta de Usuario creados exitosamente!', 'success');
+            } catch (authErr) {
+                console.error("Error creando usuario en Auth Service:", authErr);
+                const msg = JSON.stringify(authErr.response?.data) || authErr.message;
+                alert(`AVISO: Cliente registrado en sistema, pero falló la creación de cuenta web: ${msg}`);
+            }
+
             closeModal();
             fetchCustomers();
         } catch (err) {
@@ -109,13 +145,16 @@ const Clientes = () => {
         setShowModal(false);
         setNewCustomer({
             email: '',
+            username: '',
             password: 'Password123!',
-            password_confirmation: 'Password123!',
+            password_confirm: 'Password123!',
             first_name: '',
             last_name: '',
             phone: '',
             address: '',
-            city: ''
+            city: '',
+            identification_number: '',
+            date_of_birth: ''
         });
     };
 
@@ -479,35 +518,34 @@ const Clientes = () => {
                         {/* Modal Body */}
                         <form onSubmit={handleCreateCustomer}>
                             <div style={{ padding: '24px' }}>
-                                {/* Email */}
-                                <div style={{ marginBottom: '20px' }}>
-                                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                                        Email *
-                                    </label>
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={newCustomer.email}
-                                        onChange={handleInputChange}
-                                        required
-                                        style={{
-                                            width: '100%',
-                                            padding: '10px 12px',
-                                            border: '1px solid #d1d5db',
-                                            borderRadius: '8px',
-                                            outline: 'none',
-                                            fontSize: '14px',
-                                            transition: 'all 0.2s'
-                                        }}
-                                        onFocus={(e) => {
-                                            e.target.style.borderColor = '#3b82f6';
-                                            e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                                        }}
-                                        onBlur={(e) => {
-                                            e.target.style.borderColor = '#d1d5db';
-                                            e.target.style.boxShadow = 'none';
-                                        }}
-                                    />
+                                {/* Email y Usuario */}
+                                <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                                            Email *
+                                        </label>
+                                        <input
+                                            type="email"
+                                            name="email"
+                                            value={newCustomer.email}
+                                            onChange={handleInputChange}
+                                            required
+                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
+                                        />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                                            Usuario (Web) *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="username"
+                                            value={newCustomer.username}
+                                            onChange={handleInputChange}
+                                            required
+                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
+                                        />
+                                    </div>
                                 </div>
 
                                 {/* Nombre y Apellido */}
@@ -522,23 +560,7 @@ const Clientes = () => {
                                             value={newCustomer.first_name}
                                             onChange={handleInputChange}
                                             required
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px 12px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '8px',
-                                                outline: 'none',
-                                                fontSize: '14px',
-                                                transition: 'all 0.2s'
-                                            }}
-                                            onFocus={(e) => {
-                                                e.target.style.borderColor = '#3b82f6';
-                                                e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                                            }}
-                                            onBlur={(e) => {
-                                                e.target.style.borderColor = '#d1d5db';
-                                                e.target.style.boxShadow = 'none';
-                                            }}
+                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
                                         />
                                     </div>
                                     <div style={{ flex: 1 }}>
@@ -551,85 +573,65 @@ const Clientes = () => {
                                             value={newCustomer.last_name}
                                             onChange={handleInputChange}
                                             required
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px 12px',
-                                                border: '1px solid #d1d5db',
-                                                borderRadius: '8px',
-                                                outline: 'none',
-                                                fontSize: '14px',
-                                                transition: 'all 0.2s'
-                                            }}
-                                            onFocus={(e) => {
-                                                e.target.style.borderColor = '#3b82f6';
-                                                e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                                            }}
-                                            onBlur={(e) => {
-                                                e.target.style.borderColor = '#d1d5db';
-                                                e.target.style.boxShadow = 'none';
-                                            }}
+                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
                                         />
                                     </div>
                                 </div>
 
-                                {/* Teléfono */}
-                                <div style={{ marginBottom: '20px' }}>
-                                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                                        Teléfono
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="phone"
-                                        value={newCustomer.phone}
-                                        onChange={handleInputChange}
-                                        style={{
-                                            width: '100%',
-                                            padding: '10px 12px',
-                                            border: '1px solid #d1d5db',
-                                            borderRadius: '8px',
-                                            outline: 'none',
-                                            fontSize: '14px',
-                                            transition: 'all 0.2s'
-                                        }}
-                                        onFocus={(e) => {
-                                            e.target.style.borderColor = '#3b82f6';
-                                            e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                                        }}
-                                        onBlur={(e) => {
-                                            e.target.style.borderColor = '#d1d5db';
-                                            e.target.style.boxShadow = 'none';
-                                        }}
-                                    />
+                                {/* Cédula y Fecha Nacimiento */}
+                                <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                                            Cédula / RUC
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="identification_number"
+                                            value={newCustomer.identification_number}
+                                            onChange={handleInputChange}
+                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
+                                        />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                                            Fecha Nacimiento
+                                        </label>
+                                        <input
+                                            type="date"
+                                            name="date_of_birth"
+                                            value={newCustomer.date_of_birth}
+                                            onChange={handleInputChange}
+                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
+                                        />
+                                    </div>
                                 </div>
 
-                                {/* Ciudad */}
-                                <div style={{ marginBottom: '20px' }}>
-                                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                                        Ciudad
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="city"
-                                        value={newCustomer.city}
-                                        onChange={handleInputChange}
-                                        style={{
-                                            width: '100%',
-                                            padding: '10px 12px',
-                                            border: '1px solid #d1d5db',
-                                            borderRadius: '8px',
-                                            outline: 'none',
-                                            fontSize: '14px',
-                                            transition: 'all 0.2s'
-                                        }}
-                                        onFocus={(e) => {
-                                            e.target.style.borderColor = '#3b82f6';
-                                            e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                                        }}
-                                        onBlur={(e) => {
-                                            e.target.style.borderColor = '#d1d5db';
-                                            e.target.style.boxShadow = 'none';
-                                        }}
-                                    />
+                                {/* Teléfono y Ciudad */}
+                                <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                                            Teléfono
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="phone"
+                                            value={newCustomer.phone}
+                                            onChange={handleInputChange}
+                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
+                                        />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                                            Ciudad
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="city"
+                                            value={newCustomer.city}
+                                            onChange={handleInputChange}
+                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
+                                        />
+                                    </div>
                                 </div>
 
                                 {/* Info Note */}

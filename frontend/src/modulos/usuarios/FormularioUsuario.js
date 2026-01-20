@@ -10,7 +10,9 @@ const FormularioUsuario = ({ userToEdit, onSave, onCancel }) => {
         first_name: '',
         last_name: '',
         phone: '',
-        role: '' // Inicializar vacío para obligar selección
+        identification_number: '',
+        date_of_birth: '',
+        role: ''
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -42,6 +44,8 @@ const FormularioUsuario = ({ userToEdit, onSave, onCancel }) => {
                 first_name: '',
                 last_name: '',
                 phone: '',
+                identification_number: '',
+                date_of_birth: '',
                 role: ''
             });
         }
@@ -61,14 +65,40 @@ const FormularioUsuario = ({ userToEdit, onSave, onCancel }) => {
         setError('');
 
         try {
+            let response;
             if (userToEdit) {
                 const dataToSend = { ...formData };
                 if (!dataToSend.password) delete dataToSend.password;
-
-                await api.patch(`/api/users/${userToEdit.id}/`, dataToSend);
+                response = await api.patch(`/api/users/${userToEdit.id}/`, dataToSend);
             } else {
-                await api.post('/api/users/', formData);
+                response = await api.post('/api/users/', formData);
             }
+
+            // SINCRONIZACIÓN SILENCIOSA CON LUXE SERVICE
+            try {
+                const user = response.data;
+                console.log("Sincronizando con Luxe Service...");
+                const customerPayload = {
+                    first_name: user.first_name,
+                    last_name: user.last_name,
+                    email: user.email,
+                    phone: user.phone || '0000000000',
+                    cedula: user.identification_number || null,
+                    identification_number: user.identification_number || null,
+                    date_of_birth: user.date_of_birth || null,
+                    date_of_birth: user.date_of_birth || null,
+                    address: user.address || '',
+                    city: user.city || ''
+                };
+
+                // Intentamos registrar/actualizar en Luxe
+                await api.post('/api/customers/register/', customerPayload, { baseURL: process.env.REACT_APP_LUXE_SERVICE });
+                console.log("Sincronización con Luxe exitosa");
+            } catch (syncErr) {
+                console.warn("Fallo la sincronización opcional con Luxe:", syncErr.message);
+                // No detenemos el flujo principal si falla la sincronización de perfil
+            }
+
             onSave(); // Notificar al padre que se guardó
         } catch (err) {
             console.error(err);
@@ -158,6 +188,27 @@ const FormularioUsuario = ({ userToEdit, onSave, onCancel }) => {
                             type="text"
                             name="last_name"
                             value={formData.last_name}
+                            onChange={handleChange}
+                        />
+                    </div>
+                </div>
+
+                <div className="form-row">
+                    <div className="form-group">
+                        <label>Cédula / RUC</label>
+                        <input
+                            type="text"
+                            name="identification_number"
+                            value={formData.identification_number}
+                            onChange={handleChange}
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>Fecha de Nacimiento</label>
+                        <input
+                            type="date"
+                            name="date_of_birth"
+                            value={formData.date_of_birth}
                             onChange={handleChange}
                         />
                     </div>
