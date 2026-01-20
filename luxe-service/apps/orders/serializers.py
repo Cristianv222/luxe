@@ -289,7 +289,18 @@ class OrderCreateSerializer(serializers.Serializer):
         
         # Crear los items
         for item_data in items_data:
-            product = Product.objects.get(id=item_data['product_id'])
+            # Bloquear el registro del producto para evitar condiciones de carrera
+            product = Product.objects.select_for_update().get(id=item_data['product_id'])
+            
+            # Verificar y descontar stock
+            if product.track_stock:
+                if product.stock_quantity < item_data['quantity']:
+                    raise serializers.ValidationError(
+                        f"Stock insuficiente para '{product.name}'. Disponibles: {product.stock_quantity}"
+                    )
+                product.stock_quantity -= item_data['quantity']
+                product.save()
+
             size = None
             if item_data.get('size_id'):
                 size = Size.objects.get(id=item_data['size_id'])

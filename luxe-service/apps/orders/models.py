@@ -20,10 +20,9 @@ class Order(models.Model):
     ]
     
     ORDER_TYPE = [
-        ('dine_in', 'Comer Aquí'),
-        ('takeout', 'Para Llevar'),
-        ('delivery', 'Delivery'),
-        ('drive_thru', 'Drive-Thru'),
+        ('in_store', 'En Tienda'),
+        ('pickup', 'Recogida'),
+        ('delivery', 'Envío'),
     ]
     
     PAYMENT_STATUS = [
@@ -54,7 +53,7 @@ class Order(models.Model):
     order_type = models.CharField(
         max_length=20,
         choices=ORDER_TYPE,
-        default='dine_in',
+        default='in_store',
         verbose_name='Tipo de Orden'
     )
     
@@ -251,6 +250,12 @@ class Order(models.Model):
     def mark_as_cancelled(self, reason=''):
         """Cancela la orden"""
         if self.can_be_cancelled():
+            # Restaurar stock de productos
+            for item in self.items.select_related('product').all():
+                if item.product.track_stock:
+                    item.product.stock_quantity += item.quantity
+                    item.product.save()
+
             self.status = 'cancelled'
             self.cancelled_at = timezone.now()
             if reason:

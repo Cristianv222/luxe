@@ -22,4 +22,9 @@ urlpatterns = [
     
     # Incluir las rutas del router
     path('', include(router.urls)),
+    
+    # Inventario
+    path('inventory/export/excel/', views.InventoryExportExcelView.as_view(), name='inventory-export-excel'),
+    path('inventory/export/pdf/', views.InventoryExportPDFView.as_view(), name='inventory-export-pdf'),
+    path('inventory/import/excel/', views.InventoryImportExcelView.as_view(), name='inventory-import-excel'),
 ]

@@ -122,7 +122,7 @@ const Ordenes = () => {
             const receiptData = {
                 order_number: selectedOrder.order_number,
                 customer_name: selectedOrder.customer_name || 'CONSUMIDOR FINAL',
-                table_number: selectedOrder.table_number || (selectedOrder.order_type === 'takeout' ? 'PARA LLEVAR' : 'MESA GENÉRICA'),
+                table_number: selectedOrder.table_number || (selectedOrder.order_type === 'in_store' ? 'TIENDA' : (selectedOrder.order_type === 'pickup' ? 'RECOGIDA' : 'ENVÍO')),
                 items: selectedOrder.items.map(item => ({
                     name: item.product_details?.name || item.product_name || 'Producto',
                     quantity: item.quantity,
@@ -178,7 +178,7 @@ const Ordenes = () => {
         <div>
             <div className="ff-welcome-header" style={{ padding: '2rem', marginBottom: '2rem' }}>
                 <h1 style={{ marginBottom: '0.5rem' }}>Órdenes</h1>
-                <p>Gestiona y visualiza todas las órdenes del restaurante</p>
+                <p>Gestiona y visualiza todas las órdenes de la tienda</p>
             </div>
 
             {/* Search Bar */}

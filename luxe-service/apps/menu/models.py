@@ -129,6 +129,11 @@ class Product(models.Model):
     
     # Orden de visualización
     display_order = models.PositiveIntegerField(default=0, verbose_name='Orden')
+
+    # Control de Inventario
+    track_stock = models.BooleanField(default=False, verbose_name='Controlar Stock')
+    stock_quantity = models.PositiveIntegerField(default=0, verbose_name='Cantidad en Stock')
+    min_stock_alert = models.PositiveIntegerField(default=5, verbose_name='Alerta Stock Bajo')
     
     # Auditoría
     created_at = models.DateTimeField(auto_now_add=True)
@@ -150,6 +155,16 @@ class Product(models.Model):
     def is_available_now(self):
         """Verifica disponibilidad"""
         return self.is_active and self.is_available
+
+    def save(self, *args, **kwargs):
+        """Toggle is_available based on stock logic"""
+        if self.track_stock:
+            if self.stock_quantity <= 0:
+                self.is_available = False
+            else:
+                self.is_available = True
+        
+        super().save(*args, **kwargs)
 
 
 class Size(models.Model):

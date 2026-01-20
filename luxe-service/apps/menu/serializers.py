@@ -61,7 +61,8 @@ class ProductListSerializer(serializers.ModelSerializer):
             'id', 'category', 'category_name', 'name', 'slug',
             'description', 'image', 'price', 'calories',
             'is_active', 'is_available', 'is_featured', 'is_new',
-            'prep_time', 'display_order', 'has_sizes', 'has_extras'
+            'prep_time', 'display_order', 'has_sizes', 'has_extras',
+            'track_stock', 'stock_quantity', 'min_stock_alert'
         ]
         read_only_fields = ['id']
     
@@ -88,6 +89,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             'image', 'price', 'calories', 'ingredients', 'allergens',
             'is_active', 'is_available', 'is_featured', 'is_new',
             'prep_time', 'display_order', 'sizes', 'extras',
+            'track_stock', 'stock_quantity', 'min_stock_alert',
             'is_available_now', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -105,7 +107,8 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
             'category', 'name', 'slug', 'description', 'image',
             'price', 'calories', 'ingredients', 'allergens',
             'is_active', 'is_available', 'is_featured', 'is_new',
-            'prep_time', 'display_order'
+            'prep_time', 'display_order',
+            'track_stock', 'stock_quantity', 'min_stock_alert'
         ]
     
     def validate_price(self, value):

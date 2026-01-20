@@ -28,7 +28,7 @@ const PuntosVenta = () => {
     // =====================================
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
-    const [tables, setTables] = useState([]);
+    const [tables, setTables] = useState([]); // Deprecated but kept to avoid break, essentially empty
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [processingOrder, setProcessingOrder] = useState(false);
@@ -41,7 +41,7 @@ const PuntosVenta = () => {
     const [cart, setCart] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedTable, setSelectedTable] = useState('');
+    const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState('in_store'); // in_store, pickup, delivery
     const [discountCode, setDiscountCode] = useState('');
     const [appliedDiscount, setAppliedDiscount] = useState(null);
 
@@ -96,64 +96,33 @@ const PuntosVenta = () => {
         };
     }, []);
 
-    useEffect(() => {
-        let isMounted = true;
+    const loadData = useCallback(async () => {
+        try {
+            const productsRes = await api.get('/api/menu/products/', {
+                baseURL: process.env.REACT_APP_LUXE_SERVICE
+            });
+            setProducts(productsRes.data.results || productsRes.data || []);
+        } catch (err) {
+            console.error('Error cargando productos:', err);
+        }
 
-        const fetchData = async () => {
-            try {
-                const productsRes = await api.get('/api/menu/products/', {
-                    baseURL: process.env.REACT_APP_LUXE_SERVICE
-                });
+        try {
+            const categoriesRes = await api.get('/api/menu/categories/', {
+                baseURL: process.env.REACT_APP_LUXE_SERVICE
+            });
+            setCategories(categoriesRes.data.results || categoriesRes.data || []);
+        } catch (err) {
+            console.error('Error cargando categorías:', err);
+        }
 
-                if (!isMounted) return;
 
-                const loadedProducts = productsRes.data.results || productsRes.data || [];
-                setProducts(loadedProducts);
-
-            } catch (err) {
-                console.error('Error cargando productos:', err);
-            }
-
-            try {
-                const categoriesRes = await api.get('/api/menu/categories/', {
-                    baseURL: process.env.REACT_APP_LUXE_SERVICE
-                });
-
-                if (!isMounted) return;
-
-                const loadedCategories = categoriesRes.data.results || categoriesRes.data || [];
-                setCategories(loadedCategories);
-
-            } catch (err) {
-                console.error('Error cargando categorías:', err);
-            }
-
-            try {
-                const tablesRes = await api.get('/api/pos/tables/', {
-                    baseURL: process.env.REACT_APP_LUXE_SERVICE
-                });
-
-                if (!isMounted) return;
-                setTables(tablesRes.data.results || tablesRes.data || []);
-
-            } catch (err) {
-                console.warn('Mesas no disponibles');
-                if (isMounted) {
-                    setTables([]);
-                }
-            }
-
-            if (isMounted) {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-
-        return () => {
-            isMounted = false;
-        };
+        setTables([]);
+        setLoading(false);
     }, []);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     // Detectar tamaño de pantalla
     useEffect(() => {
@@ -369,7 +338,10 @@ const PuntosVenta = () => {
             const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
             const isAvailable = product.is_active && product.is_available;
 
-            return matchesCategory && matchesSearch && isAvailable;
+            // Verificar stock: si el control está activo, debe tener cantidad > 0
+            const hasStock = !product.track_stock || product.stock_quantity > 0;
+
+            return matchesCategory && matchesSearch && isAvailable && hasStock;
         });
     }, [products, selectedCategory, searchTerm]);
 
@@ -380,19 +352,15 @@ const PuntosVenta = () => {
         setProcessingOrder(true);
         setShowReviewModal(false);
 
-        let orderType = 'dine_in';
-        let tableNumber = selectedTable;
-        const DEFAULT_TABLE_NAME = 'GENERICA';
+        let orderType = selectedDeliveryMethod;
+        let tableNumber = '';
 
-        if (selectedTable === 'takeout') {
-            orderType = 'takeout';
-            tableNumber = '';
-        } else if (!selectedTable || selectedTable === 'Seleccionar mesa...') {
-            orderType = 'dine_in';
-            tableNumber = DEFAULT_TABLE_NAME;
-        } else {
-            orderType = 'dine_in';
-            tableNumber = selectedTable;
+        if (selectedDeliveryMethod === 'in_store') {
+            tableNumber = 'TIENDA';
+        } else if (selectedDeliveryMethod === 'pickup') {
+            tableNumber = 'RECOGIDA';
+        } else if (selectedDeliveryMethod === 'delivery') {
+            tableNumber = 'ENVIO';
         }
 
         // Preparar notas con información de pago
@@ -430,7 +398,7 @@ const PuntosVenta = () => {
                 customer_name: selectedCustomer
                     ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}`
                     : 'CONSUMIDOR FINAL',
-                table_number: selectedTable === 'takeout' ? 'PARA LLEVAR' : (selectedTable || 'MESA GENÉRICA'),
+                table_number: selectedDeliveryMethod === 'in_store' ? 'EN TIENDA' : (selectedDeliveryMethod === 'pickup' ? 'RECOGIDA' : 'ENVÍO'),
                 items: cart.map(item => ({
                     name: item.name,
                     quantity: item.quantity,
@@ -472,11 +440,12 @@ const PuntosVenta = () => {
             setCart([]);
             setAppliedDiscount(null);
             setDiscountCode('');
-            setSelectedTable('');
+            setSelectedDeliveryMethod('in_store');
             setSelectedCustomer(null);
             setCustomerSearch('');
             setCashGiven(null); // Resetear calculadora
             setInputCash('');
+            loadData(); // Recargar datos (stock y mesas)
 
         } catch (err) {
             console.error('❌ Error al procesar la orden:', err);
@@ -571,25 +540,17 @@ const PuntosVenta = () => {
                     </div>
                 </div>
 
-                {/* Mesa/Tipo de Orden */}
+                {/* Método de Entrega */}
                 <div style={{ marginBottom: '1.5rem' }}>
-                    <label className="ff-label">Mesa / Tipo de Orden</label>
+                    <label className="ff-label">Método de Entrega</label>
                     <select
                         className="ff-search-input"
-                        value={selectedTable}
-                        onChange={(e) => setSelectedTable(e.target.value)}
+                        value={selectedDeliveryMethod}
+                        onChange={(e) => setSelectedDeliveryMethod(e.target.value)}
                     >
-                        <option value="">Seleccionar mesa...</option>
-                        <option value="takeout">Para Llevar (Takeout)</option>
-                        {tables.map(table => (
-                            <option
-                                key={table.id}
-                                value={table.number}
-                                disabled={table.status !== 'available'}
-                            >
-                                Mesa {table.number} {table.status !== 'available' ? '(Ocupada)' : ''}
-                            </option>
-                        ))}
+                        <option value="in_store">🛍️ Compra en Tienda</option>
+                        <option value="pickup">📦 Recoger en Local</option>
+                        <option value="delivery">🚚 Envío a Domicilio</option>
                     </select>
                 </div>
 
@@ -635,7 +596,7 @@ const PuntosVenta = () => {
                     Cliente: {selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : 'CONSUMIDOR FINAL'}
                 </p>
                 <p style={{ fontSize: '0.9rem', color: 'var(--color-latte)' }}>
-                    Mesa/Tipo: {selectedTable === 'takeout' ? 'Para Llevar' : selectedTable || 'Mesa Genérica (DINE-IN)'}
+                    Método: {selectedDeliveryMethod === 'in_store' ? 'En Tienda' : (selectedDeliveryMethod === 'pickup' ? 'Recogida' : 'Envío')}
                 </p>
             </div>
 
@@ -2075,52 +2036,7 @@ const PuntosVenta = () => {
 
                         {renderReviewDetails()}
 
-                        <div style={{
-                            padding: isSmallScreen ? '1rem' : '1.5rem',
-                            borderTop: '2px solid #e5e7eb',
-                            display: 'flex',
-                            gap: '0.75rem',
-                            justifyContent: 'space-between'
-                        }}>
-                            <button
-                                style={{
-                                    padding: isSmallScreen ? '0.75rem' : '0.75rem 1.5rem',
-                                    backgroundColor: '#9ca3af',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    color: '#ffffff',
-                                    fontWeight: '600',
-                                    fontSize: isSmallScreen ? '0.875rem' : '1rem',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    flex: 1,
-                                    minHeight: TOUCH_MIN_SIZE
-                                }}
-                                onClick={() => setShowReviewModal(false)}
-                            >
-                                Editar Pedido
-                            </button>
 
-                            <button
-                                style={{
-                                    padding: isSmallScreen ? '0.75rem' : '0.75rem 1.5rem',
-                                    backgroundColor: '#059669',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    color: '#ffffff',
-                                    fontWeight: '700',
-                                    fontSize: isSmallScreen ? '0.875rem' : '1rem',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    flex: 1,
-                                    minHeight: TOUCH_MIN_SIZE
-                                }}
-                                onClick={finalPlaceOrder}
-                                disabled={processingOrder}
-                            >
-                                Confirmar y Procesar Pago
-                            </button>
-                        </div>
                     </div>
                 </div>
             )}

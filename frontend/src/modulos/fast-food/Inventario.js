@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import Modal from '../../comun/Modal';
 import Categorias from './Categorias';
-import Extras from './Extras';
-import Combos from './Combos';
-import Tamanos from './Tamanos';
+
 
 const Inventario = () => {
     const [activeTab, setActiveTab] = useState('products'); // products, categories, extras, combos, sizes
@@ -24,7 +22,10 @@ const Inventario = () => {
         category: '',
         image: null,
         is_active: true,
-        is_available: true
+        is_available: true,
+        track_stock: false,
+        stock_quantity: 0,
+        min_stock_alert: 5
     });
     const [editingProduct, setEditingProduct] = useState(null);
 
@@ -80,7 +81,10 @@ const Inventario = () => {
             category: product.category,
             image: null,
             is_active: product.is_active !== undefined ? product.is_active : true,
-            is_available: product.is_available !== undefined ? product.is_available : true
+            is_available: product.is_available !== undefined ? product.is_available : true,
+            track_stock: product.track_stock || false,
+            stock_quantity: product.stock_quantity || 0,
+            min_stock_alert: product.min_stock_alert || 5
         });
         setIsModalOpen(true);
     };
@@ -115,6 +119,11 @@ const Inventario = () => {
         formData.append('category', newProduct.category);
         formData.append('is_active', newProduct.is_active ? 'true' : 'false');
         formData.append('is_available', newProduct.is_available ? 'true' : 'false');
+        formData.append('track_stock', newProduct.track_stock ? 'true' : 'false');
+        if (newProduct.track_stock) {
+            formData.append('stock_quantity', newProduct.stock_quantity);
+            formData.append('min_stock_alert', newProduct.min_stock_alert);
+        }
         if (newProduct.image instanceof File) {
             formData.append('image', newProduct.image);
         }
@@ -139,7 +148,8 @@ const Inventario = () => {
                 });
             }
             setIsModalOpen(false);
-            setNewProduct({ name: '', description: '', price: '', category: '', image: null, is_active: true, is_available: true });
+            setIsModalOpen(false);
+            setNewProduct({ name: '', description: '', price: '', category: '', image: null, is_active: true, is_available: true, track_stock: false, stock_quantity: 0, min_stock_alert: 5 });
             setEditingProduct(null);
             fetchProducts();
         } catch (err) {
@@ -152,7 +162,78 @@ const Inventario = () => {
     return (
         <div>
             <div className="ff-welcome-header" style={{ padding: '2rem', marginBottom: '2rem' }}>
-                <h2 style={{ fontSize: '2rem', margin: 0 }}>Inventario (Menú)</h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h2 style={{ fontSize: '2rem', margin: 0 }}>Inventario (Menú)</h2>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                            className="ff-button ff-button-secondary"
+                            onClick={async () => {
+                                try {
+                                    const res = await api.get('/api/menu/inventory/export/excel/', {
+                                        responseType: 'blob',
+                                        baseURL: process.env.REACT_APP_LUXE_SERVICE
+                                    });
+                                    const url = window.URL.createObjectURL(new Blob([res.data]));
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.setAttribute('download', 'inventario_luxe.xlsx');
+                                    document.body.appendChild(link);
+                                    link.click();
+                                } catch (e) { alert('Error exportando Excel'); }
+                            }}
+                        >
+                            📊 Exportar Excel
+                        </button>
+                        <button
+                            className="ff-button ff-button-secondary"
+                            onClick={async () => {
+                                try {
+                                    const res = await api.get('/api/menu/inventory/export/pdf/', {
+                                        responseType: 'blob',
+                                        baseURL: process.env.REACT_APP_LUXE_SERVICE
+                                    });
+                                    const url = window.URL.createObjectURL(new Blob([res.data]));
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.setAttribute('download', 'inventario_luxe.pdf');
+                                    document.body.appendChild(link);
+                                    link.click();
+                                } catch (e) { alert('Error exportando PDF'); }
+                            }}
+                        >
+                            📄 Exportar PDF
+                        </button>
+                        <button
+                            className="ff-button ff-button-primary"
+                            onClick={() => document.getElementById('importInput').click()}
+                        >
+                            📥 Importar Excel
+                        </button>
+                        <input
+                            id="importInput"
+                            type="file"
+                            accept=".xlsx"
+                            style={{ display: 'none' }}
+                            onChange={async (e) => {
+                                const file = e.target.files[0];
+                                if (!file) return;
+                                const formData = new FormData();
+                                formData.append('file', file);
+                                try {
+                                    const res = await api.post('/api/menu/inventory/import/excel/', formData, {
+                                        headers: { 'Content-Type': 'multipart/form-data' },
+                                        baseURL: process.env.REACT_APP_LUXE_SERVICE
+                                    });
+                                    alert(res.data.message);
+                                    fetchProducts();
+                                } catch (err) {
+                                    alert('Error importando: ' + (err.response?.data?.error || err.message));
+                                }
+                                e.target.value = null; // Reset
+                            }}
+                        />
+                    </div>
+                </div>
             </div>
 
             {/* Tabs */}
@@ -169,31 +250,12 @@ const Inventario = () => {
                 >
                     Categorías
                 </button>
-                <button
-                    className={`ff-tab ${activeTab === 'combos' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('combos')}
-                >
-                    Combos
-                </button>
-                <button
-                    className={`ff-tab ${activeTab === 'extras' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('extras')}
-                >
-                    Extras
-                </button>
-                <button
-                    className={`ff-tab ${activeTab === 'sizes' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('sizes')}
-                >
-                    Tamaños
-                </button>
+
             </div>
 
             {/* Content Cache */}
             {activeTab === 'categories' && <Categorias />}
-            {activeTab === 'extras' && <Extras />}
-            {activeTab === 'combos' && <Combos />}
-            {activeTab === 'sizes' && <Tamanos />}
+
 
             {/* Products Content */}
             {activeTab === 'products' && (
@@ -218,6 +280,7 @@ const Inventario = () => {
                                             <th>Nombre</th>
                                             <th>Categoría</th>
                                             <th>Precio</th>
+                                            <th>Stock</th>
                                             <th>Disponible</th>
                                             <th>Acciones</th>
                                         </tr>
@@ -244,6 +307,18 @@ const Inventario = () => {
                                                     </td>
                                                     <td>{product.category_name || product.category}</td>
                                                     <td>${product.price}</td>
+                                                    <td>
+                                                        {product.track_stock ? (
+                                                            <span style={{
+                                                                color: product.stock_quantity <= product.min_stock_alert ? '#d62728' : 'inherit',
+                                                                fontWeight: product.stock_quantity <= product.min_stock_alert ? 'bold' : 'normal'
+                                                            }}>
+                                                                {product.stock_quantity}
+                                                            </span>
+                                                        ) : (
+                                                            <span style={{ fontSize: '1.2rem', color: '#aaa' }}>∞</span>
+                                                        )}
+                                                    </td>
                                                     <td>
                                                         <span className={`status-badge ${product.is_available ? 'completed' : 'pending'}`}>
                                                             {product.is_available ? 'Sí' : 'No'}
@@ -345,6 +420,46 @@ const Inventario = () => {
                                     />
                                     Disponible
                                 </label>
+                            </div>
+
+                            <div style={{ marginTop: '0.5rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', marginBottom: '1rem' }}>
+                                    <input
+                                        type="checkbox"
+                                        name="track_stock"
+                                        checked={newProduct.track_stock}
+                                        onChange={handleInputChange}
+                                        style={{ marginRight: '8px' }}
+                                    />
+                                    <strong>Controlar Inventario</strong>
+                                </label>
+
+                                {newProduct.track_stock && (
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Cantidad Actual</label>
+                                            <input
+                                                type="number"
+                                                name="stock_quantity"
+                                                className="ff-search-input"
+                                                value={newProduct.stock_quantity}
+                                                onChange={handleInputChange}
+                                                min="0"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Alerta Mínima</label>
+                                            <input
+                                                type="number"
+                                                name="min_stock_alert"
+                                                className="ff-search-input"
+                                                value={newProduct.min_stock_alert}
+                                                onChange={handleInputChange}
+                                                min="0"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Imagen</label>
