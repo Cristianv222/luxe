@@ -190,7 +190,8 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = [
-            'id', 'order_number', 'customer', 'order_type', 'order_type_display',
+            'id', 'order_number', 'customer', 'customer_name', 'customer_identification',
+            'order_type', 'order_type_display',
             'status', 'status_display', 'payment_status', 'payment_status_display',
             'subtotal', 'tax_amount', 'discount_amount', 'delivery_fee',
             'tip_amount', 'total', 'notes', 'special_instructions',
@@ -215,6 +216,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
 class OrderCreateSerializer(serializers.Serializer):
     """Serializer para crear órdenes"""
     customer_id = serializers.UUIDField(required=False, allow_null=True)
+    customer_email = serializers.EmailField(required=False, allow_null=True)
     order_type = serializers.ChoiceField(choices=Order.ORDER_TYPE, default='dine_in')
     items = OrderItemCreateSerializer(many=True)
     notes = serializers.CharField(required=False, allow_blank=True)
@@ -269,13 +271,35 @@ class OrderCreateSerializer(serializers.Serializer):
     def create(self, validated_data):
         """Crea la orden con todos sus items"""
         from apps.menu.models import Product, Size, Extra
+        from apps.customers.models import Customer
         
         # Extraer datos que no van directamente al modelo Order
         items_data = validated_data.pop('items')
         delivery_info_data = validated_data.pop('delivery_info', None)
+        customer_email = validated_data.pop('customer_email', None)
         
-        # FORZAR ESTADO COMPLETADO PARA ORDENES DE POS
-        # El usuario requiere que nazcan 'completadas' y 'pagadas'
+        # 1. Lógica de Cliente y SNAPSHOT (Inmortal)
+        customer = None
+        customer_id = validated_data.get('customer_id')
+        
+        if customer_id:
+            customer = Customer.objects.filter(id=customer_id).first()
+            if customer:
+                validated_data['customer'] = customer
+        elif customer_email:
+            customer = Customer.objects.filter(email__iexact=customer_email).first()
+            if customer:
+                validated_data['customer'] = customer
+
+        # Guardamos el snapshot de identidad en la orden para que quede 'quieta'
+        if customer:
+            validated_data['customer_name'] = f"{customer.first_name} {customer.last_name}".strip()
+            validated_data['customer_identification'] = customer.cedula or customer.phone
+        else:
+            validated_data['customer_name'] = "Consumidor Final"
+            validated_data['customer_identification'] = "9999999999999"
+
+        # 2. FORZAR ESTADO COMPLETADO PARA ORDENES DE POS
         validated_data['status'] = 'completed'
         validated_data['payment_status'] = 'paid'
         

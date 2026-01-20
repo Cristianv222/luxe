@@ -49,6 +49,20 @@ class Order(models.Model):
         verbose_name='Cliente'
     )
     
+    # Snapshot del cliente al momento de la orden (Inmortal/Quieto)
+    customer_name = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True, 
+        verbose_name='Nombre del Cliente (Snapshot)'
+    )
+    customer_identification = models.CharField(
+        max_length=20, 
+        blank=True, 
+        null=True, 
+        verbose_name='Identificación (Snapshot)'
+    )
+    
     # Información básica
     order_type = models.CharField(
         max_length=20,

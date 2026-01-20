@@ -80,9 +80,7 @@ const Clientes = () => {
             };
 
             console.log("Creando perfil de cliente...");
-            await api.post('/api/customers/register/', customerPayload, {
-                baseURL: process.env.REACT_APP_LUXE_SERVICE
-            });
+            await api.post('api/customers/register/', customerPayload, { baseURL: '/api/luxe' });
 
             // 2. Prepare payload for AUTH SERVICE (User Login)
             try {

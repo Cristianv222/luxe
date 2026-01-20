@@ -1,50 +1,40 @@
-from rest_framework.authentication import BaseAuthentication
-from rest_framework.exceptions import AuthenticationFailed
-from django.contrib.auth.models import AnonymousUser
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework import exceptions
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
 
-class SimpleUser:
+class CustomJWTAuthentication(JWTAuthentication):
     """
-    Clase simple para representar un usuario autenticado desde otro servicio
+    Autenticación JWT personalizada que no requiere que el usuario
+    exista en la base de datos local de luxe-service.
     """
-    def __init__(self, user_data):
-        self.id = user_data.get('user_id')
-        self.username = user_data.get('username', '')
-        self.email = user_data.get('email', '')
-        self.is_authenticated = True
-        self.is_active = True
-        self.is_staff = user_data.get('is_staff', False)
-        self.is_superuser = user_data.get('is_superuser', False)
-        self.role = user_data.get('role')
-        self.role_id = user_data.get('role_id')
-        self._user_data = user_data
-    
-    def __str__(self):
-        return self.username or f"User-{self.id}"
-    
-    @property
-    def is_anonymous(self):
-        return False
+    def get_user(self, validated_token):
+        user_id = validated_token.get('user_id')
+        if not user_id:
+            raise exceptions.AuthenticationFailed('Token no contiene user_id')
 
-
-class JWTAuthentication(BaseAuthentication):
-    """
-    Autenticación personalizada que usa los datos del middleware
-    """
-    
-    def authenticate(self, request):
-        # El middleware ya validó el token y agregó user_data
-        user_data = getattr(request, 'user_data', None)
-        
-        if user_data is None:
-            # No hay token o no fue validado
-            return None
-        
-        # Crear objeto de usuario simple
-        user = SimpleUser(user_data)
-        
-        # Retornar tupla (user, auth) como espera DRF
-        return (user, None)
-    
-    def authenticate_header(self, request):
-        return 'Bearer'
+        # Intentamos obtener el usuario de la base de datos local por si existe
+        # (por ejemplo si es un admin creado localmente)
+        try:
+            return User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            # Si no existe, creamos un usuario "virtual" o "shadow"
+            # para que DRF no falle la autenticación.
+            # No lo guardamos en la base de datos.
+            
+            user = User(
+                id=user_id,
+                username=validated_token.get('username', f'user_{user_id}'),
+                email=validated_token.get('email', ''),
+                is_active=True
+            )
+            # Marcar como autenticado externamente
+            user.is_external = True
+            
+            # Asignar roles desde el token si están presentes
+            user.role = validated_token.get('role')
+            user.is_staff = validated_token.get('is_staff', False)
+            user.is_superuser = validated_token.get('is_superuser', False)
+            
+            return user

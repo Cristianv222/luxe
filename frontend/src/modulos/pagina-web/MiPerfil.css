@@ -1,0 +1,253 @@
+.profile-page {
+    background-color: #fdfcfb;
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+    color: #2C2C2C;
+}
+
+.profile-main {
+    max-width: 1200px;
+    margin: 80px auto 0;
+    padding: 60px 20px;
+}
+
+.profile-hero {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.profile-hero h1 {
+    font-family: serif;
+    font-size: 42px;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+}
+
+.profile-hero p {
+    color: #666;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+}
+
+.profile-content-wrapper {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 40px;
+    background: white;
+    padding: 40px;
+    border-radius: 4px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+    border: 1px solid #f0f0f0;
+}
+
+.profile-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sidebar-btn {
+    background: none;
+    border: none;
+    text-align: left;
+    padding: 15px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+}
+
+.sidebar-btn:hover {
+    color: #2C2C2C;
+    background-color: #f9f9f9;
+}
+
+.sidebar-btn.active {
+    color: #2C2C2C;
+    background-color: #f1efed;
+}
+
+.profile-section {
+    padding-left: 20px;
+    border-left: 1px solid #f0f0f0;
+}
+
+.tab-pane h2 {
+    font-family: serif;
+    font-size: 24px;
+    margin-bottom: 30px;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 15px;
+}
+
+.profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #333;
+}
+
+.form-group input {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #2C2C2C;
+}
+
+.btn-save {
+    margin-top: 20px;
+    padding: 15px 30px;
+    background-color: #2C2C2C;
+    color: white;
+    border: none;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.3s;
+    font-size: 13px;
+}
+
+.btn-save:hover {
+    background-color: #000;
+}
+
+.btn-save:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.status-message {
+    padding: 15px;
+    margin-bottom: 30px;
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.status-message.success {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
+}
+
+.status-message.error {
+    background-color: #ffebee;
+    color: #c62828;
+    border: 1px solid #ffcdd2;
+}
+
+/* Orders Table */
+.orders-table-wrapper {
+    overflow-x: auto;
+}
+
+.orders-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.orders-table th {
+    text-align: left;
+    padding: 15px;
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #666;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.orders-table td {
+    padding: 15px;
+    font-size: 14px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.status-badge.completed,
+.status-badge.delivered {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.status-badge.pending {
+    background-color: #fff8e1;
+    color: #f57f17;
+}
+
+.status-badge.cancelled {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.no-orders {
+    color: #888;
+    font-style: italic;
+    text-align: center;
+    padding: 40px;
+}
+
+@media (max-width: 992px) {
+    .profile-content-wrapper {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-section {
+        padding-left: 0;
+        border-left: none;
+        border-top: 1px solid #f0f0f0;
+        padding-top: 40px;
+    }
+
+    .profile-sidebar {
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: 10px;
+    }
+
+    .sidebar-btn {
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 600px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../../services/api';
 import logo from '../../assets/logo_luxury.png';
 import heroBg from '../../assets/hero_store.jpg';
@@ -7,6 +8,7 @@ import './BoutiqueLanding.css';
 
 const BoutiqueLanding = () => {
     const { user, logout } = useAuth();
+    const navigate = useNavigate();
     const [categories, setCategories] = useState([]);
     const [products, setProducts] = useState([]);
     const [activeCategory, setActiveCategory] = useState(null);
@@ -16,8 +18,8 @@ const BoutiqueLanding = () => {
         const fetchData = async () => {
             try {
                 // 1. Fetch Categories
-                const catResponse = await api.get('/api/menu/categories/', {
-                    baseURL: process.env.REACT_APP_LUXE_SERVICE
+                const catResponse = await api.get('api/menu/categories/', {
+                    baseURL: '/api/luxe'
                 });
                 const cats = catResponse.data.results || catResponse.data || [];
                 const activeCats = cats.filter(c => c.is_active);
@@ -28,8 +30,8 @@ const BoutiqueLanding = () => {
                 }
 
                 // 2. Fetch Products
-                const prodResponse = await api.get('/api/menu/products/', {
-                    baseURL: process.env.REACT_APP_LUXE_SERVICE
+                const prodResponse = await api.get('api/menu/products/', {
+                    baseURL: '/api/luxe'
                 });
                 const prods = prodResponse.data.results || prodResponse.data || [];
                 setProducts(prods.filter(p => p.is_active && p.is_available));
@@ -42,6 +44,11 @@ const BoutiqueLanding = () => {
     }, []);
 
     const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
 
     return (
         <div className="boutique-container">
@@ -65,20 +72,20 @@ const BoutiqueLanding = () => {
                         <a href="#contact" className="nav-link" onClick={() => setIsMenuOpen(false)}>CONTACTO</a>
                         {user ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                <a href="/perfil" className="nav-link" onClick={() => setIsMenuOpen(false)} title="Mi Perfil">
+                                <Link to="/perfil" className="nav-link" onClick={() => setIsMenuOpen(false)} title="Mi Perfil">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                                         <circle cx="12" cy="7" r="4"></circle>
                                     </svg>
-                                </a>
-                                <button onClick={logout} className="btn-logout" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}>
+                                </Link>
+                                <button onClick={handleLogout} className="btn-logout" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}>
                                     CERRAR SESIÓN
                                 </button>
                             </div>
                         ) : (
                             <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                                <a href="/login" className="nav-link">INICIAR SESIÓN</a>
-                                <a href="/registro" className="nav-link" style={{ fontWeight: '700' }}>REGISTRARTE</a>
+                                <Link to="/login" className="nav-link">INICIAR SESIÓN</Link>
+                                <Link to="/registro" className="nav-link" style={{ fontWeight: '700' }}>REGISTRARTE</Link>
                             </div>
                         )}
                     </nav>

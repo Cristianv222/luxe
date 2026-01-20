@@ -44,6 +44,7 @@ urlpatterns = [
     path('admin/stats/', views.admin_customer_stats, name='admin-stats'),
     
     # Operaciones por cliente
+    path('admin/sync/', views.sync_external_customer, name='admin-sync'),
     path('admin/<uuid:customer_id>/', views.admin_customer_detail, name='admin-customer-detail'),
     path('admin/<uuid:customer_id>/notes/', views.admin_create_customer_note, name='admin-create-note'),
     path('admin/<uuid:customer_id>/loyalty/add-points/', views.admin_add_loyalty_points, name='admin-add-points'),

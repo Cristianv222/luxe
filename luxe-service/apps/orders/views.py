@@ -78,6 +78,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         date_to = self.request.query_params.get('date_to')
         min_total = self.request.query_params.get('min_total')
         max_total = self.request.query_params.get('max_total')
+        customer_email = self.request.query_params.get('customer__email')
         
         if date_from:
             try:
@@ -97,6 +98,9 @@ class OrderViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(total__gte=min_total)
         if max_total:
             queryset = queryset.filter(total__lte=max_total)
+
+        if customer_email:
+            queryset = queryset.filter(customer__email__iexact=customer_email)
         
         return queryset
     

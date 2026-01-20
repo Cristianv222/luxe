@@ -761,6 +761,94 @@ def admin_search_customers(request):
             'customers': serializer.data
         }
     })
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def sync_external_customer(request):
+    """
+    Sincroniza un usuario externo (de Auth Service) con un perfil de cliente en Luxe.
+    Busca por email, cédula o teléfono para evitar duplicados.
+    """
+    data = request.data
+    email = data.get('email')
+    cedula = data.get('cedula') or data.get('identification_number')
+    phone = data.get('phone')
+    
+    if not email:
+        return Response({'status': 'error', 'message': 'Email requerido'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # 1. Búsqueda por EMAIL (Prioridad absoluta)
+    customer = Customer.objects.filter(email__iexact=email).first()
+    
+    # 2. Búsqueda por Cédula/Teléfono (Solo si no hay match por email)
+    if not customer:
+        invalid_values = ['', 'None', 'null', 'undefined', '-', '.', '0000000000']
+        
+        # Intentar por cédula
+        if cedula and str(cedula).strip() not in invalid_values:
+            potential = Customer.objects.filter(cedula=cedula).first()
+            if potential:
+                # Solo usamos el match por cédula si el email coincide o está vacío
+                if not potential.email or potential.email.lower() == email.lower():
+                    customer = potential
+                else:
+                    # COLISIÓN: Esta cédula ya está asociada a otro correo. Ignoramos.
+                    pass
+        
+        # Intentar por teléfono
+        if not customer and phone and str(phone).strip() not in invalid_values:
+            potential = Customer.objects.filter(phone=phone).first()
+            if potential:
+                if not potential.email or potential.email.lower() == email.lower():
+                    customer = potential
+            
+    # 3. Si existe, actualizar con los datos frescos de Auth (Fuente de Verdad)
+    if customer:
+        try:
+            # Siempre forzamos el nombre de Auth si el registro es el correcto
+            # Evitamos colisiones de nombres antiguos
+            customer.first_name = data.get('first_name', customer.first_name)
+            customer.last_name = data.get('last_name', customer.last_name)
+            
+            # El email solo se actualiza si estaba vacío (casos raros)
+            if not customer.email:
+                customer.email = email
+            
+            # El teléfono solo se actualiza si es el temporal del sistema
+            if not customer.phone or customer.phone.startswith('SYNC_'):
+                new_phone = data.get('phone')
+                if new_phone:
+                    customer.phone = new_phone
+            
+            # La cédula solo si no la tenía registrada
+            if not customer.cedula and cedula:
+                customer.cedula = cedula
+                
+            customer.save()
+            return Response({'status': 'success', 'data': CustomerSerializer(customer).data})
+        except Exception as e:
+            return Response({'status': 'error', 'message': f'Error actualizando: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    # 3. Si no existe, crear
+    create_data = {
+        'email': email,
+        'first_name': data.get('first_name', 'Usuario'),
+        'last_name': data.get('last_name', 'Externo'),
+        'phone': phone or f"09{timezone.now().strftime('%m%d%H%M')}",
+        'cedula': cedula,
+    }
+    create_data = {k: v for k, v in create_data.items() if v is not None}
+    
+    serializer = CustomerCreateSerializer(data=create_data)
+    if serializer.is_valid():
+        try:
+            customer = serializer.save()
+            return Response({'status': 'success', 'data': CustomerSerializer(customer).data}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'status': 'error', 'message': f'Error de integridad: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response({'status': 'error', 'message': 'Validación fallida', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
 # ========== ENDPOINTS DE HEALTH CHECK ==========
 
 @api_view(['GET'])

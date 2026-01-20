@@ -92,7 +92,7 @@ const FormularioUsuario = ({ userToEdit, onSave, onCancel }) => {
                 };
 
                 // Intentamos registrar/actualizar en Luxe
-                await api.post('/api/customers/register/', customerPayload, { baseURL: process.env.REACT_APP_LUXE_SERVICE });
+                await api.post('api/customers/register/', customerPayload, { baseURL: '/api/luxe' });
                 console.log("Sincronización con Luxe exitosa");
             } catch (syncErr) {
                 console.warn("Fallo la sincronización opcional con Luxe:", syncErr.message);

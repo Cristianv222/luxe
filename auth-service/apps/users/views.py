@@ -28,9 +28,10 @@ class UserViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """
-        Solo admins pueden crear, actualizar y eliminar usuarios
+        Solo admins pueden crear, actualizar y eliminar usuarios.
+        Cualquier usuario autenticado puede ver su perfil.
         """
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+        if self.action in ['create', 'destroy', 'update', 'partial_update']:
             return [IsAdminUser()]
         return [IsAuthenticated()]
     
@@ -43,13 +44,21 @@ class UserViewSet(viewsets.ModelViewSet):
             return User.objects.all().select_related('role')
         return User.objects.filter(id=self.request.user.id)
     
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get', 'patch', 'put'])
     def me(self, request):
         """
-        Endpoint para obtener el perfil del usuario actual
-        GET /api/users/me/
+        Endpoint para obtener o actualizar el perfil del usuario actual
+        GET, PATCH, PUT /api/users/me/
         """
-        serializer = self.get_serializer(request.user)
+        user = request.user
+        if request.method in ['PATCH', 'PUT']:
+            serializer = UserSerializer(user, data=request.data, partial=(request.method == 'PATCH'))
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = self.get_serializer(user)
         return Response(serializer.data)
     
     @action(detail=True, methods=['post'])

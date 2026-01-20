@@ -17,6 +17,7 @@ import DisenoFastFood from './modulos/fast-food/DisenoFastFood';
 import LandingPage from './modulos/pagina-web/LandingPage'; // Keeping as backup for now or remove? User wanted switch.
 import BoutiqueLanding from './modulos/pagina-web/BoutiqueLanding';
 import Registro from './modulos/pagina-web/Registro';
+import MiPerfil from './modulos/pagina-web/MiPerfil';
 import './App.css';
 
 // Componente para proteger rutas
@@ -55,6 +56,14 @@ const FastFoodRoute = ({ children }) => {
   return <DisenoFastFood>{children}</DisenoFastFood>;
 };
 
+// Componente para proteger rutas de clientes (redirige al home si no hay usuario)
+const ClientRoute = ({ children }) => {
+  const { user, loading } = useContext(AuthContext);
+  if (loading) return <div>Cargando...</div>;
+  if (!user) return <Navigate to="/" />;
+  return children;
+};
+
 // Dashboard simple
 const Dashboard = () => (
   <div className="page-container">
@@ -72,6 +81,11 @@ function App() {
 
           <Route path="/" element={<BoutiqueLanding />} />
           <Route path="/registro" element={<Registro />} />
+          <Route path="/perfil" element={
+            <ClientRoute>
+              <MiPerfil />
+            </ClientRoute>
+          } />
 
           <Route path="/dashboard" element={
             <PrivateRoute>

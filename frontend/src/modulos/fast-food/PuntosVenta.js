@@ -104,12 +104,12 @@ const PuntosVenta = () => {
 
     const loadData = useCallback(async () => {
         try {
-            const productsRes = await api.get('/api/menu/products/', { baseURL: process.env.REACT_APP_LUXE_SERVICE });
+            const productsRes = await api.get('api/menu/products/', { baseURL: '/api/luxe' });
             setProducts(productsRes.data.results || productsRes.data || []);
         } catch (err) { console.error('Error cargando productos:', err); }
 
         try {
-            const categoriesRes = await api.get('/api/menu/categories/', { baseURL: process.env.REACT_APP_LUXE_SERVICE });
+            const categoriesRes = await api.get('api/menu/categories/', { baseURL: '/api/luxe' });
             setCategories(categoriesRes.data.results || categoriesRes.data || []);
         } catch (err) { console.error('Error cargando categorías:', err); }
 
@@ -269,66 +269,36 @@ const PuntosVenta = () => {
 
     const syncAndSelectUser = async (user) => {
         try {
-            console.log("Sincronizando usuario con perfil de cliente...", user.email);
+            console.log("Iniciando sincronización atómica para:", user.email);
 
-            // 1. Intentar buscar si ya existe el cliente en LUXE SERVICE
-            let existingCustomer = null;
-            try {
-                const searchRes = await api.post('/api/customers/admin/search/', { query: user.email }, { baseURL: process.env.REACT_APP_LUXE_SERVICE || '/api/luxe/api' });
-                // Buscamos exactitud por email
-                existingCustomer = searchRes.data.data.customers.find(c => c.email.toLowerCase() === user.email.toLowerCase());
-            } catch (err) {
-                console.warn("No se pudo consultar clientes existentes en Luxe:", err.message);
-            }
-
-            if (existingCustomer) {
-                console.log("Cliente encontrado en Luxe:", existingCustomer.id);
-                setSelectedCustomer(existingCustomer);
-                setCustomers([]);
-                setCustomerSearch(`${existingCustomer.first_name} ${existingCustomer.last_name}`);
-                return existingCustomer;
-            }
-
-            // 2. Si no existe, crearlo en LUXE SERVICE basado en los datos del USER
-            console.log("Creando perfil de cliente shadow en Luxe...");
             const customerPayload = {
                 first_name: user.first_name,
                 last_name: user.last_name,
                 email: user.email,
-                phone: user.phone || '0000000000',
+                phone: user.phone || null,
                 cedula: user.identification_number || null,
                 identification_number: user.identification_number || null,
-                birth_date: user.date_of_birth || null,
-                date_of_birth: user.date_of_birth || null,
                 address: user.address || '',
                 city: user.city || ''
             };
 
-            try {
-                const res = await api.post('/api/customers/register/', customerPayload, { baseURL: process.env.REACT_APP_LUXE_SERVICE || '/api/luxe/api' });
-                const createdCustomer = res.data.data.customer;
+            // USAMOS EL ENDPOINT ATÓMICO: Sincroniza (Busca o Crea) en una sola petición
+            const res = await api.post('api/customers/admin/sync/', customerPayload, { baseURL: '/api/luxe' });
+            const syncedCustomer = res.data.data;
 
-                setSelectedCustomer(createdCustomer);
+            if (syncedCustomer) {
+                console.log("Cliente vinculado correctamente:", syncedCustomer.id);
+                setSelectedCustomer(syncedCustomer);
                 setCustomers([]);
-                setCustomerSearch(`${createdCustomer.first_name} ${createdCustomer.last_name}`);
-                console.log("Sincronización exitosa.");
-                return createdCustomer;
-            } catch (err) {
-                console.warn("No se pudo crear perfil en Luxe (posiblemente ya existe o error de red):", err.message);
-                // Si falla la creación pero tenemos los datos del usuario, 
-                // lo seleccionamos localmente para el recibo, pero marcamos que no tiene ID de Luxe
-                setSelectedCustomer({ ...user, is_external_only: true });
-                setCustomers([]);
-                setCustomerSearch(`${user.first_name} ${user.last_name}`);
-                return null;
+                setCustomerSearch(''); // Limpiamos búsqueda
+                return syncedCustomer;
             }
-
         } catch (err) {
-            console.error("Fallo silencioso en sincronización:", err);
-            // No alertamos al usuario, permitimos que siga como 'usuario local'
+            console.warn("Fallo en sincronización atómica, usando selección local:", err.message);
+            // Fallback: selección local para no bloquear la operación
             setSelectedCustomer({ ...user, is_external_only: true });
             setCustomers([]);
-            setCustomerSearch(`${user.first_name} ${user.last_name}`);
+            setCustomerSearch('');
             return null;
         }
     };
@@ -396,8 +366,9 @@ const PuntosVenta = () => {
             notes: orderNotes,
             items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity, notes: i.note || '' })),
             discount_code: appliedDiscount?.code || null,
-            // IMPORTANTE: Solo enviamos el ID si es un cliente validado en Luxe
-            customer_id: (selectedCustomer && !selectedCustomer.is_external_only) ? selectedCustomer.id : null
+            // IMPORTANTE: Enviamos ID si lo tenemos, y siempre el email para respaldo
+            customer_id: (selectedCustomer && !selectedCustomer.is_external_only) ? selectedCustomer.id : null,
+            customer_email: selectedCustomer?.email || null
         };
 
         try {
@@ -694,15 +665,68 @@ const PuntosVenta = () => {
                             <div style={{ marginBottom: '2rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>Cliente</label>
-                                    <input type="text" placeholder="Buscar usuario (Ucelis)..." value={customerSearch} onChange={e => searchCustomers(e.target.value)} style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px' }} />
-                                    {customers.length > 0 && <div style={{ position: 'absolute', backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', width: '300px', zIndex: 10, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                                        {customers.map(u => (
-                                            <div key={u.id} onClick={() => syncAndSelectUser(u)} style={{ padding: '0.75rem', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}>
-                                                <div style={{ fontWeight: '600' }}>{u.first_name} {u.last_name}</div>
-                                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{u.email} {u.identification_number ? `| ${u.identification_number}` : ''}</div>
+
+                                    {selectedCustomer ? (
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            padding: '0.75rem',
+                                            backgroundColor: '#f0fdf4',
+                                            border: '1px solid #bbf7d0',
+                                            borderRadius: '8px',
+                                            marginBottom: '0.5rem'
+                                        }}>
+                                            <div>
+                                                <div style={{ fontWeight: '700', color: '#166534' }}>
+                                                    {selectedCustomer.first_name} {selectedCustomer.last_name}
+                                                </div>
+                                                <div style={{ fontSize: '0.75rem', color: '#15803d' }}>
+                                                    {selectedCustomer.email}
+                                                </div>
                                             </div>
-                                        ))}
-                                    </div>}
+                                            <button
+                                                onClick={() => setSelectedCustomer(null)}
+                                                style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer' }}
+                                            >
+                                                Desvincular
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div style={{ position: 'relative' }}>
+                                            <input
+                                                type="text"
+                                                placeholder="Buscar usuario (Ucelis)..."
+                                                value={customerSearch}
+                                                onChange={e => searchCustomers(e.target.value)}
+                                                style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px' }}
+                                            />
+                                            {customers.length > 0 && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: '100%',
+                                                    left: 0,
+                                                    backgroundColor: 'white',
+                                                    border: '1px solid #e2e8f0',
+                                                    borderRadius: '8px',
+                                                    width: '100%',
+                                                    zIndex: 100,
+                                                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'
+                                                }}>
+                                                    {customers.map(u => (
+                                                        <div
+                                                            key={u.id}
+                                                            onClick={() => syncAndSelectUser(u)}
+                                                            style={{ padding: '0.75rem', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
+                                                        >
+                                                            <div style={{ fontWeight: '600' }}>{u.first_name} {u.last_name}</div>
+                                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{u.email}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                     <button onClick={() => setShowCustomerModal(true)} style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>+ Nuevo Usuario (Ucelis)</button>
                                 </div>
                                 <div>
