@@ -277,58 +277,43 @@ const BoutiqueLanding = () => {
                 <div className="product-grid">
                     {/* Renderizamos solo si el producto coincide con la categoría activa (o si aún no hay categoría activa, mostramos todos) */}
                     {products.length > 0 ? (
-                        (() => {
-                            const filtered = products.filter(p => {
-                                const prodCatId = (typeof p.category === 'object') ? p.category?.id : p.category;
-                                return !activeCategory || prodCatId === activeCategory;
-                            });
+                        products.map(product => {
+                            const outOfStock = isOutOfStock(product);
 
-                            if (filtered.length === 0) {
-                                return (
-                                    <div className="no-products">
-                                        No hay productos disponibles en esta categoría actualmente.
-                                    </div>
-                                );
-                            }
+                            return (
+                                <div key={product.id} className="product-card">
+                                    {/* Badge DESTACADO - Siempre visible */}
+                                    <div className="featured-ribbon">DESTACADO</div>
 
-                            return filtered.map(product => {
-                                const outOfStock = isOutOfStock(product);
-
-                                return (
-                                    <div key={product.id} className="product-card">
-                                        {/* Badge DESTACADO - Siempre visible */}
-                                        <div className="featured-ribbon">DESTACADO</div>
-
-                                        {/* Badge AGOTADO - Solo si está sin stock */}
-                                        {outOfStock && (
-                                            <div className="ribbon-badge">AGOTADO</div>
+                                    {/* Badge AGOTADO - Solo si está sin stock */}
+                                    {outOfStock && (
+                                        <div className="ribbon-badge">AGOTADO</div>
+                                    )}
+                                    <div className="product-image-container" onClick={() => openProductDetail(product)} style={{ cursor: 'pointer' }}>
+                                        {product.image ? (
+                                            <img src={product.image} alt={product.name} className="product-image" />
+                                        ) : (
+                                            <div className="placeholder-image">{product.name.charAt(0)}</div>
                                         )}
-                                        <div className="product-image-container" onClick={() => openProductDetail(product)} style={{ cursor: 'pointer' }}>
-                                            {product.image ? (
-                                                <img src={product.image} alt={product.name} className="product-image" />
-                                            ) : (
-                                                <div className="placeholder-image">{product.name.charAt(0)}</div>
-                                            )}
-                                            {!outOfStock && (
-                                                <div className="quick-add-btn" onClick={(e) => { e.stopPropagation(); addToCart(product); }}>+</div>
-                                            )}
-                                        </div>
-                                        <div className="product-info">
-                                            <h3 className="product-name">{product.name}</h3>
-                                            <p className="product-price">${parseFloat(product.price).toFixed(2)}</p>
-                                            {product.track_stock && (
-                                                <p className={`product-stock ${outOfStock ? 'out-of-stock' : ''}`}>
-                                                    {outOfStock ? 'Sin stock' : `Stock: ${product.stock_quantity} unidades`}
-                                                </p>
-                                            )}
-                                        </div>
+                                        {!outOfStock && (
+                                            <div className="quick-add-btn" onClick={(e) => { e.stopPropagation(); addToCart(product); }}>+</div>
+                                        )}
                                     </div>
-                                );
-                            });
-                        })()
+                                    <div className="product-info">
+                                        <h3 className="product-name">{product.name}</h3>
+                                        <p className="product-price">${parseFloat(product.price).toFixed(2)}</p>
+                                        {product.track_stock && (
+                                            <p className={`product-stock ${outOfStock ? 'out-of-stock' : ''}`}>
+                                                {outOfStock ? 'Sin stock' : `Stock: ${product.stock_quantity} unidades`}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })
                     ) : (
                         <div className="no-products">
-                            Cargando colección exclusiva...
+                            No hay productos destacados disponibles en este momento.
                         </div>
                     )}
                 </div>
