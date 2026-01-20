@@ -1,15 +1,32 @@
-/* Global Styles */
+/* Global Styles - Updated to Boutique Theme */
 :root {
-  --primary-color: #4a90e2;
-  --secondary-color: #6c757d;
+  /* Boutique Palette Mapped to App Variables */
+  --primary-color: #CFB3A9;
+  /* Cinna */
+  --secondary-color: #A09086;
+  /* Latte */
   --danger-color: #dc3545;
   --success-color: #28a745;
-  --background-color: #f4f6f9;
-  --sidebar-bg: #343a40;
-  --sidebar-text: #fff;
-  --navbar-bg: #fff;
-  --text-color: #333;
-  --border-color: #dee2e6;
+  --background-color: #F1EEEB;
+  /* Froth */
+  --sidebar-bg: #F5F5F0;
+  /* Creme */
+  --sidebar-text: #2C2C2C;
+  /* Dark */
+  --navbar-bg: #F5F5F0;
+  --text-color: #2C2C2C;
+  --border-color: #E4D8CB;
+  /* Chai */
+
+  /* Original Boutique Variables for reference/usage */
+  --color-cinna: #CFB3A9;
+  --color-creme: #F5F5F0;
+  --color-latte: #A09086;
+  --color-chai: #E4D8CB;
+  --color-dark: #2C2C2C;
+  --color-white: #FFFFFF;
+  --color-rosa: #E8C4C4;
+  --color-froth: #F1EEEB;
 }
 
 * {
@@ -19,7 +36,7 @@
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Lato', 'Segoe UI', sans-serif;
   background-color: var(--background-color);
   color: var(--text-color);
 }
@@ -27,7 +44,8 @@ body {
 /* Layout */
 .layout {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  /* FIX: Side-by-side layout */
   height: 100vh;
 }
 
@@ -65,34 +83,7 @@ body {
   gap: 1rem;
 }
 
-/* Sidebar */
-.sidebar {
-  width: 250px;
-  background-color: var(--sidebar-bg);
-  color: var(--sidebar-text);
-  display: flex;
-  flex-direction: column;
-}
-
-.sidebar-nav {
-  list-style: none;
-  padding: 0;
-  margin-top: 1rem;
-}
-
-.sidebar-nav li a {
-  display: block;
-  padding: 10px 20px;
-  color: rgba(255, 255, 255, 0.8);
-  text-decoration: none;
-  transition: all 0.3s;
-}
-
-.sidebar-nav li a:hover,
-.sidebar-nav li.active a {
-  color: #fff;
-  background-color: rgba(255, 255, 255, 0.1);
-}
+/* Sidebar styles removed - delegating to FastFood.css import in BarraLateral.js */
 
 /* Forms & Cards */
 .login-container {
