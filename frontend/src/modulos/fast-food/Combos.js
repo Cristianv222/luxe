@@ -161,13 +161,13 @@ const Combos = () => {
                                             onClick={() => handleEditCombo(combo)}
                                             style={{ marginRight: '5px' }}
                                         >
-                                            ✏️
+                                            <i className="bi bi-pencil"></i>
                                         </button>
                                         <button
                                             className="btn btn-sm btn-danger"
                                             onClick={() => handleDeleteCombo(combo.id)}
                                         >
-                                            🗑️
+                                            <i className="bi bi-trash"></i>
                                         </button>
                                     </td>
                                 </tr>

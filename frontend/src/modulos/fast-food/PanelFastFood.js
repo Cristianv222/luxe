@@ -56,7 +56,7 @@ const PanelFastFood = () => {
                 <div className="ff-welcome-icon">
                     <i className="bi bi-shop"></i>
                 </div>
-                <h1>Panel de Comida Rápida</h1>
+                <h1>Panel de ventas </h1>
                 <p>Accede rápidamente a las funciones principales del sistema Luxe</p>
             </div>
 

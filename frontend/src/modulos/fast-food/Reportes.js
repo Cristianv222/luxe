@@ -749,7 +749,7 @@ const Reportes = () => {
         fetchDashboardStats();
 
         const interval = setInterval(() => {
-            console.log('🔄 Actualizando datos en tiempo real...');
+            console.log('Actualizando datos en tiempo real...');
             checkCurrentShift().catch(e => console.warn('Shift poll error', e));
             fetchDashboardStats().catch(e => console.warn('Dashboard poll error', e)); // Actualizar tarjetas superiores
             fetchReports().catch(e => console.warn('Reports poll error', e));        // Actualizar lista lateral
@@ -1060,7 +1060,7 @@ const Reportes = () => {
                         <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--color-latte)' }}>
                             {currentShift
                                 ? <span>Turno: <strong>#{currentShift.shift_number}</strong> | Usuario: {currentShift.user_name || 'Usuario'} | Inicio: {new Date(currentShift.opened_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} | <strong style={{ color: 'var(--color-dark)' }}>Ventas: {formatCurrency(currentShift.total_sales || 0)}</strong></span>
-                                : <span style={{ color: 'var(--color-dark)', fontWeight: 'bold' }}>⚠️ No hay turno abierto. Las ventas no se registrarán correctamente.</span>}
+                                : <span style={{ color: 'var(--color-dark)', fontWeight: 'bold' }}><i className="bi bi-exclamation-triangle" style={{ marginRight: '5px' }}></i>No hay turno abierto. Las ventas no se registrarán correctamente.</span>}
                         </p>
                     </div>
                     <div>

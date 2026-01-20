@@ -148,13 +148,13 @@ const Tamanos = () => {
                                             onClick={() => handleEditSize(size)}
                                             style={{ marginRight: '5px' }}
                                         >
-                                            ✏️
+                                            <i className="bi bi-pencil"></i>
                                         </button>
                                         <button
                                             className="btn btn-sm btn-danger"
                                             onClick={() => handleDeleteSize(size.id)}
                                         >
-                                            🗑️
+                                            <i className="bi bi-trash"></i>
                                         </button>
                                     </td>
                                 </tr>

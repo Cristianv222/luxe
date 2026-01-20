@@ -23,9 +23,9 @@ class ExtraInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'price', 'is_active', 'is_available', 'display_order')
+    list_display = ('code', 'name', 'category', 'price', 'is_active', 'is_available', 'stock_quantity')
     list_filter = ('category', 'is_active', 'is_available', 'is_featured')
-    search_fields = ('name', 'description')
+    search_fields = ('code', 'name', 'description')
     prepopulated_fields = {'slug': ('name',)}
     inlines = [SizeInline]
     ordering = ('category', 'display_order', 'name')

@@ -3,6 +3,8 @@ from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 import uuid
 import os
+import random
+import string
 
 def menu_item_image_path(instance, filename):
     """Genera la ruta para las imágenes de items del menú"""
@@ -82,6 +84,7 @@ class Product(models.Model):
     # Información básica
     name = models.CharField(max_length=200, verbose_name='Nombre')
     slug = models.SlugField(max_length=200, unique=True, verbose_name='Slug')
+    code = models.CharField(max_length=50, unique=True, blank=True, null=True, verbose_name='Código/SKU')
     description = models.TextField(verbose_name='Descripción')
     
     image = models.ImageField(
@@ -163,6 +166,15 @@ class Product(models.Model):
                 self.is_available = False
             else:
                 self.is_available = True
+        
+        if not self.code:
+            # Generar código único si no existe
+            while True:
+                # Generar código de 8 dígitos numéricos
+                new_code = ''.join(random.choices(string.digits, k=8))
+                if not Product.objects.filter(code=new_code).exists():
+                    self.code = new_code
+                    break
         
         super().save(*args, **kwargs)
 

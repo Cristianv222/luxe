@@ -24,22 +24,40 @@ const BarraLateralFastFood = () => {
             </div>
             <ul className="sidebar-nav">
                 <li className={isActive('/fast-food')}>
-                    <Link to="/fast-food">Panel Principal</Link>
+                    <Link to="/fast-food">
+                        <i className="bi bi-grid" style={{ marginRight: '10px' }}></i>
+                        Panel Principal
+                    </Link>
                 </li>
                 <li className={isActive('/fast-food/pos')}>
-                    <Link to="/fast-food/pos">Punto de Venta</Link>
+                    <Link to="/fast-food/pos">
+                        <i className="bi bi-shop" style={{ marginRight: '10px' }}></i>
+                        Punto de Venta
+                    </Link>
                 </li>
                 <li className={isActive('/fast-food/orders')}>
-                    <Link to="/fast-food/orders">Órdenes</Link>
+                    <Link to="/fast-food/orders">
+                        <i className="bi bi-receipt" style={{ marginRight: '10px' }}></i>
+                        Órdenes
+                    </Link>
                 </li>
                 <li className={isActive('/fast-food/inventory')}>
-                    <Link to="/fast-food/inventory">Inventario</Link>
+                    <Link to="/fast-food/inventory">
+                        <i className="bi bi-box-seam" style={{ marginRight: '10px' }}></i>
+                        Inventario
+                    </Link>
                 </li>
                 <li className={isActive('/fast-food/customers')}>
-                    <Link to="/fast-food/customers">Clientes</Link>
+                    <Link to="/fast-food/customers">
+                        <i className="bi bi-people" style={{ marginRight: '10px' }}></i>
+                        Clientes
+                    </Link>
                 </li>
                 <li className={isActive('/fast-food/shift')}>
-                    <Link to="/fast-food/shift">Caja (Turnos)</Link>
+                    <Link to="/fast-food/shift">
+                        <i className="bi bi-cash-coin" style={{ marginRight: '10px' }}></i>
+                        Caja (Turnos)
+                    </Link>
                 </li>
             </ul>
             <div className="sidebar-footer">

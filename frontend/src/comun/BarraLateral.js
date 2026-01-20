@@ -24,7 +24,7 @@ const BarraLateral = () => {
     const menuItems = [
         { path: '/', icon: 'bi-house-door', label: 'Inicio' },
         { path: '/users', icon: 'bi-people', label: 'Usuarios' },
-        { path: '/fast-food', icon: 'bi-cart', label: 'Comida Rápida' },
+        { path: '/fast-food', icon: 'bi-cart', label: 'Panel de administración' },
     ];
 
     return (

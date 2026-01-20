@@ -58,7 +58,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id', 'category', 'category_name', 'name', 'slug',
+            'id', 'category', 'category_name', 'name', 'slug', 'code',
             'description', 'image', 'price', 'calories',
             'is_active', 'is_available', 'is_featured', 'is_new',
             'prep_time', 'display_order', 'has_sizes', 'has_extras',
@@ -85,7 +85,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id', 'category', 'name', 'slug', 'description',
+            'id', 'category', 'name', 'slug', 'code', 'description',
             'image', 'price', 'calories', 'ingredients', 'allergens',
             'is_active', 'is_available', 'is_featured', 'is_new',
             'prep_time', 'display_order', 'sizes', 'extras',
@@ -104,7 +104,7 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'category', 'name', 'slug', 'description', 'image',
+            'category', 'name', 'slug', 'code', 'description', 'image',
             'price', 'calories', 'ingredients', 'allergens',
             'is_active', 'is_available', 'is_featured', 'is_new',
             'prep_time', 'display_order',

@@ -17,6 +17,7 @@ const Inventario = () => {
     // Estado del formulario de producto
     const [newProduct, setNewProduct] = useState({
         name: '',
+        code: '',
         description: '',
         price: '',
         category: '',
@@ -76,6 +77,7 @@ const Inventario = () => {
         setEditingProduct(product);
         setNewProduct({
             name: product.name,
+            code: product.code || '',
             description: product.description,
             price: product.price,
             category: product.category,
@@ -114,6 +116,7 @@ const Inventario = () => {
 
         const formData = new FormData();
         formData.append('name', newProduct.name);
+        formData.append('code', newProduct.code);
         formData.append('description', newProduct.description);
         formData.append('price', newProduct.price);
         formData.append('category', newProduct.category);
@@ -149,7 +152,7 @@ const Inventario = () => {
             }
             setIsModalOpen(false);
             setIsModalOpen(false);
-            setNewProduct({ name: '', description: '', price: '', category: '', image: null, is_active: true, is_available: true, track_stock: false, stock_quantity: 0, min_stock_alert: 5 });
+            setNewProduct({ name: '', code: '', description: '', price: '', category: '', image: null, is_active: true, is_available: true, track_stock: false, stock_quantity: 0, min_stock_alert: 5 });
             setEditingProduct(null);
             fetchProducts();
         } catch (err) {
@@ -182,7 +185,8 @@ const Inventario = () => {
                                 } catch (e) { alert('Error exportando Excel'); }
                             }}
                         >
-                            📊 Exportar Excel
+                            <i className="bi bi-file-earmark-spreadsheet" style={{ marginRight: '8px' }}></i>
+                            Exportar Excel
                         </button>
                         <button
                             className="ff-button ff-button-secondary"
@@ -201,13 +205,15 @@ const Inventario = () => {
                                 } catch (e) { alert('Error exportando PDF'); }
                             }}
                         >
-                            📄 Exportar PDF
+                            <i className="bi bi-file-earmark-pdf" style={{ marginRight: '8px' }}></i>
+                            Exportar PDF
                         </button>
                         <button
                             className="ff-button ff-button-primary"
                             onClick={() => document.getElementById('importInput').click()}
                         >
-                            📥 Importar Excel
+                            <i className="bi bi-upload" style={{ marginRight: '8px' }}></i>
+                            Importar Excel
                         </button>
                         <input
                             id="importInput"
@@ -263,7 +269,7 @@ const Inventario = () => {
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
                         <button className="ff-button ff-button-primary" onClick={() => {
                             setEditingProduct(null);
-                            setNewProduct({ name: '', description: '', price: '', category: '', image: null });
+                            setNewProduct({ name: '', code: '', description: '', price: '', category: '', image: null });
                             setIsModalOpen(true);
                         }}>
                             Nuevo Producto
@@ -277,6 +283,7 @@ const Inventario = () => {
                                     <thead>
                                         <tr>
                                             <th>Imagen</th>
+                                            <th>Código</th>
                                             <th>Nombre</th>
                                             <th>Categoría</th>
                                             <th>Precio</th>
@@ -301,6 +308,11 @@ const Inventario = () => {
                                                         ) : (
                                                             <span style={{ color: '#ccc', fontStyle: 'italic' }}>Sin img</span>
                                                         )}
+                                                    </td>
+                                                    <td>
+                                                        <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#555' }}>
+                                                            {product.code || '-'}
+                                                        </span>
                                                     </td>
                                                     <td>
                                                         <strong>{product.name}</strong>
@@ -359,6 +371,17 @@ const Inventario = () => {
                                     value={newProduct.name}
                                     onChange={handleInputChange}
                                     required
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>Código / SKU</label>
+                                <input
+                                    type="text"
+                                    name="code"
+                                    className="ff-search-input"
+                                    value={newProduct.code}
+                                    onChange={handleInputChange}
+                                    placeholder="Dejar vacío para autogenerar"
                                 />
                             </div>
                             <div>

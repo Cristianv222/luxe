@@ -756,7 +756,20 @@ class PrintReceiptView(APIView):
         
         lines.append(f"Ticket #: {order_data.get('order_number', 'N/A')}")
         lines.append(f"Cliente: {order_data.get('customer_name', 'CONSUMIDOR FINAL')}")
-        lines.append(f"Mesa: {order_data.get('table_number', 'N/A')}")
+        
+        # Mapeo de tipos de orden
+        order_type_map = {
+            'in_store': 'EN TIENDA',
+            'pickup': 'PARA LLEVAR',
+            'delivery': 'A DOMICILIO',
+            'online': 'EN LÍNEA'
+        }
+        
+        # Obtener tipo de orden (default: EN TIENDA)
+        order_type_key = order_data.get('order_type', 'in_store')
+        order_type_display = order_type_map.get(order_type_key, 'EN TIENDA')
+        
+        lines.append(f"TipoOrden: {order_type_display}")
         lines.append("-" * chars_per_line)
 
     # Encabezado de productos

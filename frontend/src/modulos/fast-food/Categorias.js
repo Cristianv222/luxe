@@ -155,16 +155,16 @@ const Categorias = () => {
                                         <button
                                             className="ff-button ff-button-secondary"
                                             onClick={() => handleEditCategory(cat)}
-                                            style={{ marginRight: '8px', padding: '0.5rem 1rem', fontSize: '0.8rem' }}
+                                            style={{ marginRight: '8px', padding: '0.4rem 0.6rem', fontSize: '1rem' }}
                                         >
-                                            Editar
+                                            <i className="bi bi-pencil"></i>
                                         </button>
                                         <button
                                             className="ff-button ff-button-danger"
                                             onClick={() => handleDeleteCategory(cat.id)}
-                                            style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
+                                            style={{ padding: '0.4rem 0.6rem', fontSize: '1rem' }}
                                         >
-                                            Eliminar
+                                            <i className="bi bi-trash"></i>
                                         </button>
                                     </td>
                                 </tr>
