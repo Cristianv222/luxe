@@ -27,6 +27,10 @@ const MiPerfil = () => {
     });
     const [message, setMessage] = useState({ type: '', text: '' });
 
+    // Estados para el Modal de Detalle
+    const [showModal, setShowModal] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState(null);
+
     useEffect(() => {
         if (user) {
             setProfileData({
@@ -45,7 +49,7 @@ const MiPerfil = () => {
         try {
             // Buscamos órdenes vinculadas al email del usuario.
             const response = await api.get('api/orders/orders/', {
-                params: { customer__email: user.email },
+                params: { 'customer__email': user.email },
                 baseURL: '/api/luxe'
             });
             const data = response.data.results || response.data || [];
@@ -53,6 +57,27 @@ const MiPerfil = () => {
         } catch (err) {
             console.error("Error fetching orders:", err);
         }
+    };
+
+    const fetchOrderDetails = async (orderNumber) => {
+        setLoading(true);
+        try {
+            const response = await api.get(`api/orders/orders/${orderNumber}/`, {
+                baseURL: '/api/luxe'
+            });
+            setSelectedOrder(response.data);
+            setShowModal(true);
+        } catch (err) {
+            console.error("Error fetching order details:", err);
+            setMessage({ type: 'error', text: 'No se pudo cargar el detalle de la orden' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const closeModal = () => {
+        setShowModal(false);
+        setSelectedOrder(null);
     };
 
     const handleProfileChange = (e) => {
@@ -275,7 +300,11 @@ const MiPerfil = () => {
                                             </thead>
                                             <tbody>
                                                 {orders.map(order => (
-                                                    <tr key={order.id}>
+                                                    <tr
+                                                        key={order.id}
+                                                        onClick={() => fetchOrderDetails(order.order_number)}
+                                                        className="clickable-row"
+                                                    >
                                                         <td>{new Date(order.created_at).toLocaleDateString()}</td>
                                                         <td>{order.order_number}</td>
                                                         <td>${parseFloat(order.total).toFixed(2)}</td>
@@ -296,6 +325,85 @@ const MiPerfil = () => {
                         )}
                     </section>
                 </div>
+
+                {/* MODAL DE DETALLE DE COMPRA */}
+                {showModal && selectedOrder && (
+                    <div className="order-modal-overlay" onClick={closeModal}>
+                        <div className="order-modal-content" onClick={e => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h3>Detalle de Orden</h3>
+                                <button className="close-modal" onClick={closeModal}>&times;</button>
+                            </div>
+
+                            <div className="modal-body">
+                                <div className="order-info-header">
+                                    <div className="info-item">
+                                        <label>N° Orden</label>
+                                        <span>{selectedOrder.order_number}</span>
+                                    </div>
+                                    <div className="info-item">
+                                        <label>Fecha</label>
+                                        <span>{new Date(selectedOrder.created_at).toLocaleString()}</span>
+                                    </div>
+                                    <div className="info-item">
+                                        <label>Estado</label>
+                                        <span className={`status-badge ${selectedOrder.status}`}>
+                                            {selectedOrder.status_display || selectedOrder.status}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="order-items-list">
+                                    <h4>Productos</h4>
+                                    <table className="items-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Producto</th>
+                                                <th>Cant.</th>
+                                                <th>Precio</th>
+                                                <th>Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {selectedOrder.items && selectedOrder.items.map((item, idx) => (
+                                                <tr key={idx}>
+                                                    <td>
+                                                        <div className="item-name">{item.product_details?.name || 'Producto'}</div>
+                                                        {item.notes && <div className="item-note">{item.notes}</div>}
+                                                    </td>
+                                                    <td>{item.quantity}</td>
+                                                    <td>${parseFloat(item.unit_price).toFixed(2)}</td>
+                                                    <td>${parseFloat(item.line_total).toFixed(2)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div className="order-summary-footer">
+                                    <div className="summary-row">
+                                        <span>Subtotal</span>
+                                        <span>${parseFloat(selectedOrder.subtotal).toFixed(2)}</span>
+                                    </div>
+                                    {parseFloat(selectedOrder.discount_amount) > 0 && (
+                                        <div className="summary-row discount">
+                                            <span>Descuento</span>
+                                            <span>-${parseFloat(selectedOrder.discount_amount).toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    <div className="summary-row total">
+                                        <span>Total Pagado</span>
+                                        <span>${parseFloat(selectedOrder.total).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="modal-footer">
+                                <button className="btn-close-modal" onClick={closeModal}>CERRAR</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </main>
 
             <footer className="boutique-footer">

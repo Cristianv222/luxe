@@ -78,7 +78,14 @@ class OrderViewSet(viewsets.ModelViewSet):
         date_to = self.request.query_params.get('date_to')
         min_total = self.request.query_params.get('min_total')
         max_total = self.request.query_params.get('max_total')
-        customer_email = self.request.query_params.get('customer__email')
+        customer_email = self.request.query_params.get('customer__email') or self.request.query_params.get('customer_email')
+        
+        # SEGURIDAD: Si es un cliente autenticado (no staff), forzamos que SOLO vea sus órdenes
+        if self.request.user.is_authenticated and not self.request.user.is_staff:
+            queryset = queryset.filter(customer__email__iexact=self.request.user.email)
+        elif customer_email:
+            # Si es staff o admin, permitimos el filtro manual por email
+            queryset = queryset.filter(customer__email__iexact=customer_email)
         
         if date_from:
             try:
@@ -98,9 +105,6 @@ class OrderViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(total__gte=min_total)
         if max_total:
             queryset = queryset.filter(total__lte=max_total)
-
-        if customer_email:
-            queryset = queryset.filter(customer__email__iexact=customer_email)
         
         return queryset
     
