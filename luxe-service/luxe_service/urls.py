@@ -11,6 +11,7 @@ urlpatterns = [
     path('luxe/api/hardware/', include('apps.printer.urls')),
     path('luxe/api/customers/', include('apps.customers.urls')),
     path('luxe/api/reports/', include('apps.reports.urls')),
+    path('luxe/api/loyalty/', include('apps.loyalty.urls')),
 ]
 
 from django.conf import settings

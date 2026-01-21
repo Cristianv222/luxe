@@ -28,6 +28,12 @@ const PanelLuxe = () => {
             description: 'Análisis y estadísticas de ventas',
             path: '/luxe/reports',
             icon: 'bi-graph-up-arrow'
+        },
+        {
+            title: 'Config. Puntos',
+            description: 'Reglas de puntos y cupones',
+            path: '/luxe/loyalty-config',
+            icon: 'bi-star-fill'
         }
     ];
 

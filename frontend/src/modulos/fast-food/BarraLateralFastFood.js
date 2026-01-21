@@ -61,6 +61,18 @@ const BarraLateralLuxe = () => {
                         Caja (Turnos)
                     </Link>
                 </li>
+                <li className={isActive('/luxe/printers')}>
+                    <Link to="/luxe/printers">
+                        <i className="bi bi-printer" style={{ marginRight: '10px' }}></i>
+                        Impresoras
+                    </Link>
+                </li>
+                <li className={isActive('/luxe/loyalty-config')}>
+                    <Link to="/luxe/loyalty-config">
+                        <i className="bi bi-star" style={{ marginRight: '10px' }}></i>
+                        Config. Puntos
+                    </Link>
+                </li>
             </ul>
             <div className="sidebar-footer">
                 <button

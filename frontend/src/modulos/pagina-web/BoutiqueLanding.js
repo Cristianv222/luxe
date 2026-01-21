@@ -35,6 +35,30 @@ const BoutiqueLanding = () => {
         city: ''
     });
 
+    // ============================================
+    // LOYALTY STATE
+    // ============================================
+    const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
+    const [loyaltyCedula, setLoyaltyCedula] = useState('');
+    const [loyaltyData, setLoyaltyData] = useState(null);
+    const [loyaltyLoading, setLoyaltyLoading] = useState(false);
+    const [loyaltyError, setLoyaltyError] = useState('');
+
+    const checkLoyaltyBalance = async (e) => {
+        e.preventDefault();
+        if (!loyaltyCedula) return;
+        setLoyaltyLoading(true); setLoyaltyError(''); setLoyaltyData(null);
+        try {
+            const res = await api.post('/api/loyalty/accounts/check_balance_public/', { cedula: loyaltyCedula }, { baseURL: '/api/luxe' });
+            setLoyaltyData(res.data);
+        } catch (err) {
+            setLoyaltyError(err.response?.data?.error || 'No se encontró cuenta de puntos.');
+            setLoyaltyData(null);
+        } finally {
+            setLoyaltyLoading(false);
+        }
+    };
+
     useEffect(() => {
         if (user) {
             setBillingDetails({
@@ -202,6 +226,7 @@ const BoutiqueLanding = () => {
 
                     <nav className={`main-nav ${isMenuOpen ? 'open' : ''}`}>
                         <a href="#collection" className="nav-link" onClick={() => setIsMenuOpen(false)}>DESTACADOS</a>
+                        <button className="nav-link" onClick={() => { setShowLoyaltyModal(true); setIsMenuOpen(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit' }}>CONSULTA TUS PUNTOS</button>
                         <Link to="/coleccion" className="nav-link" onClick={() => setIsMenuOpen(false)}>COLECCIÓN</Link>
                         <Link to="/nosotros" className="nav-link" onClick={() => setIsMenuOpen(false)}>NOSOTROS</Link>
                         <Link to="/contacto" className="nav-link" onClick={() => setIsMenuOpen(false)}>CONTACTO</Link>
@@ -531,6 +556,59 @@ const BoutiqueLanding = () => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* LOYALTY MODAL */}
+            {showLoyaltyModal && (
+                <div className="checkout-modal-overlay" onClick={() => setShowLoyaltyModal(false)}>
+                    <div className="checkout-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center' }}>
+                        <div style={{ padding: '20px' }}>
+                            <h3 style={{ fontFamily: 'serif', fontSize: '24px', marginBottom: '20px' }}>Mis Puntos Luxe</h3>
+
+                            {!loyaltyData ? (
+                                <form onSubmit={checkLoyaltyBalance}>
+                                    <p style={{ marginBottom: '15px', color: '#666' }}>Ingresa tu cédula para consultar tu saldo.</p>
+                                    <input
+                                        type="text"
+                                        placeholder="Número de Cédula"
+                                        value={loyaltyCedula}
+                                        onChange={e => setLoyaltyCedula(e.target.value)}
+                                        style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #ccc', borderRadius: '4px', marginBottom: '15px' }}
+                                        required
+                                    />
+                                    {loyaltyError && <p style={{ color: 'red', marginBottom: '10px', fontSize: '14px' }}>{loyaltyError}</p>}
+
+                                    <button type="submit" disabled={loyaltyLoading} className="hero-btn-simple" style={{ width: '100%', background: '#2C2C2C', color: 'white' }}>
+                                        {loyaltyLoading ? 'Consultando...' : 'Consultar'}
+                                    </button>
+                                </form>
+                            ) : (
+                                <div>
+                                    <p style={{ fontSize: '14px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px' }}>Hola, {loyaltyData.customer_name}</p>
+                                    <div style={{ fontSize: '48px', fontWeight: 'bold', color: '#2C2C2C', margin: '20px 0' }}>
+                                        {loyaltyData.points_balance} <span style={{ fontSize: '16px', fontWeight: 'normal' }}>PTS</span>
+                                    </div>
+                                    <p style={{ color: '#666', marginBottom: '20px' }}>Tienes {loyaltyData.coupons ? loyaltyData.coupons.length : 0} cupones disponibles.</p>
+
+                                    {loyaltyData.coupons && loyaltyData.coupons.length > 0 && (
+                                        <div style={{ textAlign: 'left', backgroundColor: '#f9f9f9', padding: '10px', borderRadius: '4px', maxHeight: '150px', overflowY: 'auto' }}>
+                                            {loyaltyData.coupons.map(coupon => (
+                                                <div key={coupon.id} style={{ borderBottom: '1px dashed #ccc', padding: '8px 0', fontSize: '13px' }}>
+                                                    <strong>{coupon.code}</strong> - {coupon.reward_name}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <button onClick={() => { setLoyaltyData(null); setLoyaltyCedula(''); }} style={{ marginTop: '20px', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer', color: '#666' }}>
+                                        Consultar otra cédula
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                        <button onClick={() => setShowLoyaltyModal(false)} style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>×</button>
                     </div>
                 </div>
             )}

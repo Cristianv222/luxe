@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'apps.printer',
     'apps.customers',
     'apps.reports',
+    'apps.loyalty',
 ]
 
 MIDDLEWARE = [
