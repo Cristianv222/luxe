@@ -14,6 +14,7 @@ urlpatterns = [
     path('pos_register/', views.pos_register, name='pos-register'),
     path('health/', views.health_check, name='health-check'),
     path('info/', views.service_info, name='service-info'),
+    path('', views.pos_customer_search, name='pos-customer-search'),
     
     # ========== ENDPOINTS AUTENTICADOS ==========
     # Perfil del cliente

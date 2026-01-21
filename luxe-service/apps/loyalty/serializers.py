@@ -43,10 +43,11 @@ class UserCouponSerializer(serializers.ModelSerializer):
 
 class LoyaltyAccountSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.get_full_name', read_only=True)
+    customer_cedula = serializers.CharField(source='customer.cedula', read_only=True)
     
     class Meta:
         model = LoyaltyAccount
-        fields = ['id', 'customer', 'customer_name', 'points_balance', 'total_points_earned']
+        fields = ['id', 'customer', 'customer_name', 'customer_cedula', 'points_balance', 'total_points_earned']
 
 class LoyaltyAccountDetailSerializer(LoyaltyAccountSerializer):
     transactions = PointTransactionSerializer(many=True, read_only=True)
@@ -56,5 +57,6 @@ class LoyaltyAccountDetailSerializer(LoyaltyAccountSerializer):
         fields = LoyaltyAccountSerializer.Meta.fields + ['transactions', 'coupons']
 
     def get_coupons(self, obj):
-        active_coupons = UserCoupon.objects.filter(customer=obj.customer, is_used=False)
-        return UserCouponSerializer(active_coupons, many=True).context(self.context).data
+        all_coupons = UserCoupon.objects.filter(customer=obj.customer).order_by('-created_at')
+        # Use context for absolute URL serialization if needed
+        return UserCouponSerializer(all_coupons, many=True, context=self.context).data

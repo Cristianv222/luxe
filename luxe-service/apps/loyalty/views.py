@@ -30,43 +30,45 @@ class LoyaltyAdminViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['POST'])
     def reprocess_past_orders(self, request):
         """
-        Calcula puntos para órdenes pasadas que fueron pagadas pero no generaron puntos.
+        REINICIA Y RECALCULA todos los puntos desde cero basados en las órdenes pagadas.
         """
         from apps.orders.models import Order
+        from django.db.models import Sum
         
-        # Buscar órdenes pagadas
-        # Asumimos que payment_status='paid' es lo que cuenta.
-        paid_orders = Order.objects.filter(payment_status='paid')
-        
-        processed_count = 0
-        skipped_count = 0
-        
-        for order in paid_orders:
-            # Check if points already awarded (Service checks this too, but we can optimize/count here)
-            # Service: award_points_for_order checks PointTransaction existence.
-            
-            # We trust the service to be idempotent via its check.
-            # But to return a useful count, let's check beforehand or verify result?
-            # The service doesn't return value.
-            
-            exists = PointTransaction.objects.filter(related_order_id=str(order.id), transaction_type='EARN').exists()
-            if exists:
-                skipped_count += 1
-                continue
+        try:
+            with transaction.atomic():
+                # 1. Eliminar todas las transacciones de tipo 'EARN' (Ganancia)
+                PointTransaction.objects.filter(transaction_type='EARN').delete()
+
+                # 2. Resetear todas las cuentas
+                # Para cada cuenta, recalculamos el balance basado en lo que queda (canjes, etc)
+                # y reseteamos el total ganado.
+                accounts = LoyaltyAccount.objects.all()
+                for account in accounts:
+                    # El balance actual es la suma de transacciones que NO son EARN (ajustes manuales, canjes)
+                    other_tx_sum = PointTransaction.objects.filter(
+                        account=account
+                    ).exclude(transaction_type='EARN').aggregate(total=Sum('points'))['total'] or 0
+                    
+                    account.points_balance = other_tx_sum
+                    account.total_points_earned = 0
+                    account.save()
+
+                # 3. Reprocesar todas las órdenes pagadas
+                paid_orders = Order.objects.filter(payment_status='paid').order_by('created_at')
                 
-            LoyaltyService.award_points_for_order(order)
-            
-            # Re-check to see if it was actually awarded (rule might not have matched)
-            # Or just assume processed if we called it. 
-            # Differentiate "Processed (Attempted)" vs "Points Awarded" is hard without modifying service.
-            # Let's count "Processed" as attempted.
-            processed_count += 1
-            
-        return Response({
-            "message": "Proceso completado",
-            "processed": processed_count,
-            "skipped_already_awarded": skipped_count
-        })
+                processed_count = 0
+                for order in paid_orders:
+                    LoyaltyService.award_points_for_order(order)
+                    processed_count += 1
+                
+            return Response({
+                "message": "Sincronización completa: Puntos reiniciados y recalculados",
+                "orders_processed": processed_count,
+                "accounts_updated": accounts.count()
+            })
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class EarningRuleTypeViewSet(LoyaltyAdminViewSet):
     queryset = EarningRuleType.objects.all()
@@ -84,7 +86,10 @@ class LoyaltyAccountViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet para ver cuentas de fidelidad.
     """
-    queryset = LoyaltyAccount.objects.all()
+    queryset = LoyaltyAccount.objects.all().select_related('customer')
+    
+    def get_queryset(self):
+        return self.queryset.all()
     
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -102,10 +107,9 @@ class LoyaltyAccountViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"error": "Cédula requerida"}, status=400)
             
         try:
-            # Buscar cliente por cédula (campo identification_number en Customer)
-            # Primero buscamos el cliente
+            # Buscar cliente por cédula
             from apps.customers.models import Customer
-            customer = Customer.objects.filter(identification_number=cedula).first()
+            customer = Customer.objects.filter(cedula=cedula).first()
             
             if not customer:
                  return Response({"error": "Cliente no encontrado"}, status=404)

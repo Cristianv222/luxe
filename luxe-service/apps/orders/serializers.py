@@ -193,7 +193,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             'id', 'order_number', 'customer', 'customer_name', 'customer_identification',
             'order_type', 'order_type_display',
             'status', 'status_display', 'payment_status', 'payment_status_display',
-            'subtotal', 'tax_amount', 'discount_amount', 'delivery_fee',
+            'subtotal', 'tax_amount', 'discount_amount', 'discount_code', 'delivery_fee',
             'tip_amount', 'total', 'notes', 'special_instructions',
             'table_number', 'estimated_prep_time', 'items', 'delivery_info',
             'status_history', 'can_be_cancelled', 'can_be_modified',
@@ -222,6 +222,7 @@ class OrderCreateSerializer(serializers.Serializer):
     notes = serializers.CharField(required=False, allow_blank=True)
     special_instructions = serializers.CharField(required=False, allow_blank=True)
     table_number = serializers.CharField(required=False, allow_blank=True)
+    discount_code = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     discount_amount = serializers.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -272,6 +273,8 @@ class OrderCreateSerializer(serializers.Serializer):
         """Crea la orden con todos sus items"""
         from apps.menu.models import Product, Size, Extra
         from apps.customers.models import Customer
+        from apps.pos.models import Discount
+        from apps.loyalty.models import UserCoupon
         
         # Extraer datos que no van directamente al modelo Order
         items_data = validated_data.pop('items')
@@ -308,6 +311,23 @@ class OrderCreateSerializer(serializers.Serializer):
         validated_data['ready_at'] = now
         validated_data['delivered_at'] = now
         
+        # Procesar Descuento/Cupón
+        discount_code = validated_data.get('discount_code')
+        if discount_code:
+            # Intentar con Cupón de Fidelidad primero
+            coupon = UserCoupon.objects.filter(code__iexact=discount_code, is_used=False).first()
+            if coupon:
+                coupon.is_used = True
+                coupon.used_at = timezone.now()
+                coupon.save()
+                logger.info(f"Cupón de Fidelidad {discount_code} marcado como usado.")
+            else:
+                # Intentar con Descuento estándar
+                discount = Discount.objects.filter(code__iexact=discount_code).first()
+                if discount:
+                    discount.use_discount()
+                    logger.info(f"Descuento POS {discount_code} uso incrementado.")
+
         # Crear la orden
         order = Order.objects.create(**validated_data)
         

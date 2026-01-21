@@ -1,57 +1,61 @@
+import logging
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from .models import EarningRule, LoyaltyAccount, PointTransaction, LoyaltyProgramConfig
+
+logger = logging.getLogger(__name__)
 
 class LoyaltyService:
     @staticmethod
     def calculate_points_to_earn(amount):
         """
-        Calcula los puntos que se ganarían por un monto dado,
-        basado en las reglas activas.
+        Calcula los puntos que se ganarían por un monto dado.
+        REGLA DE NEGOCIO: Solo se aplica la regla con el monto mínimo (umbral) más alto 
+        que el cliente haya superado. No se acumulan reglas.
         """
         config = LoyaltyProgramConfig.objects.first()
         if config and not config.is_active:
+            logger.info("Loyalty program is inactive.")
             return 0
 
-        # Basic validation
         try:
             amount = float(amount)
         except (ValueError, TypeError):
             return 0
             
-        points_to_earn = 0
-        active_rules = EarningRule.objects.filter(is_active=True)
+        active_rules = EarningRule.objects.filter(is_active=True).select_related('rule_type')
         
-        # Logic change: 
-        # For FIXED_MIN_ORDER: Only award the rule with the highest min_order_value satisfied.
-        # For PER_AMOUNT: Additive (usually base points). 
-        # If user intended PER_AMOUNT to also be exclusive with FIXED, that's complex, 
-        # but the example given was clearly about tiered fixed rewards (5vs30).
-        
-        fixed_rules_matched = []
-        
+        # 1. Encontrar todas las reglas que el monto supera
+        applicable_rules = []
         for rule in active_rules:
             if amount >= float(rule.min_order_value):
-                # Check for None just in case
-                if not rule.rule_type:
-                    continue
-                    
-                code = rule.rule_type.code
-                
-                if code == 'FIXED_MIN_ORDER':
-                    fixed_rules_matched.append(rule)
-                elif code == 'PER_AMOUNT':
-                    step = float(rule.amount_step) if rule.amount_step else 1.0
-                    if step > 0:
-                        multiplier = int(amount / step)
-                        points_to_earn += (multiplier * rule.points_to_award)
+                applicable_rules.append(rule)
+        
+        if not applicable_rules:
+            return 0
+            
+        # 2. Seleccionar la MEJOR regla (la que tenga el min_order_value más alto)
+        # Ordenamos de mayor a menor umbral
+        applicable_rules.sort(key=lambda r: float(r.min_order_value), reverse=True)
+        best_rule = applicable_rules[0]
+        
+        logger.info(f"Applying best rule: {best_rule.name} (Threshold: {best_rule.min_order_value}) for amount {amount}")
 
-        # Process Fixed Rules: Pick only the one with highest min_order_value
-        if fixed_rules_matched:
-            # Sort by min_order_value descending
-            fixed_rules_matched.sort(key=lambda r: r.min_order_value, reverse=True)
-            best_rule = fixed_rules_matched[0]
-            points_to_earn += best_rule.points_to_award
+        # 3. Calcular puntos según el tipo de esa única regla
+        points_to_earn = 0
+        if not best_rule.rule_type:
+            return best_rule.points_to_award
+            
+        code = best_rule.rule_type.code
+        
+        if code == 'PER_AMOUNT':
+            # Si es por monto, se multiplica (ej: 10 puntos por cada $1)
+            step = float(best_rule.amount_step) if best_rule.amount_step and best_rule.amount_step > 0 else 1.0
+            multiplier = int(amount / step)
+            points_to_earn = (multiplier * best_rule.points_to_award)
+        else:
+            # FIXED_MIN_ORDER u otros: Solo el valor fijo de la regla
+            points_to_earn = best_rule.points_to_award
         
         return points_to_earn
 
@@ -60,32 +64,37 @@ class LoyaltyService:
         """
         Otorga puntos a un usuario cuando una orden es pagada.
         """
-        if not order.customer:
-            return  # No customer linked
+        if not order or not order.customer:
+            return
             
         # Check if points already awarded for this order
         if PointTransaction.objects.filter(related_order_id=str(order.id), transaction_type='EARN').exists():
             return
 
+        # Ensure order total is refreshed/correct
         points_to_earn = LoyaltyService.calculate_points_to_earn(order.total)
         
         if points_to_earn <= 0:
             return
 
-        with transaction.atomic():
-            # Get or Create Loyalty Account linked to Customer
-            account, created = LoyaltyAccount.objects.get_or_create(customer=order.customer)
-            
-            # Update balance
-            account.points_balance += points_to_earn
-            account.total_points_earned += points_to_earn
-            account.save()
-            
-            # Record transaction
-            PointTransaction.objects.create(
-                account=account,
-                transaction_type='EARN',
-                points=points_to_earn,
-                description=f"Ganancia por Orden #{order.order_number}",
-                related_order_id=str(order.id)
-            )
+        try:
+            with transaction.atomic():
+                # Get or Create Loyalty Account linked to Customer
+                account, created = LoyaltyAccount.objects.get_or_create(customer=order.customer)
+                
+                # Update balance
+                account.points_balance += points_to_earn
+                account.total_points_earned += points_to_earn
+                account.save()
+                
+                # Record transaction
+                PointTransaction.objects.create(
+                    account=account,
+                    transaction_type='EARN',
+                    points=points_to_earn,
+                    description=f"Ganancia por Orden #{order.order_number}",
+                    related_order_id=str(order.id)
+                )
+                logger.info(f"Awarded {points_to_earn} points to {order.customer} for order {order.order_number}")
+        except Exception as e:
+            logger.error(f"Error awarding loyalty points: {str(e)}")

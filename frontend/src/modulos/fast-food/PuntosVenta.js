@@ -242,10 +242,24 @@ const PuntosVenta = () => {
     const handleApplyDiscount = async () => {
         if (!discountCode) return;
         try {
-            const res = await api.post('/api/pos/discounts/validate/', { code: discountCode }, { baseURL: process.env.REACT_APP_LUXE_SERVICE });
-            if (res.data.valid) { setAppliedDiscount(res.data.discount); alert('Descuento aplicado'); }
-            else { alert(res.data.message || 'Inválido'); setAppliedDiscount(null); }
-        } catch { alert('Error validando descuento'); }
+            const res = await api.post('/api/pos/discounts/validate/', {
+                discount_code: discountCode,
+                customer_id: selectedCustomer?.id || null,
+                order_amount: calculateSubtotal
+            }, { baseURL: '/api/luxe' });
+
+            if (res.data.valid) {
+                setAppliedDiscount(res.data.discount);
+                alert(`¡Éxito! ${res.data.message}`);
+            }
+            else {
+                alert(res.data.error || 'Código inválido');
+                setAppliedDiscount(null);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error al validar código');
+        }
     };
 
     // =====================================
@@ -253,13 +267,19 @@ const PuntosVenta = () => {
     // =====================================
     const searchCustomers = async (query) => {
         setCustomerSearch(query);
-        if (query.length < 2) { setCustomers([]); return; }
+        if (query.trim().length < 2) { setCustomers([]); return; }
         try {
-            // Buscamos directamente en clientes (nombre, cedula, telefono)
-            const res = await api.get(`/api/customers/?search=${query}`, { baseURL: '/api/luxe' });
-            const results = res.data.results || res.data || [];
-            setCustomers(results);
-        } catch (e) { console.error("Error al buscar clientes:", e); }
+            // Buscamos directamente en el nuevo endpoint de búsqueda rápida
+            const res = await api.get(`/api/customers/`, {
+                params: { search: query },
+                baseURL: '/api/luxe'
+            });
+            const results = (res.data.results || res.data || []);
+            setCustomers(results.slice(0, 10)); // Limitar a 10 para el autocomplete
+        } catch (e) {
+            console.error("Error al buscar clientes:", e);
+            setCustomers([]);
+        }
     };
 
     const selectCustomer = (customer) => {
@@ -617,7 +637,7 @@ const PuntosVenta = () => {
 
                         {/* RIGHT: Métodos de Pago y Datos */}
                         <div style={{ width: '60%', padding: '2rem', display: 'flex', flexDirection: 'column' }}>
-                            <div style={{ marginBottom: '2rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div style={{ marginBottom: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>Cliente</label>
 
@@ -665,17 +685,31 @@ const PuntosVenta = () => {
                                                     border: '1px solid #e2e8f0',
                                                     borderRadius: '8px',
                                                     width: '100%',
-                                                    zIndex: 100,
-                                                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'
+                                                    zIndex: 1000,
+                                                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2)',
+                                                    maxHeight: '200px',
+                                                    overflowY: 'auto'
                                                 }}>
                                                     {customers.map(u => (
                                                         <div
                                                             key={u.id}
                                                             onClick={() => selectCustomer(u)}
-                                                            style={{ padding: '0.75rem', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
+                                                            style={{
+                                                                padding: '0.75rem',
+                                                                cursor: 'pointer',
+                                                                borderBottom: '1px solid #f1f5f9',
+                                                                hover: { backgroundColor: '#f8fafc' }
+                                                            }}
+                                                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f8fafc'}
+                                                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                                                         >
-                                                            <div style={{ fontWeight: '600' }}>{u.first_name} {u.last_name}</div>
-                                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{u.email}</div>
+                                                            <div style={{ fontWeight: '600', color: '#1e293b' }}>
+                                                                {u.first_name} {u.last_name}
+                                                            </div>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b' }}>
+                                                                <span>ID: {u.cedula || 'N/A'}</span>
+                                                                <span>Tel: {u.phone || 'N/A'}</span>
+                                                            </div>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -692,6 +726,52 @@ const PuntosVenta = () => {
                                         <option value="delivery">Envío a Domicilio</option>
                                     </select>
                                 </div>
+                            </div>
+
+                            {/* CÓDIGO DE DESCUENTO */}
+                            <div style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>
+                                    Cupón de Descuento
+                                </label>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Código LUXE-XXXX"
+                                        value={discountCode}
+                                        onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                                        disabled={!!appliedDiscount}
+                                        style={{
+                                            flex: 1,
+                                            padding: '0.75rem',
+                                            border: '1px solid #cbd5e1',
+                                            borderRadius: '8px',
+                                            backgroundColor: appliedDiscount ? '#f1f5f9' : 'white',
+                                            textTransform: 'uppercase',
+                                            fontFamily: 'monospace',
+                                            fontWeight: 'bold'
+                                        }}
+                                    />
+                                    {appliedDiscount ? (
+                                        <button
+                                            onClick={() => { setAppliedDiscount(null); setDiscountCode(''); }}
+                                            style={{ padding: '0 1.5rem', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                                        >
+                                            Quitar
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={handleApplyDiscount}
+                                            style={{ padding: '0 1.5rem', backgroundColor: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                                        >
+                                            Aplicar
+                                        </button>
+                                    )}
+                                </div>
+                                {appliedDiscount && (
+                                    <div style={{ fontSize: '0.85rem', color: '#059669', marginTop: '0.4rem', fontWeight: '600' }}>
+                                        ✓ {appliedDiscount.name} aplicado (-{formatCurrency(calculateDiscountAmount)})
+                                    </div>
+                                )}
                             </div>
 
                             <div style={{ backgroundColor: '#f0f9ff', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem' }}>
@@ -787,7 +867,7 @@ const PuntosVenta = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Cédula / RUC</label>
-                                    <input name="identification_number" placeholder="Identificación" value={newCustomer.identification_number} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                                    <input name="identification_number" placeholder="Cédula o RUC" value={newCustomer.identification_number} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Fecha Nacimiento</label>

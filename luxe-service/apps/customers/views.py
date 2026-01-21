@@ -59,6 +59,30 @@ def register_customer(request):
     }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def pos_customer_search(request):
+    """
+    Búsqueda rápida de clientes para POS (Nombre, Cédula, Teléfono, Email)
+    GET /api/customers/?search=XXX
+    """
+    query = request.query_params.get('search', '').strip()
+    
+    if len(query) < 2:
+        return Response([])
+
+    customers = Customer.objects.filter(
+        Q(first_name__icontains=query) |
+        Q(last_name__icontains=query) |
+        Q(cedula__icontains=query) |
+        Q(phone__icontains=query) |
+        Q(email__icontains=query)
+    ).order_by('-last_login')[:20]
+
+    serializer = POSCustomerSerializer(customers, many=True)
+    return Response(serializer.data)
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_customer(request):

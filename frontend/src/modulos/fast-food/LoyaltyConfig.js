@@ -6,20 +6,20 @@ const LoyaltyConfig = () => {
     const [loading, setLoading] = useState(true);
     const [programConfig, setProgramConfig] = useState(null);
     const [earningRules, setEarningRules] = useState([]);
-    const [earningRuleTypes, setEarningRuleTypes] = useState([]); // New State
+    const [earningRuleTypes, setEarningRuleTypes] = useState([]);
     const [rewardRules, setRewardRules] = useState([]);
 
     // Modal States
     const [showEarningModal, setShowEarningModal] = useState(false);
     const [showRewardModal, setShowRewardModal] = useState(false);
-    const [showTypeModal, setShowTypeModal] = useState(false); // New Modal for Types
+    const [showTypeModal, setShowTypeModal] = useState(false);
     const [editingEarning, setEditingEarning] = useState(null);
     const [editingReward, setEditingReward] = useState(null);
 
     // Form Data
     const [earningForm, setEarningForm] = useState({
         name: '',
-        rule_type: null, // Should be ID
+        rule_type: null,
         min_order_value: 0,
         amount_step: 10,
         points_to_award: 1,
@@ -35,7 +35,6 @@ const LoyaltyConfig = () => {
         is_active: true
     });
 
-    // Type Form
     const [typeForm, setTypeForm] = useState({ name: '', code: '', description: '', is_active: true });
 
     useEffect(() => {
@@ -45,7 +44,6 @@ const LoyaltyConfig = () => {
     const loadData = async () => {
         try {
             setLoading(true);
-
             const typesRes = await api.get('/api/loyalty/config/earning-rule-types/', { baseURL: '/api/luxe' });
             setEarningRuleTypes(typesRes.data.results || typesRes.data);
 
@@ -54,16 +52,13 @@ const LoyaltyConfig = () => {
 
             const rewardRes = await api.get('/api/loyalty/config/reward-rules/', { baseURL: '/api/luxe' });
             setRewardRules(rewardRes.data.results || rewardRes.data);
-
         } catch (error) {
             console.error("Error loading loyalty config", error);
-            // alert("Error cargando configuración");
         } finally {
             setLoading(false);
         }
     };
 
-    // --- RULE TYPES HANDLERS ---
     const handleSaveType = async (e) => {
         e.preventDefault();
         try {
@@ -86,7 +81,6 @@ const LoyaltyConfig = () => {
         }
     };
 
-    // --- EARNING RULES HANDLERS ---
     const handleSaveEarning = async (e) => {
         e.preventDefault();
         try {
@@ -105,9 +99,6 @@ const LoyaltyConfig = () => {
 
     const openEditEarning = (rule) => {
         setEditingEarning(rule);
-        // Map rule_type ID correctly. 
-        // rule.rule_type in GET is the ID because of serializer default or we need to check serializer.
-        // Serializer currently shows rule_type as ID (ForeignKey default) and rule_type_name extra field.
         setEarningForm(rule);
         setShowEarningModal(true);
     };
@@ -135,7 +126,6 @@ const LoyaltyConfig = () => {
         }
     };
 
-    // --- REWARD RULES HANDLERS ---
     const handleSaveReward = async (e) => {
         e.preventDefault();
         try {
@@ -181,6 +171,21 @@ const LoyaltyConfig = () => {
         }
     };
 
+    const handleReprocess = async () => {
+        if (!window.confirm("¡ATENCIÓN! Esto ELIMINARÁ todos los puntos actuales por compras y los RECALCULARÁ desde cero basados en el historial de facturas. ¿Deseas continuar?")) return;
+        try {
+            setLoading(true);
+            const res = await api.post('/api/loyalty/config/earning-rules/reprocess_past_orders/', {}, { baseURL: '/api/luxe' });
+            alert(`Sincronización Exitosa:\n- Órdenes procesadas: ${res.data.orders_processed}\n- Cuentas actualizadas: ${res.data.accounts_updated}\n\nLos balances han sido reiniciados según las reglas actuales.`);
+            loadData();
+        } catch (error) {
+            console.error("Error al reprocesar:", error);
+            alert("Error al sincronizar puntos.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     if (loading) return <div className="p-4">Cargando configuración...</div>;
 
     return (
@@ -194,6 +199,13 @@ const LoyaltyConfig = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#334155' }}>Reglas de Obtención (Ganar Puntos)</h2>
                     <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                            onClick={handleReprocess}
+                            style={{ padding: '8px 16px', backgroundColor: '#8b5cf6', color: 'white', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
+                            title="Procesar órdenes pasadas para otorgar puntos retroactivamente"
+                        >
+                            Reprocesar Órdenes
+                        </button>
                         <button
                             onClick={() => setShowTypeModal(true)}
                             style={{ padding: '8px 16px', backgroundColor: '#64748b', color: 'white', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
@@ -226,7 +238,6 @@ const LoyaltyConfig = () => {
                                 <td style={{ padding: '10px', fontWeight: '500' }}>{rule.name}</td>
                                 <td style={{ padding: '10px' }}>{rule.rule_type_name || 'Sin Asignar'}</td>
                                 <td style={{ padding: '10px' }}>
-                                    {/* Show detail based on values present */}
                                     {rule.amount_step > 0 && rule.amount_step != null
                                         ? `Cada $${rule.amount_step} gastado`
                                         : `Mínimo $${rule.min_order_value}`}
@@ -319,7 +330,6 @@ const LoyaltyConfig = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                 <div>
                                     <label>
-                                        {/* Dynamic Label based on selected type heuristics */}
                                         {earningForm.rule_type
                                             ? (earningRuleTypes.find(t => t.id == earningForm.rule_type)?.code === 'PER_AMOUNT'
                                                 ? 'Monto Paso (Cada $X)'
@@ -328,7 +338,6 @@ const LoyaltyConfig = () => {
                                     </label>
                                     <input type="number" className="ff-input" value={earningForm.amount_step || earningForm.min_order_value}
                                         onChange={e => {
-                                            // Update both fields for simplicity in heuristic mapping
                                             setEarningForm({ ...earningForm, amount_step: e.target.value, min_order_value: e.target.value })
                                         }} />
                                 </div>

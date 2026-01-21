@@ -171,7 +171,7 @@ class LoyaltyAccount(models.Model):
         verbose_name_plural = _("Cuentas de Fidelidad")
 
     def __str__(self):
-        return f"Fidelidad: {self.user} - {self.points_balance} pts"
+        return f"Fidelidad: {self.customer} - {self.points_balance} pts"
 
 
 class PointTransaction(models.Model):

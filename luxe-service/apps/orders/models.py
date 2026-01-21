@@ -110,6 +110,13 @@ class Order(models.Model):
         verbose_name='Descuento'
     )
     
+    discount_code = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name='Código de Descuento'
+    )
+    
     delivery_fee = models.DecimalField(
         max_digits=10,
         decimal_places=2,

@@ -267,49 +267,86 @@ class DiscountViewSet(viewsets.ModelViewSet):
         
         code = serializer.validated_data['discount_code']
         customer_id = serializer.validated_data.get('customer_id')
-        order_amount = serializer.validated_data['order_amount']
+        order_amount = Decimal(str(serializer.validated_data['order_amount']))
         
-        try:
-            discount = Discount.objects.get(code__iexact=code)
-        except Discount.DoesNotExist:
+        # 1. Intentar buscar en Descuentos Estándar
+        discount = Discount.objects.filter(code__iexact=code).first()
+        
+        if discount:
+            customer = None
+            if customer_id:
+                from apps.customers.models import Customer
+                try:
+                    customer = Customer.objects.get(id=customer_id)
+                except Customer.DoesNotExist:
+                    pass
+            
+            is_valid, message = discount.is_valid(for_customer=customer)
+            
+            if not is_valid:
+                return Response({'valid': False, 'error': message, 'discount': None})
+            
+            if discount.minimum_purchase and order_amount < discount.minimum_purchase:
+                return Response({
+                    'valid': False,
+                    'error': f'Compra mínima requerida: ${discount.minimum_purchase}',
+                    'discount': None
+                })
+            
+            discount_amount = discount.calculate_discount(order_amount)
+            
             return Response({
-                'valid': False,
-                'error': 'Descuento no encontrado'
-            }, status=status.HTTP_404_NOT_FOUND)
-        
-        customer = None
-        if customer_id:
-            from apps.customers.models import Customer
-            try:
-                customer = Customer.objects.get(id=customer_id)
-            except Customer.DoesNotExist:
-                pass
-        
-        is_valid, message = discount.is_valid(for_customer=customer)
-        
-        if not is_valid:
-            return Response({
-                'valid': False,
-                'error': message,
-                'discount': None
+                'valid': True,
+                'message': message,
+                'discount': DiscountSerializer(discount).data,
+                'discount_amount': float(discount_amount),
+                'final_amount': float(order_amount - discount_amount)
             })
+            
+        # 2. Si no es descuento estándar, buscar en Cupones de Fidelidad (LOYALTY)
+        from apps.loyalty.models import UserCoupon
+        coupon = UserCoupon.objects.filter(code__iexact=code, is_used=False).first()
         
-        if discount.minimum_purchase and order_amount < discount.minimum_purchase:
+        if coupon:
+            # Validar si el cupón pertenece al cliente seleccionado (si se envió ID)
+            if customer_id and str(coupon.customer.id) != str(customer_id):
+                 return Response({
+                    'valid': False,
+                    'error': 'Este cupón pertenece a otro cliente',
+                    'discount': None
+                })
+            
+            # Mapear datos de Recompensa a formato compatible con el frontend
+            reward = coupon.reward_rule
+            
+            # Calcular descuento basado en la regla de recompensa
+            if reward.reward_type == 'PERCENTAGE':
+                discount_val = order_amount * (Decimal(str(reward.discount_value)) / 100)
+            else: # FIXED_AMOUNT
+                discount_val = Decimal(str(reward.discount_value))
+            
+            # No puede ser mayor al total
+            discount_val = min(discount_val, order_amount)
+            
             return Response({
-                'valid': False,
-                'error': f'Compra mínima requerida: ${discount.minimum_purchase}',
-                'discount': None
+                'valid': True,
+                'message': f'Cupón de Fidelidad: {reward.name}',
+                'discount': {
+                    'id': str(coupon.id),
+                    'code': coupon.code,
+                    'name': reward.name,
+                    'discount_type': 'percentage' if reward.reward_type == 'PERCENTAGE' else 'fixed_amount',
+                    'discount_value': float(reward.discount_value),
+                    'is_loyalty': True # Flag para saber que es de lealtad
+                },
+                'discount_amount': float(discount_val),
+                'final_amount': float(order_amount - discount_val)
             })
-        
-        discount_amount = discount.calculate_discount(order_amount)
-        
+
         return Response({
-            'valid': True,
-            'message': message,
-            'discount': DiscountSerializer(discount).data,
-            'discount_amount': float(discount_amount),
-            'final_amount': float(order_amount - discount_amount)
-        })
+            'valid': False,
+            'error': 'Código de descuento o cupón no válido'
+        }, status=status.HTTP_404_NOT_FOUND)
     
     @action(detail=False, methods=['get'])
     def active(self, request):
