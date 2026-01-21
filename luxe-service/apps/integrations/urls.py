@@ -7,4 +7,5 @@ urlpatterns = [
     path('whatsapp/start-session/', views.WhatsAppStartSessionView.as_view(), name='whatsapp-start-session'),
     path('whatsapp/qrcode/', views.WhatsAppQRCodeView.as_view(), name='whatsapp-qrcode'),
     path('whatsapp/test-message/', views.WhatsAppTestMessageView.as_view(), name='whatsapp-test-message'),
+    path('whatsapp/logout/', views.WhatsAppLogoutView.as_view(), name='whatsapp-logout'),
 ]

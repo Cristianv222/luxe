@@ -7,11 +7,12 @@ const WhatsAppConfig = () => {
         is_active: true,
         schedule_time: '09:00',
         session_name: 'luxe_session',
-        phone_number_sender: '0994712899',
-        birthday_message_template: '🎉 ¡Feliz Cumpleaños {first_name}! 🎂\nEn Luxe queremos celebrar contigo.\n🎁 Tienes un 10% DE DESCUENTO en tu próxima compra.\n¡Te esperamos!'
+        phone_number_sender: '',
+        birthday_message_template: ''
     });
     const [connectionStatus, setConnectionStatus] = useState('checking');
     const [qrCode, setQrCode] = useState(null);
+    const [showModal, setShowModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [testPhone, setTestPhone] = useState('');
     const [message, setMessage] = useState({ type: '', text: '' });
@@ -28,12 +29,15 @@ const WhatsAppConfig = () => {
     }, []);
 
     const checkStatus = useCallback(async () => {
-        setConnectionStatus('checking');
         try {
             const response = await api.get('/api/integrations/whatsapp/status/', {
                 baseURL: process.env.REACT_APP_LUXE_SERVICE
             });
             setConnectionStatus(response.data.status);
+            if (response.data.status === 'connected') {
+                setShowModal(false);
+                setQrCode(null);
+            }
         } catch (error) {
             setConnectionStatus('offline');
         }
@@ -42,6 +46,10 @@ const WhatsAppConfig = () => {
     useEffect(() => {
         fetchSettings();
         checkStatus();
+
+        // Polling de estado cada 10 segundos
+        const timer = setInterval(checkStatus, 10000);
+        return () => clearInterval(timer);
     }, [fetchSettings, checkStatus]);
 
     const handleSaveSettings = async () => {
@@ -51,6 +59,7 @@ const WhatsAppConfig = () => {
                 baseURL: process.env.REACT_APP_LUXE_SERVICE
             });
             setMessage({ type: 'success', text: '✅ Configuración guardada correctamente' });
+            setTimeout(() => setMessage({ type: '', text: '' }), 5000);
         } catch (error) {
             setMessage({ type: 'error', text: '❌ Error al guardar la configuración' });
         }
@@ -60,45 +69,98 @@ const WhatsAppConfig = () => {
     const handleStartSession = async () => {
         setLoading(true);
         setQrCode(null);
-        setMessage({ type: 'info', text: '⏳ Iniciando sesión de WhatsApp...' });
-        try {
-            await api.post('/api/integrations/whatsapp/start-session/', {}, {
-                baseURL: process.env.REACT_APP_LUXE_SERVICE
-            });
+        setShowModal(true); // Mostrar modal inmediatamente
+        setMessage({ type: 'info', text: '⏳ Preparando conexión con WhatsApp...' });
 
-            // Iniciar polling para obtener el QR
+        try {
+            // 1. Iniciar sesión en el backend
+            try {
+                await api.post('/api/integrations/whatsapp/start-session/', {}, {
+                    baseURL: process.env.REACT_APP_LUXE_SERVICE
+                });
+            } catch (startError) {
+                console.warn('Advertencia en start-session, intentando polling de todas formas:', startError);
+                // Si falla pero es un 503, a veces es porque la sesión ya existe o el token falló momentáneamente.
+                // Continuamos al polling para ver si el QR está disponible.
+            }
+
+            // 2. Polling agresivo para el QR
             let attempts = 0;
-            const maxAttempts = 10;
+            const maxAttempts = 20;
 
             const pollQr = setInterval(async () => {
                 attempts++;
                 try {
+                    // 1. Pedir el QR actual
                     const qrResponse = await api.get('/api/integrations/whatsapp/qrcode/', {
                         baseURL: process.env.REACT_APP_LUXE_SERVICE
                     });
 
                     if (qrResponse.data.qrcode) {
                         setQrCode(qrResponse.data.qrcode);
-                        setMessage({ type: 'info', text: '📷 Escanea el código QR con tu WhatsApp' });
-                        clearInterval(pollQr);
                         setLoading(false);
-                    } else if (attempts >= maxAttempts) {
-                        setMessage({ type: 'warning', text: '⚠️ El QR tardó demasiado. Intenta refrescar el estado.' });
-                        clearInterval(pollQr);
-                        setLoading(false);
+                    } else {
+                        // Si no hay QR, seguimos informando al usuario
+                        const waitMsg = attempts % 3 === 0 ? '⌛ Sincronizando con el servidor...' : '⏳ Generando imagen segura...';
+                        setMessage({ type: 'info', text: `${waitMsg} (Intento ${attempts})` });
                     }
-                } catch (err) {
+
+                    // 2. Verificar si ya se conectó (para cerrar el modal automáticamente)
+                    const statusRes = await api.get('/api/integrations/whatsapp/status/', {
+                        baseURL: process.env.REACT_APP_LUXE_SERVICE
+                    });
+
+                    if (statusRes.data.status === 'connected') {
+                        setConnectionStatus('connected');
+                        setQrCode(null);
+                        setShowModal(false);
+                        clearInterval(pollQr);
+                        setMessage({ type: 'success', text: '✅ ¡WhatsApp vinculado con éxito!' });
+                    }
+
                     if (attempts >= maxAttempts) {
                         clearInterval(pollQr);
                         setLoading(false);
+                        setMessage({ type: 'warning', text: '⚠️ Tiempo de espera agotado. Intenta de nuevo.' });
                     }
+                } catch (err) {
+                    console.error('Error en polling:', err);
                 }
             }, 3000);
 
+            // Guardamos el ID del intervalo en el objeto window para poder limpiarlo al cerrar el modal
+            window.activeQrPoll = pollQr;
+
         } catch (error) {
-            setMessage({ type: 'error', text: '❌ Error al iniciar sesión' });
+            setMessage({ type: 'error', text: '❌ Error al iniciar el servicio de WhatsApp' });
             setLoading(false);
         }
+    };
+
+    const handleCloseModal = () => {
+        setShowModal(false);
+        if (window.activeQrPoll) {
+            clearInterval(window.activeQrPoll);
+        }
+    };
+
+    const handleLogout = async () => {
+        if (!window.confirm('¿Estás seguro de que deseas cerrar la sesión de WhatsApp? Tendrás que volver a vincular el dispositivo.')) {
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await api.post('/api/integrations/whatsapp/logout/', {}, {
+                baseURL: process.env.REACT_APP_LUXE_SERVICE
+            });
+            setMessage({ type: 'success', text: '✅ Sesión cerrada correctamente' });
+            setConnectionStatus('disconnected');
+            setQrCode(null);
+        } catch (error) {
+            setMessage({ type: 'error', text: '❌ Error al cerrar la sesión' });
+        }
+        setLoading(false);
     };
 
     const handleTestMessage = async () => {
@@ -110,29 +172,28 @@ const WhatsAppConfig = () => {
         try {
             await api.post('/api/integrations/whatsapp/test-message/', {
                 phone: testPhone,
-                message: '🧪 Mensaje de prueba desde Luxe Sistema - ¡La conexión funciona!'
+                message: '🧪 *Luxe Restaurante*: ¡La conexión de WhatsApp funciona perfectamente! 🎉'
             }, {
                 baseURL: process.env.REACT_APP_LUXE_SERVICE
             });
-            setMessage({ type: 'success', text: `✅ Mensaje de prueba enviado a ${testPhone}` });
+            setMessage({ type: 'success', text: `✅ Mensaje enviado con éxito a ${testPhone}` });
         } catch (error) {
-            setMessage({ type: 'error', text: '❌ Error al enviar mensaje de prueba' });
+            const errorMsg = error.response?.data?.details?.message || 'Error al enviar mensaje';
+            setMessage({ type: 'error', text: `❌ ${errorMsg}` });
         }
         setLoading(false);
     };
 
-    const getStatusBadge = () => {
+    const getStatusHeader = () => {
         switch (connectionStatus) {
-            case 'connected':
-                return <span className="status-badge connected">🟢 Conectado</span>;
-            case 'disconnected':
-                return <span className="status-badge disconnected">🔴 Desconectado</span>;
-            case 'offline':
-                return <span className="status-badge offline">⚫ Servicio No Disponible</span>;
-            default:
-                return <span className="status-badge checking">🔄 Verificando...</span>;
+            case 'connected': return { label: 'Conectado', color: 'connected' };
+            case 'disconnected': return { label: 'Desconectado', color: 'disconnected' };
+            case 'offline': return { label: 'Servicio Offline', color: 'offline' };
+            default: return { label: 'Verificando...', color: 'checking' };
         }
     };
+
+    const statusInfo = getStatusHeader();
 
     return (
         <div className="whatsapp-config-container">
@@ -141,8 +202,8 @@ const WhatsAppConfig = () => {
                     <i className="bi bi-whatsapp"></i>
                 </div>
                 <div>
-                    <h1>Configuración WhatsApp</h1>
-                    <p>Automatización de mensajes de cumpleaños</p>
+                    <h1>Centro de WhatsApp</h1>
+                    <p>Gestiona la conexión y automatización de mensajes</p>
                 </div>
             </div>
 
@@ -152,52 +213,97 @@ const WhatsAppConfig = () => {
                 </div>
             )}
 
-            {/* Connection Status Card */}
             <div className="config-card">
                 <div className="card-header">
-                    <h3><i className="bi bi-wifi"></i> Estado de Conexión</h3>
-                    {getStatusBadge()}
+                    <h3><i className="bi bi-broadcast"></i> Conectividad</h3>
+                    <span className={`status-badge ${statusInfo.color}`}>
+                        {statusInfo.label}
+                    </span>
                 </div>
                 <div className="card-body">
-                    <div className="connection-actions">
+                    <div className="connection-actions" style={{ display: 'flex', gap: '1rem' }}>
                         <button
                             className="btn btn-primary"
                             onClick={handleStartSession}
-                            disabled={loading}
+                            disabled={loading || connectionStatus === 'connected'}
                         >
-                            <i className="bi bi-qr-code"></i> Iniciar/Vincular Sesión
+                            <i className="bi bi-qr-code-scan"></i>
+                            {connectionStatus === 'connected' ? 'Sesión Activa' : 'Vincular Nuevo Dispositivo'}
                         </button>
                         <button
                             className="btn btn-secondary"
                             onClick={checkStatus}
                             disabled={loading}
                         >
-                            <i className="bi bi-arrow-clockwise"></i> Actualizar Estado
+                            <i className="bi bi-arrow-repeat"></i> Actualizar
                         </button>
-                    </div>
 
-                    {qrCode && (
-                        <div className="qr-code-container">
-                            <p>Escanea este código con tu WhatsApp:</p>
-                            <img src={qrCode} alt="QR Code" className="qr-code-image" />
-                            <p className="qr-instructions">
-                                Abre WhatsApp → Configuración → Dispositivos Vinculados → Vincular un dispositivo
-                            </p>
-                        </div>
-                    )}
+                        {connectionStatus === 'connected' && (
+                            <button
+                                className="btn btn-error"
+                                onClick={handleLogout}
+                                disabled={loading}
+                                style={{ background: '#ff4d4f', color: 'white' }}
+                            >
+                                <i className="bi bi-box-arrow-right"></i> Cerrar Sesión
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            {/* Test Message Card */}
+            {/* Modal para Vincular QR */}
+            {showModal && (
+                <div className="modal-overlay" onClick={handleCloseModal}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <button className="modal-close" onClick={handleCloseModal}>&times;</button>
+                        <h2>Vincular WhatsApp</h2>
+                        <p>Escanea el código para habilitar las notificaciones</p>
+
+                        {qrCode ? (
+                            <div className="qr-container">
+                                <img src={qrCode} alt="WhatsApp QR" className="qr-code-image" />
+                                <div className="qr-instructions">
+                                    <strong>¿Cómo vincular?</strong><br />
+                                    1. Abre WhatsApp en tu teléfono.<br />
+                                    2. Menú (⋮ o Configuración) &gt; Dispositivos vinculados.<br />
+                                    3. Toca en 'Vincular un dispositivo'.
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ padding: '2rem', textAlign: 'center' }}>
+                                <div className="spinner-border text-success" role="status"></div>
+                                <p style={{ marginTop: '1rem' }}>Generando código QR...</p>
+                                {message.text && <p className="text-muted small">{message.text}</p>}
+                                {message.raw && (
+                                    <div className="debug-error" style={{ fontSize: '10px', color: '#ff4d4f', marginTop: '10px' }}>
+                                        Debug: {message.raw}
+                                    </div>
+                                )}
+                                {!loading && message.type === 'error' && (
+                                    <button
+                                        className="btn btn-primary mt-3"
+                                        onClick={handleStartSession}
+                                    >
+                                        <i className="bi bi-arrow-repeat"></i> Reintentar
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Test Message Section */}
             <div className="config-card">
                 <div className="card-header">
-                    <h3><i className="bi bi-send"></i> Enviar Mensaje de Prueba</h3>
+                    <h3><i className="bi bi-patch-check"></i> Prueba de Mensajería</h3>
                 </div>
                 <div className="card-body">
                     <div className="test-message-form">
                         <input
                             type="text"
-                            placeholder="Número de teléfono (ej: 0987654321)"
+                            placeholder="Número con código de país (ej: +593...)"
                             value={testPhone}
                             onChange={(e) => setTestPhone(e.target.value)}
                             className="form-input"
@@ -207,16 +313,16 @@ const WhatsAppConfig = () => {
                             onClick={handleTestMessage}
                             disabled={loading || connectionStatus !== 'connected'}
                         >
-                            <i className="bi bi-send-fill"></i> Enviar Prueba
+                            <i className="bi bi-send-fill"></i> Enviar Test
                         </button>
                     </div>
                 </div>
             </div>
 
-            {/* Settings Card */}
+            {/* Settings Sections */}
             <div className="config-card">
                 <div className="card-header">
-                    <h3><i className="bi bi-gear"></i> Configuración de Automatización</h3>
+                    <h3><i className="bi bi-sliders"></i> Parámetros de Automatización</h3>
                 </div>
                 <div className="card-body">
                     <div className="settings-form">
@@ -226,60 +332,53 @@ const WhatsAppConfig = () => {
                                     type="checkbox"
                                     checked={settings.is_active}
                                     onChange={(e) => setSettings({ ...settings, is_active: e.target.checked })}
+                                    style={{ marginRight: '10px' }}
                                 />
-                                <span className="checkbox-label">Automatización Activa</span>
+                                Activar envío automático de cumpleaños
                             </label>
                         </div>
 
-                        <div className="form-group">
-                            <label>Hora de Envío Diario</label>
-                            <input
-                                type="time"
-                                value={settings.schedule_time}
-                                onChange={(e) => setSettings({ ...settings, schedule_time: e.target.value })}
-                                className="form-input"
-                            />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div className="form-group">
+                                <label>Intervalo de envío (Hora)</label>
+                                <input
+                                    type="time"
+                                    value={settings.schedule_time}
+                                    onChange={(e) => setSettings({ ...settings, schedule_time: e.target.value })}
+                                    className="form-input"
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Nombre Identificador de Sesión</label>
+                                <input
+                                    type="text"
+                                    value={settings.session_name}
+                                    readOnly
+                                    className="form-input"
+                                    style={{ background: '#f5f5f5' }}
+                                />
+                            </div>
                         </div>
 
                         <div className="form-group">
-                            <label>Nombre de Sesión</label>
-                            <input
-                                type="text"
-                                value={settings.session_name}
-                                onChange={(e) => setSettings({ ...settings, session_name: e.target.value })}
-                                className="form-input"
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label>Número Emisor (Referencia)</label>
-                            <input
-                                type="text"
-                                value={settings.phone_number_sender}
-                                onChange={(e) => setSettings({ ...settings, phone_number_sender: e.target.value })}
-                                className="form-input"
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label>Plantilla de Mensaje de Cumpleaños</label>
+                            <label>Plantilla del Mensaje</label>
                             <textarea
                                 value={settings.birthday_message_template}
                                 onChange={(e) => setSettings({ ...settings, birthday_message_template: e.target.value })}
                                 className="form-textarea"
-                                rows={6}
+                                rows={5}
+                                placeholder="Hola {first_name}, feliz cumpleaños..."
                             />
-                            <small className="form-hint">
-                                Variables disponibles: {'{first_name}'}, {'{last_name}'}
-                            </small>
+                            <small style={{ color: '#666' }}>Usa {'{first_name}'} y {'{last_name}'} para personalizar.</small>
                         </div>
 
                         <button
-                            className="btn btn-primary btn-save"
+                            className="btn btn-primary"
                             onClick={handleSaveSettings}
                             disabled={loading}
+                            style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }}
                         >
-                            <i className="bi bi-check-lg"></i> Guardar Configuración
+                            <i className="bi bi-cloud-check"></i> Guardar Configuración
                         </button>
                     </div>
                 </div>
