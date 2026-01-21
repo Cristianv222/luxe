@@ -230,13 +230,16 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
         // Si createdOrder.items existe:
         if (createdOrder.items && createdOrder.items.length > 0) {
             createdOrder.items.forEach(item => {
-                const pName = item.product_name || item.product?.name || "Producto";
+                const pName = item.product_details?.name || item.product_name || item.product?.name || "Producto";
                 const qty = item.quantity;
-                const price = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
-                // El precio unitario total (incluyendo extras si el backend lo suma)
-                // Si item.total existe
-                const lineTotal = item.total || (price * qty);
-                msg += `- ${qty}x ${pName}: $${parseFloat(lineTotal).toFixed(2)}\n`;
+                // Backend uses 'unit_price' and 'line_total'
+                const rawPrice = item.unit_price || item.price || 0;
+                const price = typeof rawPrice === 'string' ? parseFloat(rawPrice) : rawPrice;
+
+                const rawTotal = item.line_total || item.total || (price * qty);
+                const lineTotal = typeof rawTotal === 'string' ? parseFloat(rawTotal) : rawTotal;
+
+                msg += `- ${qty}x ${pName}: $${lineTotal.toFixed(2)}\n`;
             });
         } else {
             msg += `(Detalle de productos en sistema)\n`;
