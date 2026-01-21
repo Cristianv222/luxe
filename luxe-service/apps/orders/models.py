@@ -551,3 +551,6 @@ class OrderStatusHistory(models.Model):
     
     def __str__(self):
         return f'{self.order.order_number}: {self.from_status} → {self.to_status}'
+
+# Import signals
+import apps.orders.signals
