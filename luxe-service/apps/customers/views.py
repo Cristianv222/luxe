@@ -18,7 +18,8 @@ from .serializers import (
     CustomerSerializer, CustomerCreateSerializer, CustomerUpdateSerializer,
     CustomerLoginSerializer, CustomerAddressSerializer, CustomerNoteSerializer,
     CustomerLoyaltySerializer, CustomerLoyaltyHistorySerializer, 
-    CustomerDeviceSerializer, CustomerStatsSerializer, CustomerSearchSerializer
+    CustomerDeviceSerializer, CustomerStatsSerializer, CustomerSearchSerializer,
+    POSCustomerSerializer
 )
 
 logger = logging.getLogger(__name__)
@@ -127,6 +128,41 @@ def verify_email(request):
         }
     })
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def pos_register(request):
+    """
+    Registro rápido desde POS.
+    POST /api/customers/pos_register/
+    """
+    serializer = POSCustomerSerializer(data=request.data)
+    if serializer.is_valid():
+        customer = serializer.save()
+        return Response(CustomerSerializer(customer).data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def health_check(request):
+    """
+    Health check endpoint
+    """
+    return Response({
+        'status': 'healthy',
+        'timestamp': timezone.now()
+    })
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def service_info(request):
+    """
+    Service information endpoint
+    """
+    return Response({
+        'service': 'Luxe Customer Service',
+        'version': '1.0.0'
+    })
 
 # ========== ENDPOINTS PROTEGIDOS (AUTENTICADOS) ==========
 
@@ -721,7 +757,6 @@ def admin_customer_stats(request):
         'data': stats
     })
 
-# apps/customers/views.py (SOLO la función admin_search_customers)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -740,13 +775,13 @@ def admin_search_customers(request):
     
     query = serializer.validated_data['query']
     
-    # Búsqueda en múltiples campos (AÑADIDO: Q(cedula__icontains=query))
+    # Búsqueda en múltiples campos
     customers = Customer.objects.filter(
         Q(email__icontains=query) |
         Q(phone__icontains=query) |
         Q(first_name__icontains=query) |
         Q(last_name__icontains=query) |
-        Q(cedula__icontains=query) | # <--- CAMBIO CRÍTICO
+        Q(cedula__icontains=query) |
         Q(address__icontains=query) |
         Q(city__icontains=query)
     ).order_by('-created_at')[:50] 
@@ -761,6 +796,7 @@ def admin_search_customers(request):
             'customers': serializer.data
         }
     })
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def sync_external_customer(request):
@@ -798,101 +834,4 @@ def sync_external_customer(request):
         if not customer and phone and str(phone).strip() not in invalid_values:
             potential = Customer.objects.filter(phone=phone).first()
             if potential:
-                if not potential.email or potential.email.lower() == email.lower():
-                    customer = potential
-            
-    # 3. Si existe, actualizar con los datos frescos de Auth (Fuente de Verdad)
-    if customer:
-        try:
-            # Siempre forzamos el nombre de Auth si el registro es el correcto
-            # Evitamos colisiones de nombres antiguos
-            customer.first_name = data.get('first_name', customer.first_name)
-            customer.last_name = data.get('last_name', customer.last_name)
-            
-            # El email solo se actualiza si estaba vacío (casos raros)
-            if not customer.email:
-                customer.email = email
-            
-            # El teléfono solo se actualiza si es el temporal del sistema
-            if not customer.phone or customer.phone.startswith('SYNC_'):
-                new_phone = data.get('phone')
-                if new_phone:
-                    customer.phone = new_phone
-            
-            # La cédula solo si no la tenía registrada
-            if not customer.cedula and cedula:
-                customer.cedula = cedula
-                
-            customer.save()
-            return Response({'status': 'success', 'data': CustomerSerializer(customer).data})
-        except Exception as e:
-            return Response({'status': 'error', 'message': f'Error actualizando: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
-        
-    # 3. Si no existe, crear
-    create_data = {
-        'email': email,
-        'first_name': data.get('first_name', 'Usuario'),
-        'last_name': data.get('last_name', 'Externo'),
-        'phone': phone or f"09{timezone.now().strftime('%m%d%H%M')}",
-        'cedula': cedula,
-    }
-    create_data = {k: v for k, v in create_data.items() if v is not None}
-    
-    serializer = CustomerCreateSerializer(data=create_data)
-    if serializer.is_valid():
-        try:
-            customer = serializer.save()
-            return Response({'status': 'success', 'data': CustomerSerializer(customer).data}, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            return Response({'status': 'error', 'message': f'Error de integridad: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    return Response({'status': 'error', 'message': 'Validación fallida', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
-
-# ========== ENDPOINTS DE HEALTH CHECK ==========
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def health_check(request):
-    """
-    Health check del servicio de clientes
-    GET /api/customers/health/
-    """
-    # Verificar conexión a base de datos
-    try:
-        customer_count = Customer.objects.count()
-        db_status = 'healthy'
-    except Exception as e:
-        customer_count = 0
-        db_status = f'error: {str(e)}'
-    
-    return Response({
-        'status': 'ok',
-        'service': 'luxe-service-customers',
-        'timestamp': timezone.now().isoformat(),
-        'database': {
-            'status': db_status,
-            'customers_count': customer_count
-        },
-        'endpoints': {
-            'register': '/api/customers/register/',
-            'login': '/api/customers/login/',
-            'profile': '/api/customers/me/',
-            'health': '/api/customers/health/'
-        }
-    })
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def service_info(request):
-    """
-    Información del servicio
-    GET /api/customers/info/
-    """
-    return Response({
-        'service': 'Fast Food Customer Service',
-        'version': '1.0.0',
-        'description': 'Microservicio para gestión de clientes y lealtad',
-        'status': 'running'
-    })
+               pass

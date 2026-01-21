@@ -95,6 +95,36 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
         
         return customer
 
+class POSCustomerSerializer(serializers.ModelSerializer):
+    """
+    Serializer para creación rápida desde POS (sin email/password obligatorios)
+    """
+    class Meta:
+        model = Customer
+        fields = [
+            'id', 'first_name', 'last_name', 'cedula', 'phone', 'birth_date', 
+            'email', 'gender', 'address', 'city'
+        ]
+        extra_kwargs = {
+            'email': {'required': False}, # Optional in input, generated if missing
+            'phone': {'required': False}  # Optional in input? User said "phone too".
+        }
+
+    def create(self, validated_data):
+        # Auto-generate email if missing
+        if 'email' not in validated_data or not validated_data['email']:
+            import uuid
+            cedula = validated_data.get('cedula', 'NoID')
+            random_suffix = uuid.uuid4().hex[:6]
+            validated_data['email'] = f"{cedula}_{random_suffix}@dummy.local"
+        
+        # Auto-generate dummy password
+        validated_data['password'] = 'POS_Generated_123!'
+        
+        # Use manager/create_user to handle hashing
+        customer = Customer.objects.create_user(**validated_data)
+        return customer
+
 class CustomerUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer

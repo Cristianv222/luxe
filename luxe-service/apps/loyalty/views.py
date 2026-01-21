@@ -27,6 +27,47 @@ class LoyaltyAdminViewSet(viewsets.ModelViewSet):
     """
     permission_classes = [permissions.IsAdminUser]
 
+    @action(detail=False, methods=['POST'])
+    def reprocess_past_orders(self, request):
+        """
+        Calcula puntos para órdenes pasadas que fueron pagadas pero no generaron puntos.
+        """
+        from apps.orders.models import Order
+        
+        # Buscar órdenes pagadas
+        # Asumimos que payment_status='paid' es lo que cuenta.
+        paid_orders = Order.objects.filter(payment_status='paid')
+        
+        processed_count = 0
+        skipped_count = 0
+        
+        for order in paid_orders:
+            # Check if points already awarded (Service checks this too, but we can optimize/count here)
+            # Service: award_points_for_order checks PointTransaction existence.
+            
+            # We trust the service to be idempotent via its check.
+            # But to return a useful count, let's check beforehand or verify result?
+            # The service doesn't return value.
+            
+            exists = PointTransaction.objects.filter(related_order_id=str(order.id), transaction_type='EARN').exists()
+            if exists:
+                skipped_count += 1
+                continue
+                
+            LoyaltyService.award_points_for_order(order)
+            
+            # Re-check to see if it was actually awarded (rule might not have matched)
+            # Or just assume processed if we called it. 
+            # Differentiate "Processed (Attempted)" vs "Points Awarded" is hard without modifying service.
+            # Let's count "Processed" as attempted.
+            processed_count += 1
+            
+        return Response({
+            "message": "Proceso completado",
+            "processed": processed_count,
+            "skipped_already_awarded": skipped_count
+        })
+
 class EarningRuleTypeViewSet(LoyaltyAdminViewSet):
     queryset = EarningRuleType.objects.all()
     serializer_class = EarningRuleTypeSerializer

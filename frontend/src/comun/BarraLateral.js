@@ -22,9 +22,10 @@ const BarraLateral = () => {
     };
 
     const menuItems = [
-        { path: '/', icon: 'bi-house-door', label: 'Inicio' },
+        { path: '/luxe', icon: 'bi-house-door', label: 'Inicio' },
         { path: '/users', icon: 'bi-people', label: 'Usuarios' },
-        { path: '/luxe', icon: 'bi-cart', label: 'Panel de administración' },
+        { path: '/luxe/loyalty-config', icon: 'bi-gear', label: 'Config. Puntos' },
+        { path: '/luxe/loyalty-management', icon: 'bi-star', label: 'Gestión Puntos' },
     ];
 
     return (

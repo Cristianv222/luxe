@@ -34,6 +34,12 @@ const PanelLuxe = () => {
             description: 'Reglas de puntos y cupones',
             path: '/luxe/loyalty-config',
             icon: 'bi-star-fill'
+        },
+        {
+            title: 'Gestión Puntos',
+            description: 'Ver clientes y saldos',
+            path: '/luxe/loyalty-management',
+            icon: 'bi-people-fill'
         }
     ];
 

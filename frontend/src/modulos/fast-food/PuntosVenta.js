@@ -58,17 +58,12 @@ const PuntosVenta = () => {
     const [customerSearch, setCustomerSearch] = useState('');
     const [showCustomerModal, setShowCustomerModal] = useState(false);
     const [newCustomer, setNewCustomer] = useState({
-        email: '',
-        username: '',
-        password: 'Password123!',
-        password_confirm: 'Password123!',
         first_name: '',
         last_name: '',
         phone: '',
-        address: '',
-        city: '',
-        identification_number: '',
-        date_of_birth: ''
+        identification_number: '', // Usado como Cédula/RUC
+        date_of_birth: '',
+        email: ''
     });
 
     // =====================================
@@ -254,101 +249,61 @@ const PuntosVenta = () => {
     };
 
     // =====================================
-    // 7. CLIENTES Y USUARIOS (UNIFICADOS - AUTH SERVICE)
+    // 7. CLIENTES (DIRECTO - LUXE CUSTOMERS)
     // =====================================
     const searchCustomers = async (query) => {
         setCustomerSearch(query);
-        if (query.length < 3) { setCustomers([]); return; }
+        if (query.length < 2) { setCustomers([]); return; }
         try {
-            // AHORA BUSCAMOS EN AUTH SERVICE (USUARIOS)
-            const res = await api.get(`/api/users/?search=${query}`);
-            const userData = res.data.results || res.data || [];
-            setCustomers(userData);
-        } catch (e) { console.error("Error al buscar usuarios:", e); }
+            // Buscamos directamente en clientes (nombre, cedula, telefono)
+            const res = await api.get(`/api/customers/?search=${query}`, { baseURL: '/api/luxe' });
+            const results = res.data.results || res.data || [];
+            setCustomers(results);
+        } catch (e) { console.error("Error al buscar clientes:", e); }
     };
 
-    const syncAndSelectUser = async (user) => {
-        try {
-            console.log("Iniciando sincronización atómica para:", user.email);
-
-            const customerPayload = {
-                first_name: user.first_name,
-                last_name: user.last_name,
-                email: user.email,
-                phone: user.phone || null,
-                cedula: user.identification_number || null,
-                identification_number: user.identification_number || null,
-                address: user.address || '',
-                city: user.city || ''
-            };
-
-            // USAMOS EL ENDPOINT ATÓMICO: Sincroniza (Busca o Crea) en una sola petición
-            const res = await api.post('api/customers/admin/sync/', customerPayload, { baseURL: '/api/luxe' });
-            const syncedCustomer = res.data.data;
-
-            if (syncedCustomer) {
-                console.log("Cliente vinculado correctamente:", syncedCustomer.id);
-                setSelectedCustomer(syncedCustomer);
-                setCustomers([]);
-                setCustomerSearch(''); // Limpiamos búsqueda
-                return syncedCustomer;
-            }
-        } catch (err) {
-            console.warn("Fallo en sincronización atómica, usando selección local:", err.message);
-            // Fallback: selección local para no bloquear la operación
-            setSelectedCustomer({ ...user, is_external_only: true });
-            setCustomers([]);
-            setCustomerSearch('');
-            return null;
-        }
+    const selectCustomer = (customer) => {
+        setSelectedCustomer(customer);
+        setCustomers([]);
+        setCustomerSearch('');
     };
 
     const handleCreateCustomer = async (e) => {
         e.preventDefault();
         try {
-            // 1. Prepare payload for AUTH SERVICE (Identity)
-            console.log("Creando cuenta de usuario web (Ucelis)...");
-            const authPayload = {
+            console.log("Creando cliente POS...");
+            const payload = {
                 first_name: newCustomer.first_name,
                 last_name: newCustomer.last_name,
-                identification_number: newCustomer.identification_number,
-                date_of_birth: newCustomer.date_of_birth,
-                email: newCustomer.email,
+                cedula: newCustomer.identification_number, // Mapeamos identification_number a cedula
                 phone: newCustomer.phone,
-                username: newCustomer.username || newCustomer.email,
-                password: newCustomer.password,
-                password_confirm: newCustomer.password_confirm
+                birth_date: newCustomer.date_of_birth || null,
+                // Email es opcional, el backend lo genera si falta
+                email: newCustomer.email
             };
 
-            const authRes = await api.post('/api/authentication/register/', authPayload);
-            const createdUser = authRes.data.user;
+            const res = await api.post('/api/customers/pos_register/', payload, { baseURL: '/api/luxe' });
+            const createdCustomer = res.data;
 
-            // 2. Sync with LUXE SERVICE (Optional background sync)
-            await syncAndSelectUser(createdUser);
-
-            // 3. Success Feedback & Reset
-            alert('¡Usuario creado exitosamente!');
-
+            alert('¡Cliente registrado exitosamente!');
+            selectCustomer(createdCustomer);
             setShowCustomerModal(false);
 
             setNewCustomer({
-                email: '',
-                username: '',
-                password: 'Password123!',
-                password_confirm: 'Password123!',
                 first_name: '',
                 last_name: '',
                 phone: '',
-                address: '',
-                city: '',
-                identification_number: '',
-                date_of_birth: ''
+                identification_number: '', // Cedula
+                date_of_birth: '',
+                email: ''
             });
 
         } catch (err) {
-            console.error('Error principal:', err);
-            const msg = err.response?.data?.message || JSON.stringify(err.response?.data) || err.message;
-            alert('Error al crear usuario: ' + msg);
+            console.error('Error creando cliente:', err);
+            const msg = err.response?.data?.cedula
+                ? 'Cédula ya registrada: ' + err.response.data.cedula
+                : (err.response?.data?.message || JSON.stringify(err.response?.data) || err.message);
+            alert('Error al crear cliente: ' + msg);
         }
     };
     const handleInputChange = (e) => setNewCustomer(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -696,7 +651,7 @@ const PuntosVenta = () => {
                                         <div style={{ position: 'relative' }}>
                                             <input
                                                 type="text"
-                                                placeholder="Buscar usuario (Ucelis)..."
+                                                placeholder="Buscar cliente..."
                                                 value={customerSearch}
                                                 onChange={e => searchCustomers(e.target.value)}
                                                 style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px' }}
@@ -716,7 +671,7 @@ const PuntosVenta = () => {
                                                     {customers.map(u => (
                                                         <div
                                                             key={u.id}
-                                                            onClick={() => syncAndSelectUser(u)}
+                                                            onClick={() => selectCustomer(u)}
                                                             style={{ padding: '0.75rem', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
                                                         >
                                                             <div style={{ fontWeight: '600' }}>{u.first_name} {u.last_name}</div>
@@ -727,7 +682,7 @@ const PuntosVenta = () => {
                                             )}
                                         </div>
                                     )}
-                                    <button onClick={() => setShowCustomerModal(true)} style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>+ Nuevo Usuario (Ucelis)</button>
+                                    <button onClick={() => setShowCustomerModal(true)} style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>+ Nuevo Cliente</button>
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>Entrega</label>
@@ -813,7 +768,7 @@ const PuntosVenta = () => {
                 <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ background: 'white', padding: '0', borderRadius: '12px', width: '600px', maxWidth: '90%', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' }}>
                         <div style={{ padding: '1.5rem', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ margin: 0, color: '#111827', fontSize: '1.25rem' }}>Nuevo Usuario (Ucelis)</h3>
+                            <h3 style={{ margin: 0, color: '#111827', fontSize: '1.25rem' }}>Nuevo Cliente</h3>
                             <button onClick={() => setShowCustomerModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>×</button>
                         </div>
 
@@ -842,37 +797,13 @@ const PuntosVenta = () => {
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Email *</label>
-                                    <input type="email" name="email" placeholder="cliente@email.com" value={newCustomer.email} onChange={handleInputChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Email (Opcional)</label>
+                                    <input type="email" name="email" placeholder="cliente@email.com" value={newCustomer.email} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
                                 </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Usuario (Web) *</label>
-                                    <input name="username" placeholder="Nombre de usuario" value={newCustomer.username} onChange={handleInputChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Teléfono *</label>
                                     <input name="phone" placeholder="099..." value={newCustomer.phone} onChange={handleInputChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
                                 </div>
-                                <div style={{ visibility: 'hidden' }}> {/* Spacer */} </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Contraseña Web</label>
-                                    <input type="password" name="password" placeholder="Crear contraseña" value={newCustomer.password} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Confirmar Contraseña</label>
-                                    <input type="password" name="password_confirm" placeholder="Repetir contraseña" value={newCustomer.password_confirm} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
-                                </div>
-                            </div>
-
-                            <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Dirección</label>
-                                <input name="address" placeholder="Dirección completa" value={newCustomer.address} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
                             </div>
 
                             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
@@ -880,7 +811,7 @@ const PuntosVenta = () => {
                                     Cancelar
                                 </button>
                                 <button type="submit" style={{ padding: '0.75rem 1.5rem', border: 'none', background: '#2563eb', color: 'white', borderRadius: '6px', fontWeight: '500', cursor: 'pointer' }}>
-                                    Crear Cuenta
+                                    Crear Cliente
                                 </button>
                             </div>
                         </form>

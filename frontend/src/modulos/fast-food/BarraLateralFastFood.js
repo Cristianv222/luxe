@@ -69,8 +69,14 @@ const BarraLateralLuxe = () => {
                 </li>
                 <li className={isActive('/luxe/loyalty-config')}>
                     <Link to="/luxe/loyalty-config">
-                        <i className="bi bi-star" style={{ marginRight: '10px' }}></i>
+                        <i className="bi bi-gear" style={{ marginRight: '10px' }}></i>
                         Config. Puntos
+                    </Link>
+                </li>
+                <li className={isActive('/luxe/loyalty-management')}>
+                    <Link to="/luxe/loyalty-management">
+                        <i className="bi bi-star" style={{ marginRight: '10px' }}></i>
+                        Gestión Puntos
                     </Link>
                 </li>
             </ul>

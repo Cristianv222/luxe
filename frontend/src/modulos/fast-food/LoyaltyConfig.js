@@ -226,9 +226,10 @@ const LoyaltyConfig = () => {
                                 <td style={{ padding: '10px', fontWeight: '500' }}>{rule.name}</td>
                                 <td style={{ padding: '10px' }}>{rule.rule_type_name || 'Sin Asignar'}</td>
                                 <td style={{ padding: '10px' }}>
-                                    {rule.rule_type === 'PER_AMOUNT'
-                                        ? `Cada $${rule.amount_step} gasta`
-                                        : `Mínimo Compra $${rule.min_order_value}`}
+                                    {/* Show detail based on values present */}
+                                    {rule.amount_step > 0 && rule.amount_step != null
+                                        ? `Cada $${rule.amount_step} gastado`
+                                        : `Mínimo $${rule.min_order_value}`}
                                 </td>
                                 <td style={{ padding: '10px', color: '#16a34a', fontWeight: 'bold' }}>+{rule.points_to_award} pts</td>
                                 <td style={{ padding: '10px' }}>
@@ -317,13 +318,17 @@ const LoyaltyConfig = () => {
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                 <div>
-                                    <label>Monto Paso / Mínimo</label>
+                                    <label>
+                                        {/* Dynamic Label based on selected type heuristics */}
+                                        {earningForm.rule_type
+                                            ? (earningRuleTypes.find(t => t.id == earningForm.rule_type)?.code === 'PER_AMOUNT'
+                                                ? 'Monto Paso (Cada $X)'
+                                                : 'Monto Mínimo de Factura ($)')
+                                            : 'Monto ($)'}
+                                    </label>
                                     <input type="number" className="ff-input" value={earningForm.amount_step || earningForm.min_order_value}
                                         onChange={e => {
-                                            // Heuristic: if type code contains 'AMOUNT', use amount_step, else min_order_value
-                                            // Since we have dynamic types, we might not strictly know logic. 
-                                            // But for now, we map to amount_step mostly or min_order_value.
-                                            // We'll update both or just one.
+                                            // Update both fields for simplicity in heuristic mapping
                                             setEarningForm({ ...earningForm, amount_step: e.target.value, min_order_value: e.target.value })
                                         }} />
                                 </div>
