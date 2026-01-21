@@ -376,7 +376,6 @@ const BoutiqueLanding = () => {
                         ) : (
                             <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                                 <Link to="/login" className="nav-link">INICIAR SESIÓN</Link>
-                                <Link to="/registro" className="nav-link" style={{ fontWeight: '700' }}>REGISTRARTE</Link>
                             </div>
                         )}
                     </nav>
@@ -804,268 +803,290 @@ const BoutiqueLanding = () => {
                 </div>
             )}
 
-            {/* LOYALTY MODAL */}
+            {/* LOYALTY MODAL - REDESIGNED */}
             {showLoyaltyModal && (
-                <div className="checkout-modal-overlay" onClick={() => setShowLoyaltyModal(false)}>
-                    <div className="checkout-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', position: 'relative' }}>
-                        {/* Header */}
-                        <div style={{
-                            background: 'linear-gradient(135deg, #2C2C2C 0%, #4a4a4a 100%)',
-                            color: 'white',
-                            padding: '25px',
-                            textAlign: 'center',
-                            borderRadius: '8px 8px 0 0'
-                        }}>
-                            <h3 style={{ fontFamily: 'serif', fontSize: '24px', margin: 0 }}>Programa de Fidelidad</h3>
-                            <p style={{ margin: '8px 0 0', opacity: 0.8, fontSize: '14px' }}>Acumula puntos y obtén recompensas exclusivas</p>
-                        </div>
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                    backdropFilter: 'blur(8px)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 10000,
+                    animation: 'fadeIn 0.3s ease-out'
+                }} onClick={() => setShowLoyaltyModal(false)}>
 
-                        <div style={{ padding: '25px' }}>
-                            {!loyaltyData ? (
-                                <form onSubmit={checkLoyaltyBalance}>
-                                    <p style={{ marginBottom: '15px', color: '#666', textAlign: 'center' }}>
-                                        Ingresa tu cédula para consultar tu saldo de puntos
-                                    </p>
-                                    <input
-                                        type="text"
-                                        placeholder="Número de Cédula"
-                                        value={loyaltyCedula}
-                                        onChange={e => setLoyaltyCedula(e.target.value)}
-                                        style={{
-                                            width: '100%',
-                                            padding: '14px',
-                                            fontSize: '16px',
-                                            border: '2px solid #e5e5e5',
-                                            borderRadius: '8px',
-                                            marginBottom: '15px',
-                                            textAlign: 'center',
-                                            letterSpacing: '2px'
-                                        }}
-                                        required
-                                    />
-                                    {loyaltyError && (
-                                        <p style={{ color: '#ef4444', marginBottom: '10px', fontSize: '14px', textAlign: 'center' }}>
-                                            {loyaltyError}
-                                        </p>
-                                    )}
-                                    <button
-                                        type="submit"
-                                        disabled={loyaltyLoading}
-                                        style={{
-                                            width: '100%',
-                                            padding: '14px',
-                                            background: '#CFB3A9',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '8px',
-                                            fontSize: '14px',
-                                            fontWeight: 'bold',
-                                            letterSpacing: '1px',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        {loyaltyLoading ? 'CONSULTANDO...' : 'CONSULTAR MIS PUNTOS'}
-                                    </button>
-                                </form>
-                            ) : (
-                                <div>
-                                    {/* Información del cliente */}
-                                    <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                                        <p style={{ fontSize: '14px', color: '#888', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '5px' }}>
-                                            Hola, {loyaltyData.customer_name}
-                                        </p>
-                                        <div style={{
-                                            background: 'linear-gradient(135deg, #CFB3A9 0%, #e8d4cf 100%)',
-                                            borderRadius: '12px',
-                                            padding: '20px',
-                                            marginTop: '10px'
-                                        }}>
-                                            <div style={{ fontSize: '52px', fontWeight: 'bold', color: '#2C2C2C' }}>
-                                                {loyaltyData.points_balance}
-                                            </div>
-                                            <div style={{ fontSize: '14px', color: '#5a5a5a', letterSpacing: '2px' }}>PUNTOS DISPONIBLES</div>
-                                        </div>
-                                    </div>
-
-                                    {/* Cupón recién canjeado */}
-                                    {redeemedCoupon && (
-                                        <div style={{
-                                            background: '#CFB3A9',
-                                            color: 'white',
-                                            padding: '20px',
-                                            borderRadius: '12px',
-                                            marginBottom: '20px',
-                                            textAlign: 'center'
-                                        }}>
-                                            <p style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '600' }}>¡Cupón generado exitosamente!</p>
-                                            <div style={{
-                                                background: 'white',
-                                                color: '#2C2C2C',
-                                                padding: '15px',
-                                                borderRadius: '8px',
-                                                fontSize: '24px',
-                                                fontWeight: 'bold',
-                                                letterSpacing: '3px',
-                                                fontFamily: 'monospace'
-                                            }}>
-                                                {redeemedCoupon.code}
-                                            </div>
-                                            <button
-                                                onClick={() => { navigator.clipboard.writeText(redeemedCoupon.code); showAlert('success', 'Copiado', '¡Código copiado al portapapeles!') }}
-                                                style={{ marginTop: '10px', background: 'rgba(255,255,255,0.3)', border: 'none', color: 'white', padding: '8px 20px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-                                            >
-                                                Copiar código
-                                            </button>
-                                        </div>
-                                    )}
-
-                                    {/* Recompensas disponibles */}
-                                    {loyaltyData.available_rewards && loyaltyData.available_rewards.length > 0 && (
-                                        <div style={{ marginBottom: '20px' }}>
-                                            <h4 style={{ fontSize: '13px', color: '#2C2C2C', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>
-                                                Recompensas Disponibles
-                                            </h4>
-                                            <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                                                {loyaltyData.available_rewards.map(reward => (
-                                                    <div key={reward.id} style={{
-                                                        display: 'flex',
-                                                        justifyContent: 'space-between',
-                                                        alignItems: 'center',
-                                                        padding: '12px',
-                                                        background: '#f9f9f9',
-                                                        borderRadius: '8px',
-                                                        marginBottom: '8px',
-                                                        border: '1px solid #eee'
-                                                    }}>
-                                                        <div>
-                                                            <div style={{ fontWeight: 'bold', color: '#2C2C2C' }}>{reward.name}</div>
-                                                            <div style={{ fontSize: '12px', color: '#888' }}>
-                                                                {reward.reward_type === 'PERCENTAGE' ? `${reward.discount_value}% descuento` : `$${reward.discount_value} de descuento`}
-                                                            </div>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => redeemReward(reward.id)}
-                                                            disabled={redeemingReward === reward.id}
-                                                            style={{
-                                                                background: '#CFB3A9',
-                                                                color: 'white',
-                                                                border: 'none',
-                                                                padding: '8px 16px',
-                                                                borderRadius: '6px',
-                                                                cursor: 'pointer',
-                                                                fontSize: '12px',
-                                                                fontWeight: 'bold'
-                                                            }}
-                                                        >
-                                                            {redeemingReward === reward.id ? '...' : `${reward.points_cost} PTS`}
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Mis cupones */}
-                                    {loyaltyData.coupons && loyaltyData.coupons.length > 0 && (
-                                        <div style={{ marginBottom: '20px' }}>
-                                            <h4 style={{ fontSize: '13px', color: '#2C2C2C', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1px solid #eee', paddingBottom: '8px' }}>
-                                                Mis Cupones ({loyaltyData.coupons.length})
-                                            </h4>
-                                            <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                                                {loyaltyData.coupons.map(coupon => (
-                                                    <div key={coupon.id} style={{
-                                                        display: 'flex',
-                                                        justifyContent: 'space-between',
-                                                        alignItems: 'center',
-                                                        padding: '10px 12px',
-                                                        background: '#f5f0ed',
-                                                        borderRadius: '6px',
-                                                        marginBottom: '6px',
-                                                        border: '1px dashed #CFB3A9'
-                                                    }}>
-                                                        <div>
-                                                            <div style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#2C2C2C', letterSpacing: '1px' }}>
-                                                                {coupon.code}
-                                                            </div>
-                                                            <div style={{ fontSize: '11px', color: '#888' }}>{coupon.reward_name}</div>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => { navigator.clipboard.writeText(coupon.code); showAlert('success', 'Copiado', 'Código ' + coupon.code + ' copiado al portapapeles') }}
-                                                            style={{
-                                                                background: 'transparent',
-                                                                border: '1px solid #CFB3A9',
-                                                                color: '#CFB3A9',
-                                                                padding: '4px 10px',
-                                                                borderRadius: '4px',
-                                                                cursor: 'pointer',
-                                                                fontSize: '11px',
-                                                                fontWeight: 'bold'
-                                                            }}
-                                                        >
-                                                            Copiar
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Sin cupones ni recompensas */}
-                                    {(!loyaltyData.coupons || loyaltyData.coupons.length === 0) &&
-                                        (!loyaltyData.available_rewards || loyaltyData.available_rewards.length === 0) && (
-                                            <p style={{ textAlign: 'center', color: '#888', padding: '20px' }}>
-                                                Aún no tienes recompensas disponibles. ¡Sigue comprando para acumular más puntos!
-                                            </p>
-                                        )}
-
-                                    {/* Error */}
-                                    {loyaltyError && (
-                                        <p style={{ color: '#ef4444', fontSize: '13px', textAlign: 'center', marginBottom: '15px' }}>
-                                            {loyaltyError}
-                                        </p>
-                                    )}
-
-                                    {/* Botón consultar otra cédula */}
-                                    <button
-                                        onClick={() => { setLoyaltyData(null); setLoyaltyCedula(''); setRedeemedCoupon(null); setLoyaltyError(''); }}
-                                        style={{
-                                            width: '100%',
-                                            marginTop: '10px',
-                                            background: 'transparent',
-                                            border: '1px solid #ccc',
-                                            padding: '10px',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                            color: '#666',
-                                            fontSize: '13px'
-                                        }}
-                                    >
-                                        Consultar otra cédula
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Botón cerrar */}
+                    <div onClick={e => e.stopPropagation()} style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        padding: '40px',
+                        borderRadius: '20px',
+                        width: '90%',
+                        maxWidth: '850px',
+                        maxHeight: '90vh',
+                        overflowY: 'auto',
+                        position: 'relative',
+                        boxShadow: '0 25px 50px rgba(0,0,0,0.2)'
+                    }}>
+                        {/* Close Button */}
                         <button
                             onClick={() => setShowLoyaltyModal(false)}
                             style={{
                                 position: 'absolute',
-                                top: '15px',
-                                right: '15px',
-                                background: 'rgba(255,255,255,0.2)',
+                                top: '20px',
+                                right: '25px',
+                                background: 'transparent',
                                 border: 'none',
-                                fontSize: '20px',
+                                fontSize: '24px',
                                 cursor: 'pointer',
-                                color: 'white',
-                                width: '32px',
-                                height: '32px',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
+                                color: '#999',
+                                transition: 'color 0.2s',
+                                zIndex: 10001
                             }}
-                        >×</button>
+                            onMouseOver={e => e.target.style.color = '#333'}
+                            onMouseOut={e => e.target.style.color = '#999'}
+                        >
+                            ✕
+                        </button>
+
+                        {/* Modal Header */}
+                        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                            <h2 style={{
+                                margin: 0,
+                                fontSize: '32px',
+                                fontFamily: "'Playfair Display', serif",
+                                color: '#2C2C2C',
+                                letterSpacing: '1px'
+                            }}>
+                                Club Luxe
+                            </h2>
+                            <p style={{ color: '#888', marginTop: '10px', fontSize: '15px' }}>
+                                Programa de Fidelidad Exclusivo
+                            </p>
+                        </div>
+
+                        {!loyaltyData ? (
+                            <div style={{ maxWidth: '400px', margin: '0 auto' }}>
+                                <form onSubmit={checkLoyaltyBalance} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                                    <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+                                        <p style={{ color: '#666', lineHeight: '1.6' }}>
+                                            Ingresa tu número de identificación para consultar tus puntos y canjear recompensas.
+                                        </p>
+                                    </div>
+
+                                    <input
+                                        type="text"
+                                        placeholder="Cédula o RUC"
+                                        value={loyaltyCedula}
+                                        onChange={e => setLoyaltyCedula(e.target.value)}
+                                        style={{
+                                            padding: '16px',
+                                            fontSize: '16px',
+                                            border: '1px solid #e0e0e0',
+                                            borderRadius: '10px',
+                                            textAlign: 'center',
+                                            backgroundColor: '#f9f9f9',
+                                            outline: 'none',
+                                            transition: 'border-color 0.3s'
+                                        }}
+                                        onFocus={e => e.target.style.borderColor = '#CFB3A9'}
+                                        onBlur={e => e.target.style.borderColor = '#e0e0e0'}
+                                        required
+                                    />
+
+                                    {loyaltyError && (
+                                        <div style={{
+                                            padding: '10px',
+                                            backgroundColor: '#fee2e2',
+                                            color: '#b91c1c',
+                                            borderRadius: '8px',
+                                            fontSize: '14px',
+                                            textAlign: 'center'
+                                        }}>
+                                            {loyaltyError}
+                                        </div>
+                                    )}
+
+                                    <button
+                                        type="submit"
+                                        disabled={loyaltyLoading}
+                                        style={{
+                                            padding: '16px',
+                                            backgroundColor: '#2C2C2C',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '30px',
+                                            fontSize: '15px',
+                                            fontWeight: '600',
+                                            letterSpacing: '1px',
+                                            cursor: loyaltyLoading ? 'wait' : 'pointer',
+                                            transition: 'transform 0.1s'
+                                        }}
+                                    >
+                                        {loyaltyLoading ? 'VERIFICANDO...' : 'CONSULTAR MIS PUNTOS'}
+                                    </button>
+                                </form>
+                            </div>
+                        ) : (
+                            <div className="loyalty-dashboard fade-in">
+                                {/* Welcome Section */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '25px', borderBottom: '1px solid #eee', paddingBottom: '15px' }}>
+                                    <div>
+                                        <p style={{ fontSize: '12px', textTransform: 'uppercase', color: '#999', letterSpacing: '2px', margin: 0 }}>Bienvenido de nuevo</p>
+                                        <h3 style={{ margin: '5px 0 0', fontSize: '24px', color: '#2C2C2C' }}>{loyaltyData.customer_name}</h3>
+                                    </div>
+                                    <button
+                                        onClick={() => { setLoyaltyData(null); setLoyaltyCedula(''); }}
+                                        style={{ background: 'none', border: 'none', color: '#CFB3A9', cursor: 'pointer', fontSize: '13px', textDecoration: 'underline' }}
+                                    >
+                                        Salir
+                                    </button>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '40px' }}>
+
+                                    {/* Left Column: Card & Balance */}
+                                    <div>
+                                        <div style={{
+                                            background: 'linear-gradient(135deg, #CFB3A9 0%, #A09086 100%)',
+                                            color: 'white',
+                                            borderRadius: '16px',
+                                            padding: '30px',
+                                            marginBottom: '30px',
+                                            boxShadow: '0 15px 30px rgba(160, 144, 134, 0.4)',
+                                            position: 'relative',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{ position: 'relative', zIndex: 1 }}>
+                                                <div style={{ opacity: 0.8, fontSize: '13px', letterSpacing: '2px', textTransform: 'uppercase' }}>Saldo Actual</div>
+                                                <div style={{ fontSize: '56px', fontWeight: 'bold', margin: '10px 0', lineHeight: 1 }}>
+                                                    {loyaltyData.points_balance}
+                                                    <span style={{ fontSize: '20px', fontWeight: '400', marginLeft: '5px' }}>pts</span>
+                                                </div>
+                                                <div style={{ fontSize: '14px', paddingTop: '15px', borderTop: '1px solid rgba(255,255,255,0.2)', marginTop: '15px', display: 'flex', justifyContent: 'space-between' }}>
+                                                    <span>Nivel: {loyaltyData.tier?.name || 'Miembro'}</span>
+                                                    <span>Luxe Member</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Active Coupons Section */}
+                                        <div style={{ marginBottom: '20px' }}>
+                                            <h4 style={{ fontSize: '16px', color: '#2C2C2C', marginBottom: '15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <span>Mis Cupones Activos</span>
+                                                <span style={{ fontSize: '12px', background: '#f0f0f0', padding: '2px 8px', borderRadius: '10px', color: '#666' }}>{loyaltyData.coupons?.length || 0}</span>
+                                            </h4>
+
+                                            {redeemedCoupon && (
+                                                <div style={{
+                                                    background: '#ecfdf5', border: '1px dashed #10b981', padding: '15px', borderRadius: '8px', marginBottom: '15px',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                                                }}>
+                                                    <div>
+                                                        <span style={{ color: '#047857', fontWeight: 'bold', fontSize: '13px', display: 'block', marginBottom: '4px' }}>¡Nuevo cupón canjeado!</span>
+                                                        <span style={{ fontFamily: 'monospace', fontSize: '18px', fontWeight: 'bold', color: '#065f46' }}>{redeemedCoupon.code}</span>
+                                                    </div>
+                                                    <button onClick={() => { navigator.clipboard.writeText(redeemedCoupon.code); alert('Copiado!'); }} style={{ border: 'none', background: 'white', color: '#059669', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+                                                        Copiar
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            <div style={{ maxHeight: '250px', overflowY: 'auto', paddingRight: '5px' }}>
+                                                {loyaltyData.coupons && loyaltyData.coupons.filter(c => !c.is_used).length > 0 ? (
+                                                    loyaltyData.coupons.filter(c => !c.is_used).map(coupon => (
+                                                        <div key={coupon.id} style={{
+                                                            padding: '15px',
+                                                            background: 'white',
+                                                            border: '1px solid #eee',
+                                                            borderRadius: '12px',
+                                                            marginBottom: '10px',
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center',
+                                                            transition: 'all 0.2s',
+                                                            boxShadow: '0 2px 5px rgba(0,0,0,0.02)'
+                                                        }}>
+                                                            <div>
+                                                                <div style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '16px', color: '#2C2C2C' }}>{coupon.code}</div>
+                                                                <div style={{ fontSize: '12px', color: '#888' }}>{coupon.reward_name}</div>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => { navigator.clipboard.writeText(coupon.code); alert('Código copiado: ' + coupon.code); }}
+                                                                style={{ background: '#f9fafb', border: '1px solid #e5e7eb', color: '#4b5563', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                                                            >
+                                                                Copiar
+                                                            </button>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div style={{ textAlign: 'center', padding: '20px', color: '#aaa', fontStyle: 'italic', background: '#f9f9f9', borderRadius: '8px' }}>
+                                                        No tienes cupones activos.
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Right Column: Available Rewards */}
+                                    <div>
+                                        <h4 style={{ fontSize: '16px', color: '#2C2C2C', marginBottom: '20px' }}>Canjear Puntos</h4>
+                                        <div style={{ display: 'grid', gap: '15px', maxHeight: '500px', overflowY: 'auto', paddingRight: '5px' }}>
+                                            {loyaltyData.available_rewards?.map(reward => {
+                                                const canAfford = loyaltyData.points_balance >= reward.points_cost;
+                                                return (
+                                                    <div key={reward.id} style={{
+                                                        backgroundColor: 'white',
+                                                        border: `1px solid ${canAfford ? '#e5e5e5' : '#f0f0f0'}`,
+                                                        borderRadius: '12px',
+                                                        padding: '16px',
+                                                        opacity: canAfford ? 1 : 0.7,
+                                                        transition: 'all 0.2s',
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center'
+                                                    }}>
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{ fontWeight: '600', color: '#333', fontSize: '15px' }}>{reward.name}</div>
+                                                            <div style={{ fontSize: '13px', color: '#888', marginTop: '4px' }}>
+                                                                {reward.description || (reward.reward_type === 'PERCENTAGE' ? `${reward.discount_value}% de descuento` : `$${reward.discount_value} de descuento`)}
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => redeemReward(reward.id)}
+                                                            disabled={!canAfford || redeemingReward === reward.id}
+                                                            style={{
+                                                                padding: '8px 16px',
+                                                                borderRadius: '20px',
+                                                                border: 'none',
+                                                                backgroundColor: canAfford ? '#2C2C2C' : '#f3f4f6',
+                                                                color: canAfford ? 'white' : '#9ca3af',
+                                                                cursor: canAfford ? 'pointer' : 'not-allowed',
+                                                                fontSize: '13px',
+                                                                fontWeight: '600',
+                                                                marginLeft: '15px',
+                                                                minWidth: '80px',
+                                                                boxShadow: canAfford ? '0 4px 6px rgba(0,0,0,0.1)' : 'none'
+                                                            }}
+                                                        >
+                                                            {redeemingReward === reward.id ? '...' : `${reward.points_cost} Pts`}
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+
+                                            {(!loyaltyData.available_rewards || loyaltyData.available_rewards.length === 0) && (
+                                                <p style={{ textAlign: 'center', color: '#999' }}>No hay recompensas disponibles en este momento.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

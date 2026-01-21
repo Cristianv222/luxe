@@ -53,7 +53,6 @@ const Login = () => {
 
                     <nav className={`main-nav ${isMenuOpen ? 'open' : ''}`}>
                         <Link to="/" className="nav-link">INICIO</Link>
-                        <Link to="/registro" className="nav-link">REGISTRARTE</Link>
                     </nav>
                 </div>
             </header>
@@ -131,11 +130,7 @@ const Login = () => {
                         </button>
                     </form>
 
-                    <div style={{ textAlign: 'center', marginTop: '30px', borderTop: '1px solid #F1EEEB', paddingTop: '20px' }}>
-                        <Link to="/registro" style={{ color: '#A09086', textDecoration: 'none', fontSize: '0.9rem' }}>
-                            ¿No tienes cuenta? <span style={{ color: '#CFB3A9', fontWeight: 'bold' }}>CREAR CUENTA</span>
-                        </Link>
-                    </div>
+
                 </div>
             </div>
         </div>

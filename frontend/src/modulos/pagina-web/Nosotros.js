@@ -43,7 +43,6 @@ const Nosotros = () => {
                         ) : (
                             <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                                 <Link to="/login" className="nav-link">INICIAR SESIÓN</Link>
-                                <Link to="/registro" className="nav-link" style={{ fontWeight: '700' }}>REGISTRARTE</Link>
                             </div>
                         )}
                     </nav>
