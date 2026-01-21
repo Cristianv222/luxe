@@ -1,7 +1,11 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import './../modulos/pagina-web/BoutiqueLanding.css'; // Asegurar estilos
 
 const PiePagina = () => {
+    const location = useLocation();
+    const isLoginPage = location.pathname === '/login';
+
     return (
         <footer className="boutique-footer">
             <div className="footer-content">
@@ -39,6 +43,62 @@ const PiePagina = () => {
             <div className="footer-bottom">
                 <p>&copy; 2026 Luxury Boutique. Todos los derechos reservados.</p>
             </div>
+
+            {/* FLOATING WHATSAPP BUTTON (GLOBAL EXCEPT LOGIN) */}
+            {!isLoginPage && (
+                <a
+                    href="https://wa.me/593986123920?text=Hola%20Luxury%20Boutique,%20quisiera%20m%C3%A1s%20informaci%C3%B3n."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="whatsapp-float hover-float"
+                    style={{
+                        position: 'fixed',
+                        width: '60px',
+                        height: '60px',
+                        bottom: '40px',
+                        left: '40px',
+                        backgroundColor: '#CFB3A9', // "Cinna" theme color
+                        border: '2px solid #FFF',
+                        color: '#FFF',
+                        borderRadius: '50px',
+                        textAlign: 'center',
+                        fontSize: '30px',
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                        zIndex: 10000,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.3s ease',
+                        textDecoration: 'none'
+                    }}
+                >
+                    <i className="fab fa-whatsapp"></i>
+
+                    {/* TOOLTIP / PESTAÑITA */}
+                    <span
+                        className="whatsapp-tooltip"
+                        style={{
+                            position: 'absolute',
+                            left: '70px', // Right of the button
+                            backgroundColor: '#FFF',
+                            color: '#2C2C2C',
+                            padding: '8px 12px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+                            opacity: 0,
+                            transition: 'opacity 0.5s',
+                            pointerEvents: 'none',
+                            animation: 'fadeInOut 5s infinite',
+                            border: '1px solid #F1EEEB'
+                        }}
+                    >
+                        ¡Escríbenos para más info!
+                    </span>
+                </a>
+            )}
         </footer>
     );
 };

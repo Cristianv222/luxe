@@ -149,6 +149,9 @@ const BoutiqueLanding = () => {
             if (existing) return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
             return [...prev, { ...product, quantity: 1 }];
         });
+        // Feedback inmediato: Mostrar alerta pequeña o abrir carrito
+        // Por ahora, mostraremos una alerta sutil de éxito
+        showAlert('success', 'Producto agregado', `${product.name} se agregó a tu carrito.`);
     };
 
     const removeFromCart = (id) => setCart(prev => prev.filter(item => item.id !== id));
@@ -430,77 +433,44 @@ const BoutiqueLanding = () => {
 
             {/* PRODUCT DETAIL MODAL */}
             {selectedProduct && (
-                <div className="checkout-modal-overlay" onClick={closeProductDetail}>
-                    <div className="checkout-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '800px' }}>
-                        <div className="modal-header" style={{ borderBottom: '1px solid #f0f0f0', padding: '20px 30px' }}>
-                            <h3 style={{ margin: 0, fontFamily: 'serif', fontSize: '24px' }}>{selectedProduct.name}</h3>
-                            <button onClick={closeProductDetail} className="close-modal" style={{ background: 'none', border: 'none', fontSize: '28px', cursor: 'pointer', color: '#999' }}>×</button>
-                        </div>
-                        <div className="modal-body" style={{ padding: '30px', maxHeight: '70vh', overflowY: 'auto' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
-                                <div>
-                                    {selectedProduct.image ? (
-                                        <img src={selectedProduct.image} alt={selectedProduct.name} style={{ width: '100%', borderRadius: '4px' }} />
-                                    ) : (
-                                        <div style={{ width: '100%', aspectRatio: '1', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px', color: '#ccc' }}>
-                                            {selectedProduct.name.charAt(0)}
-                                        </div>
-                                    )}
-                                </div>
-                                <div>
-                                    <div style={{ marginBottom: '20px' }}>
-                                        <p style={{ fontSize: '32px', fontWeight: '700', color: 'var(--color-dark)', margin: '0 0 10px 0' }}>
-                                            ${parseFloat(selectedProduct.price).toFixed(2)}
-                                        </p>
-                                        {selectedProduct.track_stock && (
-                                            <p style={{ fontSize: '14px', color: isOutOfStock(selectedProduct) ? '#ef4444' : '#22c55e', fontWeight: '600', margin: '0 0 20px 0' }}>
-                                                {isOutOfStock(selectedProduct) ? 'Sin stock' : `${selectedProduct.stock_quantity} unidades disponibles`}
-                                            </p>
-                                        )}
-                                    </div>
+                <div className="product-modal-overlay" onClick={closeProductDetail}>
+                    <div className="product-modal" onClick={(e) => e.stopPropagation()}>
+                        <button className="modal-close-btn" onClick={closeProductDetail}>×</button>
+                        <div className="modal-content-grid">
+                            <div className="modal-image-section">
+                                {selectedProduct.image ? (
+                                    <img src={selectedProduct.image} alt={selectedProduct.name} className="modal-product-image" />
+                                ) : (
+                                    <div className="modal-placeholder-image">{selectedProduct.name.charAt(0)}</div>
+                                )}
+                            </div>
+                            <div className="modal-info-section">
+                                <h2 className="modal-product-name">{selectedProduct.name}</h2>
+                                <p className="modal-product-price">${parseFloat(selectedProduct.price).toFixed(2)}</p>
+                                <p className="modal-product-description">{selectedProduct.description || 'Producto de alta calidad seleccionado especialmente para ti.'}</p>
 
-                                    {selectedProduct.description && (
-                                        <div style={{ marginBottom: '20px' }}>
-                                            <h4 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', marginBottom: '10px' }}>Descripción</h4>
-                                            <p style={{ fontSize: '14px', lineHeight: '1.6', color: '#333' }}>{selectedProduct.description}</p>
-                                        </div>
-                                    )}
+                                {selectedProduct.track_stock && (
+                                    <p className={`modal-stock-info ${isOutOfStock(selectedProduct) ? 'out-of-stock' : ''}`}>
+                                        {isOutOfStock(selectedProduct) ? '✕ Sin stock disponible' : `✓ En stock: ${selectedProduct.stock_quantity} unidades`}
+                                    </p>
+                                )}
 
-                                    {selectedProduct.ingredients && (
-                                        <div style={{ marginBottom: '20px' }}>
-                                            <h4 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', marginBottom: '10px' }}>Ingredientes</h4>
-                                            <p style={{ fontSize: '14px', lineHeight: '1.6', color: '#333' }}>{selectedProduct.ingredients}</p>
-                                        </div>
-                                    )}
-
-                                    {selectedProduct.allergens && (
-                                        <div style={{ marginBottom: '20px' }}>
-                                            <h4 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px', color: '#888', marginBottom: '10px' }}>Alérgenos</h4>
-                                            <p style={{ fontSize: '14px', lineHeight: '1.6', color: '#ef4444', fontWeight: '600' }}>{selectedProduct.allergens}</p>
-                                        </div>
-                                    )}
-
-                                    {!isOutOfStock(selectedProduct) && (
-                                        <button
-                                            onClick={() => { addToCart(selectedProduct); closeProductDetail(); }}
-                                            style={{
-                                                width: '100%',
-                                                padding: '16px',
-                                                backgroundColor: 'var(--color-dark)',
-                                                color: 'white',
-                                                border: 'none',
-                                                fontSize: '14px',
-                                                fontWeight: '700',
-                                                letterSpacing: '2px',
-                                                textTransform: 'uppercase',
-                                                cursor: 'pointer',
-                                                marginTop: '20px'
-                                            }}
-                                        >
-                                            Agregar al Carrito
-                                        </button>
-                                    )}
-                                </div>
+                                <button
+                                    className="modal-add-to-cart-btn"
+                                    onClick={() => {
+                                        if (!isOutOfStock(selectedProduct)) {
+                                            addToCart(selectedProduct);
+                                            closeProductDetail();
+                                        }
+                                    }}
+                                    disabled={isOutOfStock(selectedProduct)}
+                                    style={{
+                                        opacity: isOutOfStock(selectedProduct) ? 0.5 : 1,
+                                        cursor: isOutOfStock(selectedProduct) ? 'not-allowed' : 'pointer'
+                                    }}
+                                >
+                                    {isOutOfStock(selectedProduct) ? 'Agotado' : 'Agregar al Carrito'}
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -596,26 +566,7 @@ const BoutiqueLanding = () => {
                                     </div>
                                 </div>
 
-                                {!user && (
-                                    <div className="checkout-registration-section" style={{ marginTop: '20px', padding: '20px', backgroundColor: '#f9f9f9', border: '1px dashed #ccc' }}>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>
-                                            <input type="checkbox" checked={isRegistering} onChange={e => setIsRegistering(e.target.checked)} style={{ width: '18px', height: '18px' }} />
-                                            ¿Deseas crear una cuenta para futuras compras?
-                                        </label>
 
-                                        {isRegistering && (
-                                            <div className="checkout-input-group" style={{ marginTop: '15px' }}>
-                                                <label>Crea tu Contraseña</label>
-                                                <input type="password" placeholder="Mínimo 8 caracteres" className="checkout-input" required={isRegistering} value={checkoutPassword}
-                                                    onChange={e => setCheckoutPassword(e.target.value)} />
-                                            </div>
-                                        )}
-
-                                        <p style={{ marginTop: '15px', fontSize: '13px', color: '#666' }}>
-                                            ¿Ya tienes cuenta? <Link to="/login" style={{ color: 'var(--color-cinna)', fontWeight: 'bold' }}>Inicia Sesión aquí</Link>
-                                        </p>
-                                    </div>
-                                )}
 
                                 <button type="submit" className="btn-checkout-final" disabled={loadingCheckout} style={{ marginTop: '30px' }}>
                                     {loadingCheckout ? 'PROCESANDO...' : 'CONFIRMAR COMPRA'}

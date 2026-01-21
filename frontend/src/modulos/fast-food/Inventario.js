@@ -166,7 +166,7 @@ const Inventario = () => {
         <div>
             <div className="ff-welcome-header" style={{ padding: '2rem', marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h2 style={{ fontSize: '2rem', margin: 0 }}>Inventario (Menú)</h2>
+                    <h2 style={{ fontSize: '2rem', margin: 0 }}>Inventario</h2>
                     <div style={{ display: 'flex', gap: '10px' }}>
                         <button
                             className="ff-button ff-button-secondary"

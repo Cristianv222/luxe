@@ -254,6 +254,12 @@ const BarraNavegacion = () => {
                                     </button>
                                 </div>
 
+                                {loyaltyError && (
+                                    <div style={{ padding: '15px', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '20px', textAlign: 'center', border: '1px solid #fecaca' }}>
+                                        <strong>Error:</strong> {loyaltyError}
+                                    </div>
+                                )}
+
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '40px' }}>
                                     <div>
                                         <div style={{
