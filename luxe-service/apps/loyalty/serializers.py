@@ -52,11 +52,24 @@ class LoyaltyAccountSerializer(serializers.ModelSerializer):
 class LoyaltyAccountDetailSerializer(LoyaltyAccountSerializer):
     transactions = PointTransactionSerializer(many=True, read_only=True)
     coupons = serializers.SerializerMethodField()
+    available_rewards = serializers.SerializerMethodField()
 
     class Meta(LoyaltyAccountSerializer.Meta):
-        fields = LoyaltyAccountSerializer.Meta.fields + ['transactions', 'coupons']
+        fields = LoyaltyAccountSerializer.Meta.fields + ['transactions', 'coupons', 'available_rewards']
 
     def get_coupons(self, obj):
-        all_coupons = UserCoupon.objects.filter(customer=obj.customer).order_by('-created_at')
-        # Use context for absolute URL serialization if needed
-        return UserCouponSerializer(all_coupons, many=True, context=self.context).data
+        # Solo cupones NO usados (disponibles para usar)
+        available_coupons = UserCoupon.objects.filter(
+            customer=obj.customer, 
+            is_used=False
+        ).order_by('-created_at')
+        return UserCouponSerializer(available_coupons, many=True, context=self.context).data
+
+    def get_available_rewards(self, obj):
+        # Recompensas que puede canjear con sus puntos actuales
+        rewards = RewardRule.objects.filter(
+            is_active=True,
+            points_cost__lte=obj.points_balance  # Solo las que puede pagar
+        ).order_by('points_cost')
+        return RewardRuleSerializer(rewards, many=True).data
+

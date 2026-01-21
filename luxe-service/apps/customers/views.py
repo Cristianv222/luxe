@@ -885,12 +885,14 @@ def sync_external_customer(request):
         return Response({'status': 'error', 'message': 'Email requerido'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
+        # Valores inválidos para cédula/teléfono
+        invalid_values = ['', 'None', 'null', 'undefined', '-', '.', '0000000000']
+        
         # 1. Búsqueda por EMAIL (Prioridad absoluta)
         customer = Customer.objects.filter(email__iexact=email).first()
         
         # 2. Búsqueda por Cédula/Teléfono (Solo si no hay match por email)
         if not customer:
-            invalid_values = ['', 'None', 'null', 'undefined', '-', '.', '0000000000']
             
             # Intentar por cédula
             if cedula and str(cedula).strip() not in invalid_values:

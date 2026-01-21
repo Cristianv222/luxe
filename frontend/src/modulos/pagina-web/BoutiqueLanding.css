@@ -1049,3 +1049,44 @@ body {
         border-top: 1px solid #e0e0e0;
     }
 }
+
+/* ============================================
+   CUSTOM ALERT MODAL ANIMATIONS
+   ============================================ */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.alert-modal-overlay {
+    animation: fadeIn 0.2s ease-out;
+}

@@ -175,3 +175,65 @@ class LoyaltyAccountViewSet(viewsets.ReadOnlyModelViewSet):
             )
             
         return Response(UserCouponSerializer(coupon).data)
+
+    @action(detail=False, methods=['POST'], permission_classes=[permissions.AllowAny])
+    def redeem_reward_public(self, request):
+        """
+        Canjear puntos por un cupón (público, por cédula).
+        Body: { "cedula": "1234567890", "reward_rule_id": 1 }
+        """
+        cedula = request.data.get('cedula')
+        reward_id = request.data.get('reward_rule_id')
+        
+        if not cedula or not reward_id:
+            return Response({"error": "Cédula y reward_rule_id son requeridos"}, status=400)
+        
+        try:
+            # Buscar cliente por cédula
+            from apps.customers.models import Customer
+            customer = Customer.objects.filter(cedula=cedula).first()
+            
+            if not customer:
+                return Response({"error": "Cliente no encontrado"}, status=404)
+            
+            reward = RewardRule.objects.get(id=reward_id, is_active=True)
+            account = LoyaltyAccount.objects.get(customer=customer)
+        except RewardRule.DoesNotExist:
+            return Response({"error": "Recompensa no encontrada o inactiva"}, status=404)
+        except LoyaltyAccount.DoesNotExist:
+            return Response({"error": "No tienes cuenta de puntos activa"}, status=404)
+
+        if account.points_balance < reward.points_cost:
+            return Response({
+                "error": f"Puntos insuficientes. Necesitas {reward.points_cost} puntos, tienes {account.points_balance}"
+            }, status=400)
+
+        with transaction.atomic():
+            # Deducir puntos
+            account.points_balance -= reward.points_cost
+            account.save()
+            
+            # Registrar transacción
+            PointTransaction.objects.create(
+                account=account,
+                transaction_type='REDEEM',
+                points=-reward.points_cost,
+                description=f"Canje de recompensa: {reward.name}"
+            )
+            
+            # Generar cupón con código único
+            import uuid
+            code = f"LUXE-{uuid.uuid4().hex[:8].upper()}"
+            coupon = UserCoupon.objects.create(
+                customer=customer,
+                reward_rule=reward,
+                code=code
+            )
+        
+        return Response({
+            "success": True,
+            "message": f"¡Felicidades! Has canjeado '{reward.name}'",
+            "coupon": UserCouponSerializer(coupon).data,
+            "new_balance": account.points_balance
+        })
+
