@@ -40,8 +40,15 @@ const PanelLuxe = () => {
             description: 'Ver clientes y saldos',
             path: '/luxe/loyalty-management',
             icon: 'bi-people-fill'
+        },
+        {
+            title: 'WhatsApp',
+            description: 'Automatización de mensajes',
+            path: '/luxe/whatsapp-config',
+            icon: 'bi-whatsapp'
         }
     ];
+
 
     const infoCards = [
         {

@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_MULTIPLE_DATABASES: auth_service_db,luxe_service_db
+      POSTGRES_MULTIPLE_DATABASES: auth_service_db,luxe_service_db,automation_service_db
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./scripts/create-multiple-postgresql-databases.sh:/docker-entrypoint-initdb.d/create-multiple-postgresql-databases.sh
@@ -126,6 +126,58 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  automation-service:
+    build: ./automation-service
+    container_name: luxe_automation
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        echo "🔄 Waiting for PostgreSQL..."
+        until python -c 'import socket; socket.create_connection(("postgres", 5432), timeout=1)' 2>/dev/null; do
+          sleep 1
+        done
+        echo "✅ PostgreSQL is ready!"
+        echo "🔄 Running migrations..."
+        python manage.py migrate --noinput
+        # In production, you would run celery or a scheduler here.
+        # For now, we keep it alive to execute commands manually or via cron
+        echo "🚀 Automation Service Ready - Keeping alive..."
+        tail -f /dev/null
+    volumes:
+      - ./automation-service:/app
+    environment:
+      - SECRET_KEY=luxe-automation-secret-key-iso25010
+      - DB_NAME=automation_service_db
+      - LUXE_DB_NAME=luxe_service_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_HOST=postgres
+      - DEBUG=True
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - luxe-network
+    restart: unless-stopped
+
+  wppconnect:
+    build:
+      context: ./wppconnect
+      dockerfile: Dockerfile
+    container_name: luxe_wppconnect
+    environment:
+      - PORT=21465
+      - SECRET_KEY=luxe_wpp_secret
+      - AUTHENTICATION_TYPE=false
+    ports:
+      - "21465:21465"
+    networks:
+      - luxe-network
+    restart: unless-stopped
+    volumes:
+      - ./wppconnect-sessions:/usr/src/app/tokens
 
   frontend:
     build: 

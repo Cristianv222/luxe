@@ -15,6 +15,7 @@ import ShiftManager from './modulos/fast-food/ShiftManager';
 import Impresoras from './modulos/fast-food/Impresoras';
 import LoyaltyConfig from './modulos/fast-food/LoyaltyConfig';
 import GestionPuntos from './modulos/fast-food/GestionPuntos';
+import WhatsAppConfig from './modulos/fast-food/WhatsAppConfig';
 import DisenoLuxe from './modulos/fast-food/DisenoFastFood';
 import LandingPage from './modulos/pagina-web/LandingPage'; // Keeping as backup for now or remove? User wanted switch.
 import BoutiqueLanding from './modulos/pagina-web/BoutiqueLanding';
@@ -161,6 +162,11 @@ function App() {
             <Route path="/luxe/loyalty-management" element={
               <LuxeRoute>
                 <GestionPuntos />
+              </LuxeRoute>
+            } />
+            <Route path="/luxe/whatsapp-config" element={
+              <LuxeRoute>
+                <WhatsAppConfig />
               </LuxeRoute>
             } />
 

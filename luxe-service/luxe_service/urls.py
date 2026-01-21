@@ -12,6 +12,9 @@ urlpatterns = [
     path('luxe/api/customers/', include('apps.customers.urls')),
     path('luxe/api/reports/', include('apps.reports.urls')),
     path('luxe/api/loyalty/', include('apps.loyalty.urls')),
+    # Integrations (WhatsApp Automation, etc.)
+    path('luxe/api/integrations/', include('apps.integrations.urls')),
+
 ]
 
 from django.conf import settings
