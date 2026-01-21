@@ -236,6 +236,7 @@ class OrderCreateSerializer(serializers.Serializer):
         default=0
     )
     delivery_info = DeliveryInfoSerializer(required=False, allow_null=True)
+    source = serializers.CharField(required=False, default='pos')
     
     def validate_customer_id(self, value):
         """Valida que el cliente exista"""
@@ -302,17 +303,35 @@ class OrderCreateSerializer(serializers.Serializer):
             validated_data['customer_name'] = "Consumidor Final"
             validated_data['customer_identification'] = "9999999999999"
 
-        # 2. FORZAR ESTADO COMPLETADO PARA ORDENES DE POS
-        validated_data['status'] = 'completed'
-        validated_data['payment_status'] = 'paid'
+        # 2. LOGICA DE ESTADO SEGÚN ORIGEN
+        # Si viene explicitamente como 'web' o el tipo es delivery/pickup iniciada por cliente,
+        # NO completamos automáticamente.
+        # Por defecto, si no se especifica source, asumimos POS (comportamiento anterior) o si es in_store.
         
-        now = timezone.now()
-        validated_data['confirmed_at'] = now
-        validated_data['ready_at'] = now
-        validated_data['delivered_at'] = now
+        source = validated_data.pop('source', 'pos')
+        
+        if source == 'web':
+            validated_data['status'] = 'pending'
+            validated_data['payment_status'] = 'pending'
+            # Fechas nulas por defecto
+            validated_data['confirmed_at'] = None
+            validated_data['ready_at'] = None
+            validated_data['delivered_at'] = None
+        else:
+            # COMPORTAMIENTO POS (Original)
+            validated_data['status'] = 'completed'
+            validated_data['payment_status'] = 'paid'
+            
+            now = timezone.now()
+            validated_data['confirmed_at'] = now
+            validated_data['ready_at'] = now
+            validated_data['delivered_at'] = now
         
         # Procesar Descuento/Cupón
         discount_code = validated_data.get('discount_code')
+        applied_discount_object = None
+        is_user_coupon = False
+
         if discount_code:
             # Intentar con Cupón de Fidelidad primero
             coupon = UserCoupon.objects.filter(code__iexact=discount_code, is_used=False).first()
@@ -320,12 +339,16 @@ class OrderCreateSerializer(serializers.Serializer):
                 coupon.is_used = True
                 coupon.used_at = timezone.now()
                 coupon.save()
+                applied_discount_object = coupon
+                is_user_coupon = True
                 logger.info(f"Cupón de Fidelidad {discount_code} marcado como usado.")
             else:
                 # Intentar con Descuento estándar
                 discount = Discount.objects.filter(code__iexact=discount_code).first()
                 if discount:
                     discount.use_discount()
+                    applied_discount_object = discount
+                    is_user_coupon = False
                     logger.info(f"Descuento POS {discount_code} uso incrementado.")
 
         # Crear la orden
@@ -379,7 +402,44 @@ class OrderCreateSerializer(serializers.Serializer):
         # Calcular tiempo estimado
         order.calculate_estimated_time()
         
-        # Recalcular totales
+        # Primero calcular subtotales y tax
+        order.calculate_totals()
+
+        # APLICAR VALOR DEL DESCUENTO
+        if applied_discount_object:
+            calculated_discount = 0
+            # Si es Cupón de Usuario (Loyalty)
+            if is_user_coupon:
+                rule = applied_discount_object.reward_rule
+                if rule:
+                    if rule.reward_type == 'PERCENTAGE':
+                        calculated_discount = order.subtotal * (rule.discount_value / 100)
+                    elif rule.reward_type == 'FIXED_AMOUNT':
+                        calculated_discount = rule.discount_value
+            # Si es Descuento Estándar (POS)
+            else:
+                # Usar el método calculate_discount del modelo
+                calculated_discount = applied_discount_object.calculate_discount(order.subtotal)
+            
+            # Asignar el descuento calculado a la orden
+            if calculated_discount > 0:
+                # Asegurarse que no exceda el subtotal (aunque calculate_discount ya lo hace para Discount, aseguramos para Coupon)
+                if calculated_discount > order.subtotal:
+                    calculated_discount = order.subtotal
+                
+                order.discount_amount = calculated_discount
+                # Crear registro de uso si es Descuento estándar (para auditoría)
+                if not is_user_coupon:
+                    from apps.pos.models import DiscountUsage
+                    DiscountUsage.objects.create(
+                        discount=applied_discount_object,
+                        order=order,
+                        discount_amount=calculated_discount,
+                        original_amount=order.subtotal,
+                        applied_by="SYSTEM" # O el usuario si lo tuviéramos
+                    )
+
+        # Recalcular totales finales con el descuento aplicado
         order.calculate_totals()
         order.save()
         

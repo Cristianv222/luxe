@@ -77,111 +77,116 @@ const Dashboard = () => (
   </div>
 );
 
+import { CartProvider } from './context/CartContext';
+// ... imports ...
+
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
+      <CartProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
 
-          <Route path="/" element={<BoutiqueLanding />} />
-          <Route path="/registro" element={<Registro />} />
-          <Route path="/coleccion" element={<Coleccion />} />
-          <Route path="/nosotros" element={<Nosotros />} />
-          <Route path="/contacto" element={<Contacto />} />
-          <Route path="/perfil" element={
-            <ClientRoute>
-              <MiPerfil />
-            </ClientRoute>
-          } />
+            <Route path="/" element={<BoutiqueLanding />} />
+            <Route path="/registro" element={<Registro />} />
+            <Route path="/coleccion" element={<Coleccion />} />
+            <Route path="/nosotros" element={<Nosotros />} />
+            <Route path="/contacto" element={<Contacto />} />
+            <Route path="/perfil" element={
+              <ClientRoute>
+                <MiPerfil />
+              </ClientRoute>
+            } />
 
-          <Route path="/dashboard" element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          } />
+            <Route path="/dashboard" element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            } />
 
-          <Route path="/users" element={
-            <PrivateRoute>
-              <ListaUsuarios />
-            </PrivateRoute>
-          } />
+            <Route path="/users" element={
+              <PrivateRoute>
+                <ListaUsuarios />
+              </PrivateRoute>
+            } />
 
-          {/* Rutas de creación/edición eliminadas porque ahora son Modales */}
+            {/* Rutas de creación/edición eliminadas porque ahora son Modales */}
 
-          <Route path="/luxe" element={
-            <LuxeRoute>
-              <PanelLuxe />
-            </LuxeRoute>
-          } />
-          <Route path="/luxe/inventory" element={
-            <LuxeRoute>
-              <Inventario />
-            </LuxeRoute>
-          } />
-          <Route path="/luxe/orders" element={
-            <LuxeRoute>
-              <Ordenes />
-            </LuxeRoute>
-          } />
-          <Route path="/luxe/customers" element={
-            <LuxeRoute>
-              <Clientes />
-            </LuxeRoute>
-          } />
-          <Route path="/luxe/reports" element={
-            <LuxeRoute>
-              <Reportes />
-            </LuxeRoute>
-          } />
-          <Route path="/luxe/pos" element={
-            <LuxeRoute>
-              <PuntosVenta />
-            </LuxeRoute>
-          } />
-          <Route path="/luxe/shift" element={
-            <LuxeRoute>
-              <ShiftManager onShiftActive={() => { }} />
-            </LuxeRoute>
-          } />
-          <Route path="/luxe/printers" element={
-            <LuxeRoute>
-              <Impresoras />
-            </LuxeRoute>
-          } />
-          <Route path="/luxe/loyalty-config" element={
-            <LuxeRoute>
-              <LoyaltyConfig />
-            </LuxeRoute>
-          } />
-          <Route path="/luxe/loyalty-management" element={
-            <LuxeRoute>
-              <GestionPuntos />
-            </LuxeRoute>
-          } />
+            <Route path="/luxe" element={
+              <LuxeRoute>
+                <PanelLuxe />
+              </LuxeRoute>
+            } />
+            <Route path="/luxe/inventory" element={
+              <LuxeRoute>
+                <Inventario />
+              </LuxeRoute>
+            } />
+            <Route path="/luxe/orders" element={
+              <LuxeRoute>
+                <Ordenes />
+              </LuxeRoute>
+            } />
+            <Route path="/luxe/customers" element={
+              <LuxeRoute>
+                <Clientes />
+              </LuxeRoute>
+            } />
+            <Route path="/luxe/reports" element={
+              <LuxeRoute>
+                <Reportes />
+              </LuxeRoute>
+            } />
+            <Route path="/luxe/pos" element={
+              <LuxeRoute>
+                <PuntosVenta />
+              </LuxeRoute>
+            } />
+            <Route path="/luxe/shift" element={
+              <LuxeRoute>
+                <ShiftManager onShiftActive={() => { }} />
+              </LuxeRoute>
+            } />
+            <Route path="/luxe/printers" element={
+              <LuxeRoute>
+                <Impresoras />
+              </LuxeRoute>
+            } />
+            <Route path="/luxe/loyalty-config" element={
+              <LuxeRoute>
+                <LoyaltyConfig />
+              </LuxeRoute>
+            } />
+            <Route path="/luxe/loyalty-management" element={
+              <LuxeRoute>
+                <GestionPuntos />
+              </LuxeRoute>
+            } />
 
-          <Route path="/hotel" element={
-            <PrivateRoute>
-              <ServicePlaceholder title="Hotel" />
-            </PrivateRoute>
-          } />
+            <Route path="/hotel" element={
+              <PrivateRoute>
+                <ServicePlaceholder title="Hotel" />
+              </PrivateRoute>
+            } />
 
-          <Route path="/pool" element={
-            <PrivateRoute>
-              <ServicePlaceholder title="Piscinas" />
-            </PrivateRoute>
-          } />
+            <Route path="/pool" element={
+              <PrivateRoute>
+                <ServicePlaceholder title="Piscinas" />
+              </PrivateRoute>
+            } />
 
-          <Route path="/restaurant" element={
-            <PrivateRoute>
-              <ServicePlaceholder title="Restaurante" />
-            </PrivateRoute>
-          } />
+            <Route path="/restaurant" element={
+              <PrivateRoute>
+                <ServicePlaceholder title="Restaurante" />
+              </PrivateRoute>
+            } />
 
-          {/* Redirigir cualquier otra ruta al inicio */}
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </Router>
+            {/* Redirigir cualquier otra ruta al inicio */}
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </Router>
+      </CartProvider>
     </AuthProvider>
   );
 }

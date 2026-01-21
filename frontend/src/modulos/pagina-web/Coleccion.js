@@ -4,49 +4,38 @@ import BarraNavegacion from '../../comun/BarraNavegacion';
 import PiePagina from '../../comun/PiePagina';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
+import CheckoutFlow from './components/CheckoutFlow';
 import './BoutiqueLanding.css';
 import './ProductStock.css';
 import './ProductBadges.css';
 
 const Coleccion = () => {
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
+    const { cart, addToCart: contextAddToCart, isCartOpen, setIsCartOpen, toggleCart } = useCart();
     const navigate = useNavigate();
     const [categories, setCategories] = useState([]);
     const [products, setProducts] = useState([]);
     const [activeCategory, setActiveCategory] = useState(null);
 
-    // ============================================
-    // CART & CHECKOUT STATE
-    // ============================================
-    const [cart, setCart] = useState([]);
-    const [showCheckoutModal, setShowCheckoutModal] = useState(false);
-    const [billingDetails, setBillingDetails] = useState({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        identification_number: '',
-        address: '',
-        city: ''
+    // Alert Modal State
+    const [alertModal, setAlertModal] = useState({
+        show: false,
+        type: 'info',
+        title: '',
+        message: ''
     });
-    // Removed unused isRegistering, paymentMethod states if logic isn't fully using them here compared to landing
+
+    const showAlert = (type, title, message) => {
+        setAlertModal({ show: true, type, title, message });
+    };
+
+    const closeAlert = () => {
+        setAlertModal({ ...alertModal, show: false });
+    };
 
     // Product detail modal
     const [selectedProduct, setSelectedProduct] = useState(null);
-
-    useEffect(() => {
-        if (user) {
-            setBillingDetails({
-                first_name: user.first_name || '',
-                last_name: user.last_name || '',
-                email: user.email || '',
-                phone: user.phone || '',
-                identification_number: user.identification_number || '',
-                address: user.address || '',
-                city: user.city || ''
-            });
-        }
-    }, [user]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -68,19 +57,10 @@ const Coleccion = () => {
         fetchData();
     }, []);
 
-    // ============================================
-    // CART LOGIC
-    // ============================================
     const addToCart = (product) => {
-        setCart(prev => {
-            const existing = prev.find(item => item.id === product.id);
-            if (existing) return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
-            return [...prev, { ...product, quantity: 1 }];
-        });
+        contextAddToCart(product);
+        showAlert('success', 'Producto agregado', `${product.name} se agregó a tu carrito.`);
     };
-
-    const removeFromCart = (id) => setCart(prev => prev.filter(item => item.id !== id));
-    const calculateTotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
 
     const openProductDetail = (product) => setSelectedProduct(product);
     const closeProductDetail = () => setSelectedProduct(null);
@@ -93,7 +73,7 @@ const Coleccion = () => {
 
             {/* BOTÓN FLOTANTE DE CARRITO */}
             {cart.length > 0 && (
-                <div className="cart-floating-btn" onClick={() => setShowCheckoutModal(true)}>
+                <div className="cart-floating-btn" onClick={toggleCart}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="9" cy="21" r="1"></circle>
                         <circle cx="20" cy="21" r="1"></circle>
@@ -268,42 +248,25 @@ const Coleccion = () => {
                 </div>
             )}
 
-            {/* CHECKOUT MODAL */}
-            {showCheckoutModal && (
-                <div className="checkout-modal-overlay" onClick={() => setShowCheckoutModal(false)}>
-                    <div className="checkout-modal" onClick={(e) => e.stopPropagation()}>
-                        <button className="modal-close-btn" onClick={() => setShowCheckoutModal(false)}>×</button>
-                        <h2 className="checkout-title">Finalizar Compra</h2>
+            {/* CHECKOUT FLOW */}
+            <CheckoutFlow isOpen={isCartOpen} onClose={toggleCart} />
 
-                        <div className="checkout-content">
-                            <div className="cart-items-list">
-                                {cart.map(item => (
-                                    <div key={item.id} className="cart-item-row">
-                                        <div className="item-info">
-                                            <h5>{item.name}</h5>
-                                            <span>Cant: {item.quantity}</span>
-                                        </div>
-                                        <div className="item-price-actions">
-                                            <span className="item-price">${(item.price * item.quantity).toFixed(2)}</span>
-                                            <button className="remove-item" onClick={() => removeFromCart(item.id)}>Quitar</button>
-                                        </div>
-                                    </div>
-                                ))}
+            {/* CUSTOM ALERT MODAL */}
+            {alertModal.show && (
+                <div className="alert-modal-overlay" onClick={closeAlert} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, animation: 'fadeIn 0.2s ease-out' }}>
+                    <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '0', maxWidth: '400px', width: '90%', boxShadow: '0 25px 50px rgba(0,0,0,0.25)', animation: 'slideUp 0.3s ease-out', overflow: 'hidden' }}>
+                        <div style={{ padding: '25px 25px 20px', background: alertModal.type === 'success' ? 'linear-gradient(135deg, #CFB3A9 0%, #e8d4cf 100%)' : alertModal.type === 'error' ? 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)' : alertModal.type === 'warning' ? 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)' : 'linear-gradient(135deg, #2C2C2C 0%, #4a4a4a 100%)', textAlign: 'center' }}>
+                            <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px', fontSize: '28px', color: 'white' }}>
+                                {alertModal.type === 'success' && '✓'}
+                                {alertModal.type === 'error' && '✕'}
+                                {alertModal.type === 'warning' && '!'}
+                                {alertModal.type === 'info' && 'i'}
                             </div>
-                            <div className="checkout-summary">
-                                <div className="summary-line">
-                                    <span>Subtotal</span>
-                                    <span>${calculateTotal.toFixed(2)}</span>
-                                </div>
-                                <div className="summary-line">
-                                    <span>Envío</span>
-                                    <span>Gratis</span>
-                                </div>
-                                <div className="summary-total">
-                                    <span>Total</span>
-                                    <span>${calculateTotal.toFixed(2)}</span>
-                                </div>
-                            </div>
+                            <h3 style={{ margin: 0, color: 'white', fontSize: '20px', fontFamily: 'serif', fontWeight: '600' }}>{alertModal.title}</h3>
+                        </div>
+                        <div style={{ padding: '25px', textAlign: 'center' }}>
+                            <p style={{ margin: '0 0 25px', color: '#666', fontSize: '15px', lineHeight: '1.6' }}>{alertModal.message}</p>
+                            <button onClick={closeAlert} style={{ padding: '14px 50px', backgroundColor: alertModal.type === 'error' ? '#ef4444' : '#2C2C2C', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', letterSpacing: '1px', transition: 'transform 0.2s, box-shadow 0.2s' }}>ACEPTAR</button>
                         </div>
                     </div>
                 </div>
