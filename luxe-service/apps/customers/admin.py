@@ -31,7 +31,7 @@ class CustomerLoyaltyInline(admin.StackedInline):
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ['email', 'full_name', 'cedula', 'phone', 'customer_type', # <-- CEDULA en list_display
+    list_display = ['email', 'full_name', 'cedula', 'phone', 'birth_date', 'customer_type', # <-- birth_date agregado
                      'is_active', 'is_vip', 'total_orders', 'total_spent_display',
                      'created_at']
     list_filter = ['customer_type', 'is_active', 'is_vip',

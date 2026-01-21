@@ -12,6 +12,7 @@ urlpatterns = [
     path('login/', views.login_customer, name='customer-login'),
     path('verify-email/', views.verify_email, name='verify-email'),
     path('pos_register/', views.pos_register, name='pos-register'),
+    path('search_by_cedula/', views.search_by_cedula, name='search-by-cedula'),  # Nuevo endpoint
     path('health/', views.health_check, name='health-check'),
     path('info/', views.service_info, name='service-info'),
     path('', views.pos_customer_search, name='pos-customer-search'),

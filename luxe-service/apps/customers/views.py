@@ -168,6 +168,54 @@ def pos_register(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+def search_by_cedula(request):
+    """
+    Buscar cliente por cédula para autocompletar datos en checkout
+    GET /api/customers/search_by_cedula/?cedula=XXX
+    """
+    cedula = request.query_params.get('cedula', '').strip()
+    
+    if not cedula:
+        return Response({
+            'found': False,
+            'message': 'Cédula es requerida'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        # Buscar por cédula
+        customer = Customer.objects.filter(cedula=cedula).first()
+        
+        if customer:
+            return Response({
+                'found': True,
+                'customer': {
+                    'id': str(customer.id),
+                    'first_name': customer.first_name,
+                    'last_name': customer.last_name,
+                    'email': customer.email,
+                    'phone': customer.phone,
+                    'cedula': customer.cedula,
+                    'birth_date': customer.birth_date.isoformat() if customer.birth_date else None,
+                    'address': customer.address,
+                    'city': customer.city
+                }
+            })
+        else:
+            return Response({
+                'found': False,
+                'message': 'Cliente no encontrado'
+            })
+    
+    except Exception as e:
+        logger.error(f"Error buscando cliente por cédula: {str(e)}")
+        return Response({
+            'found': False,
+            'message': 'Error en la búsqueda'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def health_check(request):
     """
     Health check endpoint
@@ -836,26 +884,81 @@ def sync_external_customer(request):
     if not email:
         return Response({'status': 'error', 'message': 'Email requerido'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # 1. Búsqueda por EMAIL (Prioridad absoluta)
-    customer = Customer.objects.filter(email__iexact=email).first()
-    
-    # 2. Búsqueda por Cédula/Teléfono (Solo si no hay match por email)
-    if not customer:
-        invalid_values = ['', 'None', 'null', 'undefined', '-', '.', '0000000000']
+    try:
+        # 1. Búsqueda por EMAIL (Prioridad absoluta)
+        customer = Customer.objects.filter(email__iexact=email).first()
         
-        # Intentar por cédula
-        if cedula and str(cedula).strip() not in invalid_values:
-            potential = Customer.objects.filter(cedula=cedula).first()
-            if potential:
-                # Solo usamos el match por cédula si el email coincide o está vacío
-                if not potential.email or potential.email.lower() == email.lower():
-                    customer = potential
-                else:
-                    # COLISIÓN: Esta cédula ya está asociada a otro correo. Ignoramos.
-                    pass
+        # 2. Búsqueda por Cédula/Teléfono (Solo si no hay match por email)
+        if not customer:
+            invalid_values = ['', 'None', 'null', 'undefined', '-', '.', '0000000000']
+            
+            # Intentar por cédula
+            if cedula and str(cedula).strip() not in invalid_values:
+                potential = Customer.objects.filter(cedula=cedula).first()
+                if potential:
+                    # Solo usamos el match por cédula si el email coincide o está vacío
+                    if not potential.email or potential.email.lower() == email.lower():
+                        customer = potential
+            
+            # Intentar por teléfono
+            if not customer and phone and str(phone).strip() not in invalid_values:
+                potential = Customer.objects.filter(phone=phone).first()
+                if potential:
+                    if not potential.email or potential.email.lower() == email.lower():
+                        customer = potential
+
+        # 3. Crear o actualizar cliente
+        if customer:
+            # ACTUALIZAR cliente existente
+            customer.first_name = data.get('first_name', customer.first_name) or customer.first_name
+            customer.last_name = data.get('last_name', customer.last_name) or customer.last_name
+            customer.phone = phone or customer.phone
+            customer.address = data.get('address', customer.address) or customer.address
+            customer.city = data.get('city', customer.city) or customer.city
+            
+            # Actualizar cédula solo si no tiene una ya y el nuevo valor es válido
+            if cedula and cedula not in invalid_values and not customer.cedula:
+                customer.cedula = cedula
+            
+            # Actualizar fecha de nacimiento si se proporciona
+            birth_date = data.get('birth_date')
+            if birth_date:
+                customer.birth_date = birth_date
+                
+            customer.save()
+            action = 'updated'
+        else:
+            # CREAR nuevo cliente
+            customer = Customer.objects.create(
+                email=email,
+                first_name=data.get('first_name', ''),
+                last_name=data.get('last_name', ''),
+                phone=phone or '',
+                cedula=cedula if cedula and cedula not in invalid_values else None,
+                address=data.get('address', ''),
+                city=data.get('city', ''),
+                birth_date=data.get('birth_date') or None
+            )
+            action = 'created'
         
-        # Intentar por teléfono
-        if not customer and phone and str(phone).strip() not in invalid_values:
-            potential = Customer.objects.filter(phone=phone).first()
-            if potential:
-               pass
+        return Response({
+            'status': 'success',
+            'action': action,
+            'data': {
+                'id': str(customer.id),
+                'email': customer.email,
+                'first_name': customer.first_name,
+                'last_name': customer.last_name,
+                'phone': customer.phone,
+                'cedula': customer.cedula,
+                'birth_date': str(customer.birth_date) if customer.birth_date else None
+            }
+        }, status=status.HTTP_200_OK if action == 'updated' else status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        logger.error(f"Error en sync_external_customer: {str(e)}")
+        return Response({
+            'status': 'error',
+            'message': f'Error al sincronizar cliente: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

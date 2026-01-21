@@ -31,9 +31,20 @@ const BoutiqueLanding = () => {
         email: '',
         phone: '',
         identification_number: '',
+        birth_date: '',  // Nuevo campo
         address: '',
         city: ''
     });
+    const [loadingCustomerSearch, setLoadingCustomerSearch] = useState(false);
+    const [customerFound, setCustomerFound] = useState(false);
+
+    // ============================================
+    // DISCOUNT/COUPON STATE
+    // ============================================
+    const [discountCode, setDiscountCode] = useState('');
+    const [discountInfo, setDiscountInfo] = useState(null);
+    const [discountLoading, setDiscountLoading] = useState(false);
+    const [discountError, setDiscountError] = useState('');
 
     // ============================================
     // LOYALTY STATE
@@ -59,6 +70,37 @@ const BoutiqueLanding = () => {
         }
     };
 
+    // Función para buscar cliente por cédula
+    const searchCustomerByCedula = async (cedula) => {
+        if (!cedula || cedula.length < 10) return;
+
+        setLoadingCustomerSearch(true);
+        try {
+            const response = await api.get(`api/customers/search_by_cedula/?cedula=${cedula}`, { baseURL: '/api/luxe' });
+            if (response.data && response.data.found) {
+                const customer = response.data.customer;
+                setBillingDetails({
+                    first_name: customer.first_name || '',
+                    last_name: customer.last_name || '',
+                    email: customer.email || '',
+                    phone: customer.phone || '',
+                    identification_number: cedula,
+                    birth_date: customer.birth_date || '',
+                    address: customer.address || '',
+                    city: customer.city || ''
+                });
+                setCustomerFound(true);
+            } else {
+                setCustomerFound(false);
+            }
+        } catch (err) {
+            console.log('Cliente no encontrado, puede continuar con el registro');
+            setCustomerFound(false);
+        } finally {
+            setLoadingCustomerSearch(false);
+        }
+    };
+
     useEffect(() => {
         if (user) {
             setBillingDetails({
@@ -66,11 +108,13 @@ const BoutiqueLanding = () => {
                 last_name: user.last_name || '',
                 email: user.email || '',
                 phone: user.phone || '',
-                identification_number: user.identification_number || '',
+                identification_number: user.identification_number || user.cedula || '',
+                birth_date: user.birth_date || '',
                 address: user.address || '',
                 city: user.city || ''
             });
             setIsRegistering(false);
+            setCustomerFound(true);
         }
     }, [user]);
 
@@ -125,6 +169,49 @@ const BoutiqueLanding = () => {
         return product.track_stock && product.stock_quantity <= 0;
     };
 
+    // Función para validar cupón de descuento
+    const validateDiscountCode = async () => {
+        if (!discountCode.trim()) return;
+
+        setDiscountLoading(true);
+        setDiscountError('');
+        setDiscountInfo(null);
+
+        try {
+            const response = await api.post('api/pos/discounts/validate/',
+                { discount_code: discountCode.trim(), order_amount: calculateTotal },
+                { baseURL: '/api/luxe' }
+            );
+
+            if (response.data.valid) {
+                const disc = response.data.discount;
+                setDiscountInfo({
+                    code: disc?.code || discountCode.trim(),
+                    type: disc?.discount_type || 'fixed',
+                    value: disc?.discount_value || 0,
+                    amount: response.data.discount_amount || 0,
+                    description: response.data.message || disc?.name || 'Descuento aplicado'
+                });
+            } else {
+                setDiscountError(response.data.error || response.data.message || 'Cupón no válido');
+            }
+        } catch (err) {
+            setDiscountError(err.response?.data?.message || err.response?.data?.error || 'Error al validar cupón');
+        } finally {
+            setDiscountLoading(false);
+        }
+    };
+
+    const removeDiscount = () => {
+        setDiscountCode('');
+        setDiscountInfo(null);
+        setDiscountError('');
+    };
+
+    // Calcular total con descuento
+    const discountAmount = discountInfo ? discountInfo.amount : 0;
+    const finalTotal = calculateTotal - discountAmount;
+
     const handleCheckoutSubmit = async (e) => {
         e.preventDefault();
         if (cart.length === 0) return alert("Tu carrito está vacío");
@@ -152,6 +239,7 @@ const BoutiqueLanding = () => {
                 email: billingDetails.email,
                 phone: billingDetails.phone,
                 cedula: billingDetails.identification_number,
+                birth_date: billingDetails.birth_date || null,  // Enviar fecha de nacimiento
                 address: billingDetails.address,
                 city: billingDetails.city
             };
@@ -167,7 +255,8 @@ const BoutiqueLanding = () => {
                 })),
                 order_type: 'in_store',
                 payment_method: paymentMethod === 'efectivo' ? 'cash' : 'transfer',
-                status: 'pending'
+                status: 'pending',
+                discount_code: discountInfo ? discountInfo.code : null  // Enviar cupón si existe
             };
 
             console.log('Enviando orden:', orderPayload);
@@ -454,6 +543,39 @@ const BoutiqueLanding = () => {
                         <div className="checkout-left">
                             <h3 className="checkout-title">Datos de Facturación</h3>
                             <form className="checkout-form" onSubmit={handleCheckoutSubmit}>
+                                {/* IDENTIFICACIÓN PRIMERO - Con búsqueda automática */}
+                                <div className="checkout-input-group" style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f0f7ff', borderRadius: '8px' }}>
+                                    <label style={{ fontWeight: 'bold', color: '#1e40af' }}>Identificación / Cédula</label>
+                                    <input
+                                        type="text"
+                                        className="checkout-input"
+                                        required
+                                        value={billingDetails.identification_number}
+                                        onChange={e => {
+                                            const valor = e.target.value;
+                                            setBillingDetails({ ...billingDetails, identification_number: valor });
+                                            // Buscar automáticamente cuando tenga 10 dígitos
+                                            if (valor.length === 10 && !user) {
+                                                searchCustomerByCedula(valor);
+                                            }
+                                        }}
+                                        onBlur={() => {
+                                            if (billingDetails.identification_number.length >= 10 && !user) {
+                                                searchCustomerByCedula(billingDetails.identification_number);
+                                            }
+                                        }}
+                                        placeholder="Ingrese su cédula o RUC"
+                                        style={{ borderColor: customerFound ? '#10b981' : '#cbd5e1' }}
+                                    />
+                                    {loadingCustomerSearch && (
+                                        <small style={{ display: 'block', marginTop: '5px', color: '#6366f1' }}>🔍 Buscando cliente...</small>
+                                    )}
+                                    {customerFound && (
+                                        <small style={{ display: 'block', marginTop: '5px', color: '#10b981', fontWeight: 'bold' }}>✅ Cliente encontrado - Datos autocompletados</small>
+                                    )}
+                                </div>
+
+                                {/* Resto de campos */}
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                                     <div className="checkout-input-group">
                                         <label>Nombre</label>
@@ -473,14 +595,18 @@ const BoutiqueLanding = () => {
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                                     <div className="checkout-input-group">
-                                        <label>Identificación</label>
-                                        <input type="text" className="checkout-input" required value={billingDetails.identification_number}
-                                            onChange={e => setBillingDetails({ ...billingDetails, identification_number: e.target.value })} />
-                                    </div>
-                                    <div className="checkout-input-group">
                                         <label>Teléfono</label>
                                         <input type="text" className="checkout-input" required value={billingDetails.phone}
                                             onChange={e => setBillingDetails({ ...billingDetails, phone: e.target.value })} />
+                                    </div>
+                                    <div className="checkout-input-group">
+                                        <label>Fecha de Nacimiento</label>
+                                        <input
+                                            type="date"
+                                            className="checkout-input"
+                                            value={billingDetails.birth_date}
+                                            onChange={e => setBillingDetails({ ...billingDetails, birth_date: e.target.value })}
+                                        />
                                     </div>
                                 </div>
                                 <div className="checkout-input-group">
@@ -541,18 +667,87 @@ const BoutiqueLanding = () => {
                                     </div>
                                 ))}
                             </div>
+                            {/* SECCIÓN DE CUPÓN DE DESCUENTO */}
+                            <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f9f5f1', borderRadius: '8px', border: '1px dashed #cfb3a9' }}>
+                                <label style={{ fontWeight: 'bold', fontSize: '14px', color: '#2c2c2c', marginBottom: '10px', display: 'block' }}>🎟️ ¿Tienes un cupón de descuento?</label>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Ingresa tu código"
+                                        value={discountCode}
+                                        onChange={e => setDiscountCode(e.target.value.toUpperCase())}
+                                        disabled={discountInfo !== null}
+                                        style={{
+                                            flex: 1,
+                                            padding: '10px',
+                                            border: `1px solid ${discountInfo ? '#10b981' : discountError ? '#ef4444' : '#ccc'}`,
+                                            borderRadius: '4px',
+                                            fontSize: '14px',
+                                            textTransform: 'uppercase'
+                                        }}
+                                    />
+                                    {!discountInfo ? (
+                                        <button
+                                            type="button"
+                                            onClick={validateDiscountCode}
+                                            disabled={discountLoading || !discountCode.trim()}
+                                            style={{
+                                                padding: '10px 20px',
+                                                backgroundColor: '#2c2c2c',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                fontSize: '13px',
+                                                fontWeight: 'bold'
+                                            }}
+                                        >
+                                            {discountLoading ? '...' : 'APLICAR'}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={removeDiscount}
+                                            style={{
+                                                padding: '10px 20px',
+                                                backgroundColor: '#ef4444',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                fontSize: '13px'
+                                            }}
+                                        >
+                                            ✕
+                                        </button>
+                                    )}
+                                </div>
+                                {discountError && (
+                                    <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '8px', marginBottom: 0 }}>❌ {discountError}</p>
+                                )}
+                                {discountInfo && (
+                                    <p style={{ color: '#10b981', fontSize: '12px', marginTop: '8px', marginBottom: 0 }}>✅ {discountInfo.description} (-${discountInfo.amount.toFixed(2)})</p>
+                                )}
+                            </div>
+
                             <div className="checkout-summary">
                                 <div className="summary-line">
                                     <span>Subtotal</span>
                                     <span>${calculateTotal.toFixed(2)}</span>
                                 </div>
+                                {discountInfo && (
+                                    <div className="summary-line" style={{ color: '#10b981' }}>
+                                        <span>Descuento ({discountInfo.code})</span>
+                                        <span>-${discountInfo.amount.toFixed(2)}</span>
+                                    </div>
+                                )}
                                 <div className="summary-line">
                                     <span>Envío</span>
                                     <span>Gratis</span>
                                 </div>
                                 <div className="summary-total">
                                     <span>Total</span>
-                                    <span>${calculateTotal.toFixed(2)}</span>
+                                    <span>${finalTotal.toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>
