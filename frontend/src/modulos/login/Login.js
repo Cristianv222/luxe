@@ -1,8 +1,9 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import '../pagina-web/BoutiqueLanding.css'; // Use Boutique Styles
-import logo from '../../assets/logo_luxury.png'; // Import Logo
+import BarraNavegacion from '../../comun/BarraNavegacion'; // Import shared Navbar
+import PiePagina from '../../comun/PiePagina';
+import '../pagina-web/BoutiqueLanding.css';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -10,9 +11,6 @@ const Login = () => {
     const [error, setError] = useState('');
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-    const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -37,25 +35,7 @@ const Login = () => {
     return (
         <div className="boutique-container">
             {/* BOUTIQUE HEADER */}
-            <header className="boutique-header">
-                <div className="header-content">
-                    <div className="logo-container">
-                        <Link to="/">
-                            <img src={logo} alt="Luxe" className="boutique-logo" />
-                        </Link>
-                    </div>
-
-                    <button className={`menu-toggle ${isMenuOpen ? 'open' : ''}`} onClick={toggleMenu}>
-                        <span className="bar"></span>
-                        <span className="bar"></span>
-                        <span className="bar"></span>
-                    </button>
-
-                    <nav className={`main-nav ${isMenuOpen ? 'open' : ''}`}>
-                        <Link to="/" className="nav-link">INICIO</Link>
-                    </nav>
-                </div>
-            </header>
+            <BarraNavegacion />
 
             {/* LOGIN FORM CENTERED */}
             <div style={{
@@ -133,6 +113,7 @@ const Login = () => {
 
                 </div>
             </div>
+            <PiePagina />
         </div>
     );
 };

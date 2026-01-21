@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import BarraNavegacion from '../../comun/BarraNavegacion';
+import PiePagina from '../../comun/PiePagina';
 import api from '../../services/api';
-import logo from '../../assets/logo_luxury.png';
 import { useAuth } from '../../context/AuthContext';
 import './BoutiqueLanding.css';
 import './ProductStock.css';
@@ -13,17 +14,12 @@ const Coleccion = () => {
     const [categories, setCategories] = useState([]);
     const [products, setProducts] = useState([]);
     const [activeCategory, setActiveCategory] = useState(null);
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     // ============================================
     // CART & CHECKOUT STATE
     // ============================================
     const [cart, setCart] = useState([]);
     const [showCheckoutModal, setShowCheckoutModal] = useState(false);
-    const [loadingCheckout, setLoadingCheckout] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState('efectivo');
-    const [isRegistering, setIsRegistering] = useState(false);
-    const [checkoutPassword, setCheckoutPassword] = useState('');
     const [billingDetails, setBillingDetails] = useState({
         first_name: '',
         last_name: '',
@@ -33,6 +29,7 @@ const Coleccion = () => {
         address: '',
         city: ''
     });
+    // Removed unused isRegistering, paymentMethod states if logic isn't fully using them here compared to landing
 
     // Product detail modal
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -48,7 +45,6 @@ const Coleccion = () => {
                 address: user.address || '',
                 city: user.city || ''
             });
-            setIsRegistering(false);
         }
     }, [user]);
 
@@ -91,48 +87,9 @@ const Coleccion = () => {
 
     const isOutOfStock = (product) => product.track_stock && product.stock_quantity <= 0;
 
-    const handleLogout = () => {
-        logout();
-        navigate('/');
-    };
-
-    const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-
     return (
         <div className="boutique-container">
-            {/* BOUTIQUE HEADER */}
-            <header className="boutique-header">
-                <div className="header-content">
-                    <div className="logo-container">
-                        <Link to="/">
-                            <img src={logo} alt="Luxe" className="boutique-logo" />
-                        </Link>
-                    </div>
-
-                    <button className={`menu-toggle ${isMenuOpen ? 'open' : ''}`} onClick={toggleMenu}>
-                        <span className="bar"></span>
-                        <span className="bar"></span>
-                        <span className="bar"></span>
-                    </button>
-
-                    <nav className={`main-nav ${isMenuOpen ? 'open' : ''}`}>
-                        <Link to="/" className="nav-link" onClick={() => setIsMenuOpen(false)}>INICIO</Link>
-                        <Link to="/coleccion" className="nav-link" onClick={() => setIsMenuOpen(false)}>COLECCIÓN</Link>
-                        <Link to="/nosotros" className="nav-link" onClick={() => setIsMenuOpen(false)}>NOSOTROS</Link>
-                        <Link to="/contacto" className="nav-link" onClick={() => setIsMenuOpen(false)}>CONTACTO</Link>
-                        {user ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                <Link to="/perfil" className="nav-link" onClick={() => setIsMenuOpen(false)}>MI PERFIL</Link>
-                                <button onClick={handleLogout} className="btn-logout">CERRAR SESIÓN</button>
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                                <Link to="/login" className="nav-link">INICIAR SESIÓN</Link>
-                            </div>
-                        )}
-                    </nav>
-                </div>
-            </header>
+            <BarraNavegacion />
 
             {/* BOTÓN FLOTANTE DE CARRITO */}
             {cart.length > 0 && (
@@ -311,7 +268,7 @@ const Coleccion = () => {
                 </div>
             )}
 
-            {/* CHECKOUT MODAL - Reutilizando el mismo del BoutiqueLanding */}
+            {/* CHECKOUT MODAL */}
             {showCheckoutModal && (
                 <div className="checkout-modal-overlay" onClick={() => setShowCheckoutModal(false)}>
                     <div className="checkout-modal" onClick={(e) => e.stopPropagation()}>
@@ -352,24 +309,7 @@ const Coleccion = () => {
                 </div>
             )}
 
-            {/* FOOTER */}
-            <footer className="boutique-footer">
-                <div className="footer-content">
-                    <div className="footer-column">
-                        <h4>LUXURY BOUTIQUE</h4>
-                        <p>Redefiniendo el lujo y la exclusividad desde 2025.</p>
-                    </div>
-                    <div className="footer-column">
-                        <h4>Contacto</h4>
-                        <p>ventas@luxuryboutique.com</p>
-                        <p>+593 99 999 9999</p>
-                        <p>Quito, Ecuador</p>
-                    </div>
-                </div>
-                <div className="footer-bottom">
-                    <p>&copy; 2026 Luxury Boutique. Todos los derechos reservados.</p>
-                </div>
-            </footer>
+            <PiePagina />
         </div>
     );
 };

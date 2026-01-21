@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../services/api';
+import BarraNavegacion from '../../comun/BarraNavegacion';
+import PiePagina from '../../comun/PiePagina';
 import './BoutiqueLanding.css'; // Use Boutique Styles
-import logo from '../../assets/logo_luxury.png'; // Import Logo
 
 const Registro = () => {
     const [formData, setFormData] = useState({
@@ -20,7 +21,7 @@ const Registro = () => {
     const [msg, setMsg] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
+
 
     const navigate = useNavigate();
 
@@ -30,8 +31,6 @@ const Registro = () => {
             [e.target.name]: e.target.value
         });
     };
-
-    const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -74,27 +73,7 @@ const Registro = () => {
 
     return (
         <div className="boutique-container">
-            {/* BOUTIQUE HEADER (Reused structure) */}
-            <header className="boutique-header">
-                <div className="header-content">
-                    <div className="logo-container">
-                        <Link to="/">
-                            <img src={logo} alt="Luxe" className="boutique-logo" />
-                        </Link>
-                    </div>
-
-                    <button className={`menu-toggle ${isMenuOpen ? 'open' : ''}`} onClick={toggleMenu}>
-                        <span className="bar"></span>
-                        <span className="bar"></span>
-                        <span className="bar"></span>
-                    </button>
-
-                    <nav className={`main-nav ${isMenuOpen ? 'open' : ''}`}>
-                        <Link to="/" className="nav-link">INICIO</Link>
-                        <Link to="/login" className="nav-link">INICIAR SESIÓN</Link>
-                    </nav>
-                </div>
-            </header>
+            <BarraNavegacion />
 
             {/* MAIN CONTENT CENTERED */}
             <div style={{
@@ -208,6 +187,7 @@ const Registro = () => {
                     </div>
                 </div>
             </div>
+            <PiePagina />
         </div>
     );
 };

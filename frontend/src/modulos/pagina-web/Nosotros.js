@@ -1,53 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import logo from '../../assets/logo_luxury.png';
+import BarraNavegacion from '../../comun/BarraNavegacion'; // Correct import path?
+import PiePagina from '../../comun/PiePagina';
 import './BoutiqueLanding.css';
 
 const Nosotros = () => {
-    const { user, logout } = useAuth();
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-    const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-
-    const handleLogout = () => {
-        logout();
-    };
-
     return (
         <div className="boutique-container">
-            {/* BOUTIQUE HEADER */}
-            <header className="boutique-header">
-                <div className="header-content">
-                    <div className="logo-container">
-                        <Link to="/">
-                            <img src={logo} alt="Luxe" className="boutique-logo" />
-                        </Link>
-                    </div>
-
-                    <button className={`menu-toggle ${isMenuOpen ? 'open' : ''}`} onClick={toggleMenu}>
-                        <span className="bar"></span>
-                        <span className="bar"></span>
-                        <span className="bar"></span>
-                    </button>
-
-                    <nav className={`main-nav ${isMenuOpen ? 'open' : ''}`}>
-                        <Link to="/" className="nav-link" onClick={() => setIsMenuOpen(false)}>INICIO</Link>
-                        <Link to="/nosotros" className="nav-link" onClick={() => setIsMenuOpen(false)}>NOSOTROS</Link>
-                        <Link to="/contacto" className="nav-link" onClick={() => setIsMenuOpen(false)}>CONTACTO</Link>
-                        {user ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                <Link to="/perfil" className="nav-link" onClick={() => setIsMenuOpen(false)}>MI PERFIL</Link>
-                                <button onClick={handleLogout} className="btn-logout">CERRAR SESIÓN</button>
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                                <Link to="/login" className="nav-link">INICIAR SESIÓN</Link>
-                            </div>
-                        )}
-                    </nav>
-                </div>
-            </header>
+            <BarraNavegacion />
 
             {/* HERO SECTION */}
             <section style={{
@@ -121,7 +81,7 @@ const Nosotros = () => {
                                 lineHeight: '1.8',
                                 marginBottom: '20px'
                             }}>
-                                <strong style={{ color: '#CFB3A9' }}>Luxe</strong> nació de la pasión por ofrecer una experiencia
+                                <strong style={{ color: '#CFB3A9' }}>Luxury Boutique</strong> nació de la pasión por ofrecer una experiencia
                                 de compra excepcional, donde cada detalle cuenta y cada producto cuenta una historia única.
                             </p>
                             <p style={{
@@ -310,7 +270,7 @@ const Nosotros = () => {
                         }}>
                             Explora nuestros productos cuidadosamente seleccionados
                         </p>
-                        <Link to="/" style={{
+                        <Link to="/" style={{ // Should this be /coleccion or /? User said collection button.
                             display: 'inline-block',
                             padding: '15px 40px',
                             backgroundColor: '#CFB3A9',
@@ -329,24 +289,7 @@ const Nosotros = () => {
                 </div>
             </section>
 
-            {/* FOOTER - IGUAL AL DE LA PÁGINA PRINCIPAL */}
-            <footer className="boutique-footer">
-                <div className="footer-content">
-                    <div className="footer-column">
-                        <h4>LUXURY BOUTIQUE</h4>
-                        <p>Redefiniendo el lujo y la exclusividad desde 2025.</p>
-                    </div>
-                    <div className="footer-column">
-                        <h4>Contacto</h4>
-                        <p>ventas@luxuryboutique.com</p>
-                        <p>+593 99 999 9999</p>
-                        <p>Quito, Ecuador</p>
-                    </div>
-                </div>
-                <div className="footer-bottom">
-                    <p>&copy; 2026 Luxury Boutique. Todos los derechos reservados.</p>
-                </div>
-            </footer>
+            <PiePagina />
         </div>
     );
 };

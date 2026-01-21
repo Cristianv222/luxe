@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import logo from '../../assets/logo_luxury.png';
+import BarraNavegacion from '../../comun/BarraNavegacion';
+import PiePagina from '../../comun/PiePagina';
 import './BoutiqueLanding.css';
 
 const Contacto = () => {
-    const { user, logout } = useAuth();
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -16,12 +14,6 @@ const Contacto = () => {
     });
     const [sending, setSending] = useState(false);
     const [success, setSuccess] = useState(false);
-
-    const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-
-    const handleLogout = () => {
-        logout();
-    };
 
     const handleChange = (e) => {
         setFormData({
@@ -53,38 +45,7 @@ const Contacto = () => {
 
     return (
         <div className="boutique-container">
-            {/* BOUTIQUE HEADER */}
-            <header className="boutique-header">
-                <div className="header-content">
-                    <div className="logo-container">
-                        <Link to="/">
-                            <img src={logo} alt="Luxe" className="boutique-logo" />
-                        </Link>
-                    </div>
-
-                    <button className={`menu-toggle ${isMenuOpen ? 'open' : ''}`} onClick={toggleMenu}>
-                        <span className="bar"></span>
-                        <span className="bar"></span>
-                        <span className="bar"></span>
-                    </button>
-
-                    <nav className={`main-nav ${isMenuOpen ? 'open' : ''}`}>
-                        <Link to="/" className="nav-link" onClick={() => setIsMenuOpen(false)}>INICIO</Link>
-                        <Link to="/nosotros" className="nav-link" onClick={() => setIsMenuOpen(false)}>NOSOTROS</Link>
-                        <Link to="/contacto" className="nav-link" onClick={() => setIsMenuOpen(false)}>CONTACTO</Link>
-                        {user ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                <Link to="/perfil" className="nav-link" onClick={() => setIsMenuOpen(false)}>MI PERFIL</Link>
-                                <button onClick={handleLogout} className="btn-logout">CERRAR SESIÓN</button>
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                                <Link to="/login" className="nav-link">INICIAR SESIÓN</Link>
-                            </div>
-                        )}
-                    </nav>
-                </div>
-            </header>
+            <BarraNavegacion />
 
             {/* HERO SECTION */}
             <section style={{
@@ -108,7 +69,7 @@ const Contacto = () => {
                         marginBottom: '20px',
                         textTransform: 'uppercase',
                         fontWeight: '700'
-                    }}>Estamos aquí para ti</p>
+                    }}>Visítanos en Cuenca</p>
                     <h1 style={{
                         fontFamily: "'Cinzel', serif",
                         fontSize: '3.5rem',
@@ -143,7 +104,7 @@ const Contacto = () => {
                         gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
                         gap: '60px'
                     }}>
-                        {/* CONTACT INFO - REESTRUCTURADO */}
+                        {/* CONTACT INFO */}
                         <div>
                             <h2 style={{
                                 fontFamily: "'Cinzel', serif",
@@ -196,10 +157,10 @@ const Contacto = () => {
                                         color: '#666',
                                         fontSize: '0.95rem'
                                     }}>
-                                        <a href="mailto:info@luxe.com" style={{
+                                        <a href="mailto:ventas@luxuryboutique.com" style={{
                                             color: '#CFB3A9',
                                             textDecoration: 'none'
-                                        }}>info@luxe.com</a>
+                                        }}>ventas@luxuryboutique.com</a>
                                     </p>
                                 </div>
 
@@ -240,10 +201,10 @@ const Contacto = () => {
                                         color: '#666',
                                         fontSize: '0.95rem'
                                     }}>
-                                        <a href="tel:+593999999999" style={{
+                                        <a href="tel:+593986123920" style={{
                                             color: '#A09086',
                                             textDecoration: 'none'
-                                        }}>+593 99 999 9999</a>
+                                        }}>098 612 3920</a>
                                     </p>
                                 </div>
 
@@ -286,8 +247,8 @@ const Contacto = () => {
                                         fontSize: '0.95rem',
                                         lineHeight: '1.6'
                                     }}>
-                                        Av. Principal 123<br />
-                                        Quito, Ecuador
+                                        Luxe Boutique<br />
+                                        Cuenca, Ecuador
                                     </p>
                                 </div>
 
@@ -326,9 +287,9 @@ const Contacto = () => {
                                         fontSize: '0.95rem',
                                         lineHeight: '1.8'
                                     }}>
-                                        Lunes - Viernes: 9:00 - 18:00<br />
-                                        Sábados: 10:00 - 14:00<br />
-                                        Domingos: Cerrado
+                                        Lun - Vie: 9:00 AM - 6:45 PM<br />
+                                        Sábado: 10:00 AM - 6:45 PM<br />
+                                        Dom y Mié: CERRADO
                                     </p>
                                 </div>
                             </div>
@@ -547,7 +508,7 @@ const Contacto = () => {
                     }}>
                         <iframe
                             title="Ubicación Luxe"
-                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.7988595434765!2d-78.49075!3d-0.17523!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMMKwMTAnMzAuOCJTIDc4wrAyOSczOC43Ilc!5e0!3m2!1sen!2sec!4v1234567890"
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d249.04456396755182!2d-79.0046849466266!3d-2.8987975850757297!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x91cd190035dde331%3A0x381e10e747cbd16e!2sLuxury%20Boutique!5e0!3m2!1ses!2sec!4v1769018295740!5m2!1ses!2sec"
                             width="100%"
                             height="100%"
                             style={{ border: 0 }}
@@ -559,24 +520,7 @@ const Contacto = () => {
                 </div>
             </section>
 
-            {/* FOOTER - IGUAL AL DE LA PÁGINA PRINCIPAL */}
-            <footer className="boutique-footer">
-                <div className="footer-content">
-                    <div className="footer-column">
-                        <h4>LUXURY BOUTIQUE</h4>
-                        <p>Redefiniendo el lujo y la exclusividad desde 2025.</p>
-                    </div>
-                    <div className="footer-column">
-                        <h4>Contacto</h4>
-                        <p>ventas@luxuryboutique.com</p>
-                        <p>+593 99 999 9999</p>
-                        <p>Quito, Ecuador</p>
-                    </div>
-                </div>
-                <div className="footer-bottom">
-                    <p>&copy; 2026 Luxury Boutique. Todos los derechos reservados.</p>
-                </div>
-            </footer>
+            <PiePagina />
         </div>
     );
 };

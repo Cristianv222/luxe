@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
-import logo from '../../assets/logo_luxury.png';
+import BarraNavegacion from '../../comun/BarraNavegacion';
+import PiePagina from '../../comun/PiePagina';
 import './MiPerfil.css';
 
 const MiPerfil = () => {
@@ -11,7 +12,6 @@ const MiPerfil = () => {
     const [activeTab, setActiveTab] = useState('datos');
     const [loading, setLoading] = useState(false);
     const [orders, setOrders] = useState([]);
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [profileData, setProfileData] = useState({
         first_name: '',
         last_name: '',
@@ -129,8 +129,6 @@ const MiPerfil = () => {
         }
     };
 
-    const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-
     const handleLogout = () => {
         logout();
         navigate('/');
@@ -139,23 +137,7 @@ const MiPerfil = () => {
     return (
         <div className="profile-page">
             {/* HEADER (Reutilizado de BoutiqueLanding) */}
-            <header className="boutique-header">
-                <div className="header-content">
-                    <div className="logo-container">
-                        <Link to="/"><img src={logo} alt="Luxe" className="boutique-logo" /></Link>
-                    </div>
-                    <button className={`menu-toggle ${isMenuOpen ? 'open' : ''}`} onClick={toggleMenu}>
-                        <span className="bar"></span>
-                        <span className="bar"></span>
-                        <span className="bar"></span>
-                    </button>
-                    <nav className={`main-nav ${isMenuOpen ? 'open' : ''}`}>
-                        <Link to="/" className="nav-link">INICIO</Link>
-                        <a href="/#collection" className="nav-link">COLECCIÓN</a>
-                        <button onClick={handleLogout} className="btn-logout">CERRAR SESIÓN</button>
-                    </nav>
-                </div>
-            </header>
+            <BarraNavegacion />
 
             <main className="profile-main">
                 <div className="profile-hero">
@@ -406,11 +388,7 @@ const MiPerfil = () => {
                 )}
             </main>
 
-            <footer className="boutique-footer">
-                <div className="footer-bottom">
-                    <p>&copy; 2026 Luxury Boutique. Todos los derechos reservados.</p>
-                </div>
-            </footer>
+            <PiePagina />
         </div>
     );
 };

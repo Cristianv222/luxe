@@ -569,7 +569,7 @@ body {
    ============================================ */
 .boutique-footer {
     background-color: var(--color-chai);
-    padding: 5rem 2rem 2rem;
+    padding: 1.5rem 2rem 1rem;
     margin-top: auto;
     border-top: 1px solid rgba(160, 144, 134, 0.2);
 }
@@ -581,13 +581,13 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 4rem;
-    margin-bottom: 4rem;
+    margin-bottom: 2rem;
 }
 
 .footer-column h4 {
     font-family: var(--font-serif);
     font-size: 1.4rem;
-    margin-bottom: 1.8rem;
+    margin-bottom: 1rem;
     color: var(--color-dark);
     font-weight: 600;
     letter-spacing: 2px;
@@ -631,7 +631,7 @@ body {
 .footer-bottom {
     text-align: center;
     border-top: 1px solid rgba(160, 144, 134, 0.3);
-    padding-top: 2rem;
+    padding-top: 1rem;
     font-size: 0.9rem;
     color: var(--color-latte);
     max-width: 1400px;
