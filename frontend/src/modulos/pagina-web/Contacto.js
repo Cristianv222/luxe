@@ -22,25 +22,35 @@ const Contacto = () => {
         });
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
         setSending(true);
 
-        // Simular envío (aquí podrías integrar con tu backend)
-        setTimeout(() => {
-            setSending(false);
-            setSuccess(true);
-            setFormData({
-                name: '',
-                email: '',
-                phone: '',
-                subject: '',
-                message: ''
-            });
+        // Número de teléfono de la boutique (Formato internacional sin +)
+        const phoneNumber = "593986123920";
 
-            // Ocultar mensaje de éxito después de 5 segundos
-            setTimeout(() => setSuccess(false), 5000);
-        }, 1500);
+        // Construir el mensaje
+        const message = `Hola Luxury Boutique,\n\nSoy ${formData.name}.\nEmail: ${formData.email}\nTeléfono: ${formData.phone || 'No especificado'}\n\nAsunto: ${formData.subject}\n\nMensaje:\n${formData.message}`;
+
+        // Codificar el mensaje para URL
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+
+        // Abrir WhatsApp en nueva pestaña
+        window.open(whatsappUrl, '_blank');
+
+        setSending(false);
+        setSuccess(true);
+
+        // Limpiar formulario y quitar mensaje de éxito
+        setFormData({
+            name: '',
+            email: '',
+            phone: '',
+            subject: '',
+            message: ''
+        });
+        setTimeout(() => setSuccess(false), 5000);
     };
 
     return (
