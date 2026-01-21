@@ -308,7 +308,7 @@ class OrderCreateSerializer(serializers.Serializer):
         # NO completamos automáticamente.
         # Por defecto, si no se especifica source, asumimos POS (comportamiento anterior) o si es in_store.
         
-        source = validated_data.pop('source', 'pos')
+        source = validated_data.get('source', 'pos')
         
         if source == 'web':
             validated_data['status'] = 'pending'

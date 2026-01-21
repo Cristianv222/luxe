@@ -84,6 +84,20 @@ class EarningRule(models.Model):
         verbose_name=_("Monto Paso (para 'Por monto')"),
         help_text=_("Ej: Cada $10. Si es nulo se asume el total.")
     )
+    
+    ORDER_SOURCE_CHOICES = [
+        ('ALL', 'Todos los Canales'),
+        ('WEB', 'Web / Delivery'),
+        ('POS', 'Local / POS'),
+    ]
+    order_source = models.CharField(
+        max_length=10,
+        choices=ORDER_SOURCE_CHOICES,
+        default='ALL',
+        verbose_name=_("Canal de Venta"),
+        help_text=_("Aplica esta regla solo a órdenes de este canal.")
+    )
+
     is_active = models.BooleanField(default=True, verbose_name=_("Activa"))
     created_at = models.DateTimeField(auto_now_add=True)
 

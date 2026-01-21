@@ -1380,3 +1380,163 @@ body {
         transform: translateY(0);
     }
 }
+
+/* Success/Transfer Modal Specifics */
+.transfer-modal-content {
+    text-align: center;
+    max-width: 600px !important;
+    /* Made significantly wider */
+    width: 95% !important;
+    /* Ensure it takes almost full width on mobile */
+    background-color: #fff;
+    padding: 2.5rem !important;
+}
+
+.success-icon-container {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background-color: #10b981;
+    /* Keeping green as requested */
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    font-size: 35px;
+    box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+}
+
+.transfer-title {
+    font-family: var(--font-serif);
+    font-size: 2rem;
+    color: var(--color-dark);
+    margin-bottom: 0.5rem;
+}
+
+.transfer-subtitle {
+    font-family: var(--font-sans);
+    color: var(--color-latte);
+    margin-bottom: 2rem;
+}
+
+.payment-instructions-box {
+    background-color: #faf7f5;
+    /* Light boutique bg */
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    border: 1px solid #eee;
+}
+
+.instructions-title {
+    font-family: var(--font-serif);
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--color-dark);
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.instructions-text {
+    font-family: var(--font-sans);
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+    color: var(--color-dark);
+}
+
+.price-highlight {
+    color: var(--color-cinna);
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.qr-container {
+    margin-bottom: 1.5rem;
+    border: 2px dashed var(--color-latte);
+    padding: 10px;
+    border-radius: 8px;
+    background-color: white;
+    display: block;
+    /* Utilize full width */
+    width: 100%;
+}
+
+.qr-image {
+    width: 100%;
+    /* Fill container */
+    max-width: 450px;
+    /* Cap max size on desktop */
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+.whatsapp-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 16px;
+    background-color: #25D366;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-family: var(--font-sans);
+}
+
+.whatsapp-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+}
+
+.close-link-btn {
+    background: transparent;
+    border: none;
+    color: var(--color-latte);
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    transition: color 0.2s;
+}
+
+.close-link-btn:hover {
+    color: var(--color-cinna);
+}
+
+@media (max-width: 768px) {
+    .transfer-modal-content {
+        padding: 1.5rem !important;
+        /* Less padding on mobile */
+        width: 100% !important;
+        border-radius: 0;
+        height: 100vh;
+        /* Full screen on very small phones if needed, or just max width */
+        max-height: 100vh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .payment-instructions-box {
+        padding: 1rem;
+    }
+
+    .qr-image {
+        max-width: none;
+        /* remove cap on mobile to fill width */
+        width: 100%;
+    }
+
+    .transfer-title {
+        font-size: 1.5rem;
+    }
+}

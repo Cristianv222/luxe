@@ -71,6 +71,17 @@ class Order(models.Model):
         verbose_name='Tipo de Orden'
     )
     
+    SOURCE_CHOICES = [
+        ('web', 'Web'),
+        ('pos', 'POS / Caja'),
+    ]
+    source = models.CharField(
+        max_length=10,
+        choices=SOURCE_CHOICES,
+        default='pos',
+        verbose_name='Origen'
+    )
+    
     status = models.CharField(
         max_length=20,
         choices=ORDER_STATUS,
@@ -191,6 +202,14 @@ class Order(models.Model):
         # Calcular total si no se proporciona
         if self.pk:
             self.calculate_totals()
+            
+        # REGLA NEGOCIO: Si la orden se completa o entrega, asumimos que se pagó
+        # Esto asegura que se disparen los puntos de fidelidad correctamente
+        if self.status in ['completed', 'delivered'] and self.payment_status == 'pending':
+            self.payment_status = 'paid'
+            # Si delivered_at está vacío y es delivered, llenarlo
+            if self.status == 'delivered' and not self.delivered_at:
+                self.delivered_at = timezone.now()
         
         super().save(*args, **kwargs)
     
@@ -263,6 +282,7 @@ class Order(models.Model):
         """Marca la orden como entregada"""
         if self.status in ['ready', 'delivering']:
             self.status = 'delivered'
+            self.payment_status = 'paid' # Asumimos pago al entregar
             self.delivered_at = timezone.now()
             self.save()
             return True

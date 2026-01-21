@@ -7,23 +7,40 @@ logger = logging.getLogger(__name__)
 
 class LoyaltyService:
     @staticmethod
-    def calculate_points_to_earn(amount):
+    def calculate_points_to_earn(order):
         """
-        Calcula los puntos que se ganarían por un monto dado.
+        Calcula los puntos que se ganarían por una orden dada.
         REGLA DE NEGOCIO: Solo se aplica la regla con el monto mínimo (umbral) más alto 
-        que el cliente haya superado. No se acumulan reglas.
+        que el cliente haya superado, FILTRANDO por el canal de venta (Web vs POS).
         """
         config = LoyaltyProgramConfig.objects.first()
         if config and not config.is_active:
             logger.info("Loyalty program is inactive.")
             return 0
+            
+        if not order:
+            return 0
 
         try:
-            amount = float(amount)
+            amount = float(order.total)
         except (ValueError, TypeError):
             return 0
             
-        active_rules = EarningRule.objects.filter(is_active=True).select_related('rule_type')
+        # Determinar el canal de la orden para filtrar reglas
+        # Asumimos que order.source existe (agregado anteriormente). Si no, fallback a ALL.
+        # Mapeo: 'web' -> 'WEB', 'pos' -> 'POS', otros -> 'ALL'
+        order_source_code = 'ALL'
+        if hasattr(order, 'source'):
+             if order.source == 'web':
+                 order_source_code = 'WEB'
+             elif order.source == 'pos':
+                 order_source_code = 'POS'
+        
+        # Filtramos reglas activas que coincidan con el canal O sean para todos
+        active_rules = EarningRule.objects.filter(
+            is_active=True, 
+            order_source__in=[order_source_code, 'ALL']
+        ).select_related('rule_type')
         
         # 1. Encontrar todas las reglas que el monto supera
         applicable_rules = []
@@ -35,11 +52,16 @@ class LoyaltyService:
             return 0
             
         # 2. Seleccionar la MEJOR regla (la que tenga el min_order_value más alto)
-        # Ordenamos de mayor a menor umbral
-        applicable_rules.sort(key=lambda r: float(r.min_order_value), reverse=True)
+        # IMPORTANTE: Si hay empate en montos, priorizamos la regla específica del canal sobre 'ALL'
+        # Sort priority: 1. Min Value (Desc), 2. is Specific channel (WEB/POS > ALL)
+        def sort_key(r):
+            source_priority = 1 if r.order_source == order_source_code else 0
+            return (float(r.min_order_value), source_priority)
+
+        applicable_rules.sort(key=sort_key, reverse=True)
         best_rule = applicable_rules[0]
         
-        logger.info(f"Applying best rule: {best_rule.name} (Threshold: {best_rule.min_order_value}) for amount {amount}")
+        logger.info(f"Applying best rule: {best_rule.name} (Source: {best_rule.order_source}, Threshold: {best_rule.min_order_value}) for amount {amount}")
 
         # 3. Calcular puntos según el tipo de esa única regla
         points_to_earn = 0
@@ -72,7 +94,7 @@ class LoyaltyService:
             return
 
         # Ensure order total is refreshed/correct
-        points_to_earn = LoyaltyService.calculate_points_to_earn(order.total)
+        points_to_earn = LoyaltyService.calculate_points_to_earn(order)
         
         if points_to_earn <= 0:
             return
