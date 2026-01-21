@@ -352,6 +352,9 @@ class OrderItem(models.Model):
         return f'{self.quantity}x {self.product.name}'
     
     def save(self, *args, **kwargs):
+        # Extraer flag antes de llamar a super().save()
+        skip_order_save = kwargs.pop('skip_order_save', False)
+        
         # Calcular precio unitario si no se proporciona
         if not self.unit_price:
             self.unit_price = self.product.price
@@ -367,10 +370,13 @@ class OrderItem(models.Model):
         
         super().save(*args, **kwargs)
         
-        # Recalcular totales de la orden
-        if self.order_id:
+        # Recalcular totales de la orden SOLO si no viene del serializer
+        # Evita ciclo infinito cuando el serializer ya gestiona el save
+        if self.order_id and not skip_order_save:
             self.order.calculate_totals()
-            self.order.save()
+            # NO llamamos a save() aquí para evitar ciclos infinitos
+            # El serializer se encarga de guardar la orden después
+
     
     def get_total_with_extras(self):
         """Calcula el total incluyendo extras"""

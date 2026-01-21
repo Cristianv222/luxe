@@ -384,6 +384,45 @@ class OrderCreateSerializer(serializers.Serializer):
         order.save()
         
         # ========================================
+        # CREAR REGISTRO DE PAGO AUTOMÁTICO
+        # ========================================
+        # Las órdenes de POS necesitan un registro de pago
+        # para evitar IntegrityError cuando se accede a payment_method
+        from apps.payments.models import Payment, PaymentMethod, Currency
+        
+        try:
+            # Obtener el método de pago por defecto (efectivo)
+            cash_method = PaymentMethod.objects.filter(
+                method_type='cash',
+                is_active=True
+            ).first()
+            
+            # Obtener la moneda por defecto
+            default_currency = Currency.objects.filter(is_default=True).first()
+            
+            if cash_method and default_currency:
+                # Crear el registro de pago
+                # IMPORTANTE: No usar .create() sino crear instancia y .save()
+                # para que se ejecute el método save() del modelo que genera payment_number
+                payment = Payment(
+                    order=order,
+                    payment_method=cash_method,
+                    currency=default_currency,
+                    amount=order.total,
+                    original_amount=order.total,
+                    original_currency=default_currency,
+                    status='completed',
+                    completed_at=now
+                )
+                payment.save()
+                logger.info(f"✅ Pago automático creado para orden {order.order_number} - Payment: {payment.payment_number}")
+            else:
+                logger.warning(f"⚠️ No se pudo crear pago automático: método de pago o moneda no encontrados")
+        except Exception as e:
+            logger.error(f"❌ Error al crear pago automático: {str(e)}")
+            # No fallar la orden por esto, solo registrar el error
+        
+        # ========================================
         # ENVIAR A IMPRESIÓN AUTOMÁTICAMENTE
         # ========================================
         self._send_to_printer(order)
