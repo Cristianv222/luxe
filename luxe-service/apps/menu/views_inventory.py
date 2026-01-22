@@ -105,11 +105,13 @@ class InventoryImportExcelView(APIView):
              return Response({'error': 'Formato no válido. Use .xlsx'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            wb = openpyxl.load_workbook(file)
+            # data_only=True recupera el VALOR de la celda de fórmulas, no la fórmula en sí.
+            wb = openpyxl.load_workbook(file, data_only=True)
             ws = wb.active
             
             count_updated = 0
             count_created = 0
+            errors = []
             
             # Skip header
             rows = list(ws.rows)
@@ -122,100 +124,193 @@ class InventoryImportExcelView(APIView):
                 defaults={'slug': 'importados', 'description': 'Categoría para productos importados'}
             )
                  
-            for row in rows[1:]:
-                # Expected: ID (0), Nombre (1), Categoría (2), Precio (3), Stock (4), Min (5), Active (6), Available (7)
-                
-                cell_id = row[0].value
-                cell_name = row[1].value
-                cell_category_name = row[2].value
-                cell_price = row[3].value
-                cell_stock = row[4].value
-                
-                if not cell_name:
-                    continue
-                
-                product = None
-                
-                # 1. Tratar de buscar por ID
-                if cell_id and len(str(cell_id)) > 30: 
-                    try:
-                        product = Product.objects.get(id=str(cell_id))
-                    except Product.DoesNotExist:
-                        pass
-                
-                # 2. Si no, buscar por nombre
-                if not product and cell_name:
-                    product = Product.objects.filter(name__iexact=str(cell_name)).first()
+            for idx, row in enumerate(rows[1:], start=2):
+                # Mapeo basado en imagen del usuario y descripción:
+                # 0: Id
+                # 1: Código del Producto (sku)
+                # 2: Código de Barras (nuevo)
+                # 3: Descripcion (nombre)
+                # 4: Linea -> Category
+                # 5: Categoria -> SubCategory? (usaremos lógica simple)
+                # 8: Totales Existentes (Stock)
+                # 9: Precio1 (Price)
+                # 14: Costo Actual (cost_price)
+                # 15: Costo ultima compra (last_purchase_cost)
+                # 17: IVA (tax_rate) - Asumiendo formato "15%" o "0.15"
+                # 18: Cuenta Contable (Ventas?) -> accounting_sales_account
+                # 19: Cuenta Contable (Costos?) -> accounting_cost_account
+                # 20: Cuenta Contable Inventarios -> accounting_inventory_account
+
+                try:
+                    # Safe cell reading
+                    def get_val(idx):
+                        try:
+                            return row[idx].value
+                        except IndexError:
+                            return None
+
+                    cell_id = get_val(0)
+                    cell_code = get_val(1)
+                    cell_barcode = get_val(2)
+                    cell_name = get_val(3)
+                    cell_linea = get_val(4) or ''
+                    cell_categoria = get_val(5) or ''
+                    cell_subgrupo = get_val(7) or ''
+                    cell_medida = get_val(8) or 'Unidad'
                     
-                if product:
-                    # ACTUALIZAR (Sumar Stock)
-                    try:
-                        if cell_stock is not None and str(cell_stock).lower() != 'n/a':
-                             try:
-                                qty_to_add = int(cell_stock)
-                                product.track_stock = True
-                                product.stock_quantity += qty_to_add # SUMAR stock
-                             except ValueError:
-                                pass
-                        
-                        # Actualizar precio si es diferente (opcional, usuario pidió sumar stock pero precio usually overrides)
-                        if cell_price is not None:
-                            try:
-                                product.price = float(cell_price)
-                            except ValueError:
-                                pass
-                        
-                        product.save()
-                        count_updated += 1
-                    except Exception as e:
-                        print(f"Error updating {cell_name}: {e}")
-                
-                else:
-                    # CREAR PRODUCTO
-                    try:
-                        category = default_category
-                        if cell_category_name:
-                            category = Category.objects.filter(name__iexact=str(cell_category_name)).first() or default_category
+                    cell_stock = get_val(9)
+                    cell_price = get_val(10)
+                    
+                    cell_cost = get_val(15)
+                    cell_last_cost = get_val(16)
+                    cell_tax = get_val(18)
+                    
+                    acc_sales = get_val(19) or ''
+                    acc_cost = get_val(20) or ''
+                    acc_inv = get_val(21) or ''
 
-                        new_stock = 0
-                        track_stock = False
-                        if cell_stock is not None and str(cell_stock).lower() != 'n/a':
-                             try:
-                                new_stock = int(cell_stock)
-                                track_stock = True
-                             except ValueError:
-                                pass
-                        
-                        new_price = 0
-                        if cell_price is not None:
-                             try:
-                                new_price = float(cell_price)
-                             except ValueError:
-                                pass
+                    if not cell_name:
+                        continue
+                    
+                    # 1. CATEGORÍA
+                    # Usamos 'Linea' como categoría principal si existe, sino 'Importados'
+                    category = default_category
+                    if cell_linea:
+                        category_slug = str(cell_linea).lower().strip().replace(' ', '-')[:90]
+                        category, _ = Category.objects.get_or_create(
+                            name=str(cell_linea).strip(),
+                            defaults={'slug': category_slug}
+                        )
 
-                        base_slug = str(cell_name).lower().replace(' ', '-').replace('/', '-')
+                    # 2. MATCH PRODUCT
+                    product = None
+                    
+                    # Search by Barcode first (if exists)
+                    if cell_barcode:
+                        product = Product.objects.filter(barcode=str(cell_barcode)).first()
+                    
+                    # Search by Code (SKU)
+                    if not product and cell_code:
+                        product = Product.objects.filter(code=str(cell_code)).first()
+
+                    # Search by Name (last resort)
+                    if not product and cell_name:
+                        product = Product.objects.filter(name__iexact=str(cell_name)).first()
+                    
+                    # 3. PREPARE DATA
+                    
+                    # Precio
+                    price_val = 0
+                    if cell_price is not None:
+                        try:
+                            price_val = float(str(cell_price).replace(',', '.'))
+                        except ValueError:
+                            pass
+                            
+                    # Costos
+                    cost_val = 0
+                    if cell_cost is not None:
+                        try:
+                            cost_val = float(str(cell_cost).replace(',', '.'))
+                        except ValueError:
+                            pass
+                    
+                    last_cost_val = 0
+                    if cell_last_cost is not None:
+                         try:
+                            last_cost_val = float(str(cell_last_cost).replace(',', '.'))
+                         except ValueError:
+                            pass
+
+                    # Tax (IVA)
+                    tax_val = 0
+                    if cell_tax is not None:
+                        try:
+                            # Puede venir como "15%" o 0.15
+                            val_str = str(cell_tax).replace('%', '').replace(',', '.')
+                            tax_val = float(val_str)
+                            # Si es > 1 (ej 15), es porcentaje literal. Si es < 1 (0.15), es decimal.
+                            if tax_val > 1: # es 12 o 15
+                                pass # se guarda como 15.00
+                            elif 0 < tax_val < 1:
+                                tax_val = tax_val * 100
+                        except ValueError:
+                            pass
+
+                    # Stock
+                    stock_val = 0
+                    has_stock = False
+                    if cell_stock is not None and str(cell_stock).lower() != 'n/a':
+                         try:
+                            stock_val = int(float(str(cell_stock).replace(',', '.')))
+                            has_stock = True # Even if 0, we track it
+                         except ValueError:
+                            pass
+
+                    # 4. CREATE OR UPDATE
+                    is_new = False
+                    if not product:
+                        is_new = True
+                        base_slug = str(cell_name).lower().replace(' ', '-').replace('/', '-')[:150]
                         import uuid
                         unique_slug = f"{base_slug}-{uuid.uuid4().hex[:6]}"
-
-                        Product.objects.create(
-                            name=str(cell_name),
+                        
+                        product = Product(
                             slug=unique_slug,
-                            description="Importado desde Excel",
-                            category=category,
-                            price=new_price,
-                            track_stock=track_stock,
-                            stock_quantity=new_stock,
                             is_active=True,
                             is_available=True
                         )
+                    
+                    # Update fields
+                    product.name = str(cell_name)[:200]
+                    product.category = category
+                    product.price = price_val
+                    
+                    if cell_code:
+                        product.code = str(cell_code)[:50]
+                    if cell_barcode:
+                        product.barcode = str(cell_barcode)[:100]
+                        
+                    product.cost_price = cost_val
+                    product.last_purchase_cost = last_cost_val
+                    product.tax_rate = tax_val
+                    
+                    product.accounting_sales_account = str(acc_sales)[:50]
+                    product.accounting_cost_account = str(acc_cost)[:50]
+                    product.accounting_inventory_account = str(acc_inv)[:50]
+                    
+                    product.line = str(cell_linea)[:100]
+                    product.subgroup = str(cell_subgrupo)[:100]
+                    product.unit_measure = str(cell_medida)[:50]
+                    
+                    # Stock logic
+                    # User wants to UPDATE stock, likely replace or add? 
+                    # Usually imports are snapshots. Let's set it.
+                    if has_stock:
+                        product.track_stock = True
+                        product.stock_quantity = stock_val
+                        if stock_val > 0:
+                            product.is_available = True
+                    
+                    product.save()
+                    
+                    if is_new:
                         count_created += 1
-                    except Exception as e:
-                        print(f"Error creating {cell_name}: {e}")
+                    else:
+                        count_updated += 1
+
+                except Exception as row_error:
+                    print(f"Error procesando fila {row}: {row_error}")
+                    errors.append(f"Fila {idx}: {str(row_error)}")
+                    continue
                 
             return Response({
-                'message': f'Importación completada. {count_updated} actualizados (stock sumado), {count_created} creados.',
-                'stats': {'updated': count_updated, 'created': count_created}
+                'message': f'Importación completada. {count_updated} actualizados, {count_created} creados.',
+                'stats': {'updated': count_updated, 'created': count_created},
+                'errors': errors[:20] if errors else []
             })
             
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return Response({'error': f'Error procesando archivo: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)

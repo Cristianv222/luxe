@@ -349,6 +349,13 @@ class OrderItem(models.Model):
         verbose_name='Precio Unitario'
     )
     
+    unit_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name='Costo Unitario (Histórico)'
+    )
+    
     line_total = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -380,6 +387,10 @@ class OrderItem(models.Model):
             self.unit_price = self.product.price
             if self.size:
                 self.unit_price = self.size.get_final_price()
+        
+        # Guardar costo histórico si no existe
+        if not self.unit_cost:
+            self.unit_cost = self.product.cost_price
         
         # Calcular total de extras
         # Nota: esto requiere que la instancia ya tenga ID para acceder a m2m

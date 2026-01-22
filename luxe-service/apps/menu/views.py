@@ -139,7 +139,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     filterset_fields = ['category', 'is_active', 'is_available', 'is_featured', 'is_new']
-    search_fields = ['name', 'description', 'ingredients']
+    search_fields = ['name', 'description', 'ingredients', 'code', 'barcode']
     ordering_fields = ['display_order', 'name', 'price', 'created_at']
     ordering = ['category__display_order', 'display_order', 'name']
     lookup_field = 'pk'  # ← CAMBIADO de 'slug' a 'pk'

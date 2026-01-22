@@ -380,6 +380,7 @@ class OrderCreateSerializer(serializers.Serializer):
                 product=product,
                 size=size,
                 quantity=item_data['quantity'],
+                unit_cost=product.cost_price,  # Guardar costo histórico para reporte de ganancias
                 notes=item_data.get('notes', '')
             )
             

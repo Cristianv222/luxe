@@ -142,6 +142,25 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    # --- Nuevos Campos para Importación Excel / ERP ---
+    barcode = models.CharField(max_length=100, unique=True, blank=True, null=True, verbose_name='Código de Barras')
+    
+    # Costos e Impuestos
+    cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Costo Actual')
+    last_purchase_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Costo Última Compra')
+    tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0, verbose_name='IVA %')
+    
+    # Gestión
+    unit_measure = models.CharField(max_length=50, default='Unidad', verbose_name='Unidad de Medida')
+    line = models.CharField(max_length=100, blank=True, verbose_name='Línea')
+    subgroup = models.CharField(max_length=100, blank=True, verbose_name='Subgrupo')
+    
+    # Contabilidad
+    accounting_sales_account = models.CharField(max_length=50, blank=True, verbose_name='Cuenta Ventas (Ingreso)')
+    accounting_cost_account = models.CharField(max_length=50, blank=True, verbose_name='Cuenta Costos (Venta)')
+    accounting_inventory_account = models.CharField(max_length=50, blank=True, verbose_name='Cuenta Inventario (Activo)')
+    # ------------------------------------------------
+    
     class Meta:
         verbose_name = 'Producto'
         verbose_name_plural = 'Productos'

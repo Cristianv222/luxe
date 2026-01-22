@@ -58,11 +58,13 @@ class ProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id', 'category', 'category_name', 'name', 'slug', 'code',
-            'description', 'image', 'price', 'calories',
+            'id', 'category', 'category_name', 'name', 'slug', 'code', 'barcode',
+            'description', 'image', 'price', 'cost_price', 'tax_rate', 'calories',
             'is_active', 'is_available', 'is_featured', 'is_new',
             'prep_time', 'display_order', 'has_sizes', 'has_extras',
-            'track_stock', 'stock_quantity', 'min_stock_alert'
+            'track_stock', 'stock_quantity', 'min_stock_alert',
+            'line', 'subgroup', 'unit_measure',
+            'accounting_sales_account', 'accounting_cost_account', 'accounting_inventory_account'
         ]
         read_only_fields = ['id']
     
@@ -85,11 +87,14 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id', 'category', 'name', 'slug', 'code', 'description',
-            'image', 'price', 'calories', 'ingredients', 'allergens',
+            'id', 'category', 'name', 'slug', 'code', 'barcode', 'description',
+            'image', 'price', 'cost_price', 'last_purchase_cost', 'tax_rate', 'calories',
+            'ingredients', 'allergens',
             'is_active', 'is_available', 'is_featured', 'is_new',
             'prep_time', 'display_order', 'sizes', 'extras',
             'track_stock', 'stock_quantity', 'min_stock_alert',
+            'unit_measure', 'line', 'subgroup',
+            'accounting_sales_account', 'accounting_cost_account', 'accounting_inventory_account',
             'is_available_now', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -104,12 +109,27 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'category', 'name', 'slug', 'code', 'description', 'image',
-            'price', 'calories', 'ingredients', 'allergens',
+            'category', 'name', 'slug', 'code', 'barcode', 'description', 'image',
+            'price', 'cost_price', 'last_purchase_cost', 'tax_rate', 
+            'calories', 'ingredients', 'allergens',
             'is_active', 'is_available', 'is_featured', 'is_new',
             'prep_time', 'display_order',
-            'track_stock', 'stock_quantity', 'min_stock_alert'
+            'track_stock', 'stock_quantity', 'min_stock_alert',
+            'unit_measure', 'line', 'subgroup',
+            'accounting_sales_account', 'accounting_cost_account', 'accounting_inventory_account'
         ]
+    
+    def validate_code(self, value):
+        """Convierte string vacío a None para respetar unique=True"""
+        if value == '':
+            return None
+        return value
+
+    def validate_barcode(self, value):
+        """Convierte string vacío a None para respetar unique=True"""
+        if value == '':
+            return None
+        return value
     
     def validate_price(self, value):
         """Valida que el precio sea positivo"""
