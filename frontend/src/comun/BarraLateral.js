@@ -22,10 +22,16 @@ const BarraLateral = () => {
     };
 
     const menuItems = [
-        { path: '/luxe', icon: 'bi-house-door', label: 'Inicio' },
-        { path: '/users', icon: 'bi-people', label: 'Usuarios' },
+        { path: '/luxe', icon: 'bi-grid', label: 'Inicio' },
+        { path: '/luxe/pos', icon: 'bi-shop', label: 'Punto de Venta' },
+        { path: '/luxe/orders', icon: 'bi-receipt', label: 'Órdenes' },
+        { path: '/luxe/inventory', icon: 'bi-box-seam', label: 'Inventario' },
+        { path: '/luxe/customers', icon: 'bi-people-fill', label: 'Clientes' },
+        { path: '/luxe/reports', icon: 'bi-graph-up', label: 'Reportes' },
         { path: '/luxe/loyalty-config', icon: 'bi-gear', label: 'Config. Puntos' },
         { path: '/luxe/loyalty-management', icon: 'bi-star', label: 'Gestión Puntos' },
+        { path: '/luxe/whatsapp-config', icon: 'bi-whatsapp', label: 'WhatsApp' },
+        { path: '/users', icon: 'bi-people', label: 'Usuarios del Sistema' },
     ];
 
     return (

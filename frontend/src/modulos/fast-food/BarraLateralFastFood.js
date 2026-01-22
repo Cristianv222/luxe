@@ -53,6 +53,12 @@ const BarraLateralLuxe = () => {
                         Clientes
                     </Link>
                 </li>
+                <li className={isActive('/luxe/reports')}>
+                    <Link to="/luxe/reports">
+                        <i className="bi bi-graph-up" style={{ marginRight: '10px' }}></i>
+                        Reportes
+                    </Link>
+                </li>
                 <li className={isActive('/luxe/shift')}>
                     <Link to="/luxe/shift">
                         <i className="bi bi-cash-coin" style={{ marginRight: '10px' }}></i>
@@ -75,6 +81,12 @@ const BarraLateralLuxe = () => {
                     <Link to="/luxe/loyalty-management">
                         <i className="bi bi-star" style={{ marginRight: '10px' }}></i>
                         Gestión Puntos
+                    </Link>
+                </li>
+                <li className={isActive('/luxe/whatsapp-config')}>
+                    <Link to="/luxe/whatsapp-config">
+                        <i className="bi bi-whatsapp" style={{ marginRight: '10px' }}></i>
+                        WhatsApp
                     </Link>
                 </li>
             </ul>

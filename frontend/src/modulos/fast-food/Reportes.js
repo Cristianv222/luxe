@@ -248,9 +248,9 @@ const Reportes = () => {
     };
 
     // Obtener la lista de reportes recientes
-    const fetchReports = useCallback(async () => {
+    const fetchReports = useCallback(async (isBackground = false) => {
         try {
-            setLoadingData(true);
+            if (!isBackground) setLoadingData(true);
             setConnectionError(false);
             setError('');
             setNoReportMessage('');
@@ -342,7 +342,7 @@ const Reportes = () => {
             // throw new Error('Error al cargar reportes listados.'); 
             return []; // Retornar vacío para no romper inicialización
         } finally {
-            setLoadingData(false);
+            if (!isBackground) setLoadingData(false);
         }
     }, []);
     // ========== NUEVA FUNCIÓN PARA VER DETALLE DEL REPORTE ==========
@@ -752,7 +752,7 @@ const Reportes = () => {
             console.log('Actualizando datos en tiempo real...');
             checkCurrentShift().catch(e => console.warn('Shift poll error', e));
             fetchDashboardStats().catch(e => console.warn('Dashboard poll error', e)); // Actualizar tarjetas superiores
-            fetchReports().catch(e => console.warn('Reports poll error', e));        // Actualizar lista lateral
+            fetchReports(true).catch(e => console.warn('Reports poll error', e));        // Actualizar lista lateral
             refreshCurrentData().catch(e => console.warn('Data poll error', e));  // Actualizar detalle central
         }, 5000); // 5 segundos para mejor sensación de tiempo real
 
