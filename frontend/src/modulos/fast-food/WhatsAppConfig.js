@@ -20,6 +20,9 @@ const WhatsAppConfig = () => {
     const [editingId, setEditingId] = useState(null);
     const [messageHistory, setMessageHistory] = useState([]);
     const [message, setMessage] = useState({ type: '', text: '' });
+    const [testMessage, setTestMessage] = useState('');
+    const [sendingTest, setSendingTest] = useState(false);
+    const [activeTab, setActiveTab] = useState('connection');
 
     const fetchSettings = useCallback(async () => {
         try {
@@ -41,10 +44,10 @@ const WhatsAppConfig = () => {
 
     const fetchHistory = useCallback(async () => {
         try {
-            const response = await api.get('/api/automation/history/', {
-                baseURL: process.env.REACT_APP_API_BASE_URL
+            // Updated to use luxe-service history endpoint which includes test messages
+            const response = await api.get('/api/integrations/whatsapp/history/', {
+                baseURL: process.env.REACT_APP_LUXE_SERVICE
             });
-            // Handle pagination if API is paginated
             const data = response.data.results ? response.data.results : (Array.isArray(response.data) ? response.data : []);
             setMessageHistory(data);
         } catch (error) {
@@ -72,7 +75,7 @@ const WhatsAppConfig = () => {
         checkStatus();
         fetchHistory();
 
-        const timer = setInterval(checkStatus, 10000);
+        const timer = setInterval(checkStatus, 15000);
         return () => clearInterval(timer);
     }, [fetchSettings, checkStatus, fetchHistory]);
 
@@ -90,6 +93,7 @@ const WhatsAppConfig = () => {
             }
             setShowSuccessModal(true);
             fetchSettings();
+            setMessage({ type: 'success', text: '✅ Configuración guardada correctamente' });
         } catch (error) {
             setMessage({ type: 'error', text: '❌ Error al guardar la configuración' });
         }
@@ -99,6 +103,7 @@ const WhatsAppConfig = () => {
     const handleEditConfig = (config) => {
         setSettings(config);
         setEditingId(config.id);
+        setActiveTab('settings');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -170,6 +175,7 @@ const WhatsAppConfig = () => {
                         setShowModal(false);
                         clearInterval(pollQr);
                         setMessage({ type: 'success', text: '✅ ¡Conectado!' });
+                        fetchHistory();
                     }
 
                     if (attempts >= maxAttempts) {
@@ -215,29 +221,43 @@ const WhatsAppConfig = () => {
 
     const handleTestMessage = async () => {
         if (!testPhone) {
-            setMessage({ type: 'error', text: '❌ Ingresa un número' });
+            setMessage({ type: 'error', text: '❌ Ingresa un número de teléfono' });
             return;
         }
-        setLoading(true);
+        if (!testMessage.trim()) {
+            setMessage({ type: 'error', text: '❌ Escribe un mensaje para enviar' });
+            return;
+        }
+        if (connectionStatus !== 'connected') {
+            setMessage({ type: 'error', text: '❌ WhatsApp no está conectado. Vincula tu dispositivo primero.' });
+            return;
+        }
+
+        setSendingTest(true);
+        setMessage({ type: 'info', text: '📤 Enviando mensaje...' });
+
         try {
             await api.post('/api/integrations/whatsapp/test-message/', {
                 phone: testPhone,
-                message: '🧪 *Luxe*: ¡Conexión exitosa! 🎉'
+                message: testMessage
             }, {
                 baseURL: process.env.REACT_APP_LUXE_SERVICE
             });
-            setMessage({ type: 'success', text: `✅ Mensaje enviado` });
+            setMessage({ type: 'success', text: `✅ ¡Mensaje enviado a ${testPhone}!` });
+            setTestMessage('');
+            fetchHistory();
         } catch (error) {
-            setMessage({ type: 'error', text: '❌ Error al enviar' });
+            const errorMsg = error.response?.data?.error || 'Error al enviar';
+            setMessage({ type: 'error', text: `❌ ${errorMsg}` });
         }
-        setLoading(false);
+        setSendingTest(false);
     };
 
     const getStatusHeader = () => {
         switch (connectionStatus) {
             case 'connected': return { label: 'Conectado', color: 'connected' };
             case 'disconnected': return { label: 'Desconectado', color: 'disconnected' };
-            case 'offline': return { label: 'Offline', color: 'offline' };
+            case 'offline': return { label: 'Sin Servicio', color: 'offline' };
             default: return { label: 'Verificando...', color: 'checking' };
         }
     };
@@ -245,145 +265,318 @@ const WhatsAppConfig = () => {
     const statusInfo = getStatusHeader();
 
     return (
-        <div className="whatsapp-config-container">
-            <div className="whatsapp-header">
-                <div className="header-icon"><i className="bi bi-whatsapp"></i></div>
-                <div>
-                    <h1>Centro de WhatsApp</h1>
-                    <p>Gestión de automatización</p>
+        <div className="whatsapp-config-wrapper">
+            <div className="compact-header-row">
+                <div className="title-group">
+                    <i className="bi bi-whatsapp"></i>
+                    <div>
+                        <h1>WhatsApp Automation</h1>
+                        <p className="subtitle">Gestión de Mensajería & Automatización</p>
+                    </div>
+                </div>
+                <div className={`status-indicator-pill ${statusInfo.color}`}>
+                    <span className="dot"></span>
+                    {statusInfo.label}
                 </div>
             </div>
 
-            {message.text && <div className={`alert alert-${message.type}`}>{message.text}</div>}
-
-            <div className="config-card">
-                <div className="card-header">
-                    <h3>Conectividad</h3>
-                    <span className={`status-badge ${statusInfo.color}`}>{statusInfo.label}</span>
+            {message.text && (
+                <div className={`boutique-alert alert-${message.type}`}>
+                    <i className={`bi bi-${message.type === 'error' ? 'exclamation-circle' : 'check-circle'}`}></i>
+                    {message.text}
+                    <button onClick={() => setMessage({ text: '', type: '' })}>&times;</button>
                 </div>
-                <div className="card-body">
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                        <button className="btn btn-primary" onClick={handleStartSession} disabled={loading || connectionStatus === 'connected'}>
-                            {connectionStatus === 'connected' ? 'Sesión Activa' : 'Vincular Dispositivo'}
-                        </button>
-                        <button className="btn btn-secondary" onClick={checkStatus} disabled={loading}>Actualizar</button>
-                        {connectionStatus === 'connected' && (
-                            <button className="btn btn-error" onClick={handleLogout} disabled={loading} style={{ background: '#ff4d4f', color: 'white' }}>
-                                Cerrar Sesión
-                            </button>
-                        )}
-                    </div>
+            )}
+
+            <div className="boutique-tabs-container">
+                <div className="tabs-header">
+                    <button
+                        className={`tab-item ${activeTab === 'connection' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('connection')}
+                    >
+                        <i className="bi bi-link-45deg"></i> Conexión
+                    </button>
+                    <button
+                        className={`tab-item ${activeTab === 'settings' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('settings')}
+                    >
+                        <i className="bi bi-gear"></i> Configuración
+                    </button>
+                    <button
+                        className={`tab-item ${activeTab === 'history' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('history')}
+                    >
+                        <i className="bi bi-clock-history"></i> Historial
+                    </button>
+                </div>
+
+                <div className="tab-content">
+                    {activeTab === 'connection' && (
+                        <div className="tab-pane animate-fade-in">
+                            <div className="boutique-grid">
+                                <div className="grid-main">
+                                    <div className="info-card">
+                                        <h3>Estado del Servicio</h3>
+                                        <p>Para enviar mensajes, tu cuenta de WhatsApp debe estar vinculada mediante el código QR.</p>
+                                        <div className="action-row">
+                                            {connectionStatus !== 'connected' ? (
+                                                <button className="btn-boutique primary" onClick={handleStartSession} disabled={loading}>
+                                                    {loading ? 'Preparando...' : 'Vincular WhatsApp'}
+                                                </button>
+                                            ) : (
+                                                <button className="btn-boutique danger" onClick={handleLogout} disabled={loading}>
+                                                    Desconectar Sesión
+                                                </button>
+                                            )}
+                                            <button className="btn-boutique secondary" onClick={checkStatus}>
+                                                <i className="bi bi-arrow-repeat"></i> Actualizar
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="info-card">
+                                        <h3>Enviar Mensaje Directo</h3>
+                                        <div className="test-form">
+                                            <div className="input-group">
+                                                <label>Número de Teléfono</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Ej: 0991234567"
+                                                    value={testPhone}
+                                                    onChange={e => setTestPhone(e.target.value)}
+                                                    disabled={connectionStatus !== 'connected'}
+                                                />
+                                            </div>
+                                            <div className="input-group">
+                                                <label>Mensaje Personalizado</label>
+                                                <textarea
+                                                    placeholder="Escribe el mensaje..."
+                                                    rows={4}
+                                                    value={testMessage}
+                                                    onChange={e => setTestMessage(e.target.value)}
+                                                    disabled={connectionStatus !== 'connected'}
+                                                />
+                                            </div>
+                                            <button
+                                                className="btn-boutique accent"
+                                                onClick={handleTestMessage}
+                                                disabled={sendingTest || connectionStatus !== 'connected'}
+                                            >
+                                                {sendingTest ? 'Enviando...' : <><i className="bi bi-send"></i> Enviar Ahora</>}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="grid-side">
+                                    <div className="status-overview">
+                                        <div className="session-info">
+                                            <span>Sesión Activa:</span>
+                                            <strong>{settings.session_name || 'Ninguna'}</strong>
+                                        </div>
+                                        <div className="session-info">
+                                            <span>Última Sincronización:</span>
+                                            <strong>{new Date().toLocaleTimeString()}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'settings' && (
+                        <div className="tab-pane animate-fade-in">
+                            <div className="settings-container">
+                                <div className="card-header-compact">
+                                    <h3>Configuración de Automatización</h3>
+                                    <div className="header-actions">
+                                        {editingId && <button className="btn-text" onClick={() => {
+                                            setEditingId(null);
+                                            setSettings({ is_active: true, schedule_time: '09:00', session_name: 'luxe_session', phone_number_sender: '', birthday_message_template: '' });
+                                        }}>+ Nueva Config</button>}
+                                    </div>
+                                </div>
+                                <div className="boutique-form-grid">
+                                    <div className="form-column">
+                                        <div className="input-group checkbox-group">
+                                            <input
+                                                type="checkbox"
+                                                id="is_active"
+                                                checked={settings.is_active}
+                                                onChange={e => setSettings({ ...settings, is_active: e.target.checked })}
+                                            />
+                                            <label htmlFor="is_active">Activar Envío Automático de Cumpleaños</label>
+                                        </div>
+                                        <div className="input-group">
+                                            <label>Hora de Ejecución Diaria</label>
+                                            <input
+                                                type="time"
+                                                value={settings.schedule_time}
+                                                onChange={e => setSettings({ ...settings, schedule_time: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="input-group">
+                                            <label>Nombre de la Sesión</label>
+                                            <input
+                                                type="text"
+                                                value={settings.session_name}
+                                                onChange={e => setSettings({ ...settings, session_name: e.target.value })}
+                                                placeholder="luxe_session"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="form-column">
+                                        <div className="input-group">
+                                            <label>Plantilla de Mensaje (Cumpleaños)</label>
+                                            <textarea
+                                                rows={8}
+                                                value={settings.birthday_message_template}
+                                                onChange={e => setSettings({ ...settings, birthday_message_template: e.target.value })}
+                                                placeholder="¡Feliz cumpleaños {first_name}!..."
+                                            />
+                                            <small className="hint">Usa {"{first_name}"} para el nombre del cliente.</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="form-footer">
+                                    <button className="btn-boutique primary wide" onClick={handleSaveSettings} disabled={loading}>
+                                        {loading ? 'Guardando...' : (editingId ? 'Actualizar Configuración' : 'Crear Configuración')}
+                                    </button>
+                                </div>
+
+                                <div className="configs-list-section">
+                                    <h4>Configuraciones Guardadas</h4>
+                                    <div className="mini-table-wrapper">
+                                        <table className="boutique-table mini">
+                                            <thead>
+                                                <tr>
+                                                    <th>Sesión</th>
+                                                    <th>Hora</th>
+                                                    <th>Estado</th>
+                                                    <th>Opciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {savedConfigs.map(config => (
+                                                    <tr key={config.id} className={editingId === config.id ? 'active-row' : ''}>
+                                                        <td>{config.session_name}</td>
+                                                        <td>{config.schedule_time}</td>
+                                                        <td>
+                                                            <span className={`mini-badge ${config.is_active ? 'success' : 'neutral'}`}>
+                                                                {config.is_active ? 'Activo' : 'Inactivo'}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <div className="table-actions">
+                                                                <button onClick={() => handleEditConfig(config)} title="Editar"><i className="bi bi-pencil"></i></button>
+                                                                <button onClick={() => handleDeleteConfig(config.id)} title="Eliminar" className="text-danger"><i className="bi bi-trash"></i></button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'history' && (
+                        <div className="tab-pane animate-fade-in">
+                            <div className="history-full-card">
+                                <div className="card-header-compact">
+                                    <h3>Historial de Comunicaciones</h3>
+                                    <button className="btn-icon" onClick={fetchHistory} title="Refrescar"><i className="bi bi-arrow-clockwise"></i></button>
+                                </div>
+                                <div className="boutique-table-wrapper">
+                                    <table className="boutique-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Fecha & Hora</th>
+                                                <th>Destinatario</th>
+                                                <th>Tipo</th>
+                                                <th>Estado</th>
+                                                <th>Mensaje</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {messageHistory.length === 0 ? (
+                                                <tr><td colSpan="5" className="empty-state">No hay mensajes registrados aún.</td></tr>
+                                            ) : (
+                                                messageHistory.map((item, idx) => (
+                                                    <tr key={item.id || idx}>
+                                                        <td className="time-td">{new Date(item.sent_at).toLocaleString()}</td>
+                                                        <td>
+                                                            <div className="customer-info">
+                                                                <strong>{item.customer_name || 'Desconocido'}</strong>
+                                                                <span>{item.phone}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <span className={`type-tag ${item.message_type}`}>
+                                                                {item.message_type_display || item.message_type}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <span className={`status-tag ${item.status}`}>
+                                                                {item.status_display || (item.status === 'sent' ? 'Enviado' : 'Fallido')}
+                                                            </span>
+                                                        </td>
+                                                        <td className="message-td">
+                                                            <div className="message-bubble-preview" title={item.message}>
+                                                                {item.message}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
             {showModal && (
-                <div className="modal-overlay" onClick={handleCloseModal}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <button className="modal-close" onClick={handleCloseModal}>&times;</button>
-                        <h2>Vincular WhatsApp</h2>
-                        {qrCode ? (
-                            <div className="qr-container">
-                                <img src={qrCode} alt="QR" className="qr-code-image" />
-                            </div>
-                        ) : (
-                            <div style={{ padding: '2rem', textAlign: 'center' }}>
-                                <div className="spinner-border text-success"></div>
-                                <p>Generando QR...</p>
-                            </div>
-                        )}
+                <div className="boutique-modal-overlay">
+                    <div className="boutique-modal animate-pop">
+                        <div className="modal-top">
+                            <h2>Vincular WhatsApp</h2>
+                            <button className="close-btn" onClick={handleCloseModal}>&times;</button>
+                        </div>
+                        <div className="modal-middle">
+                            {qrCode ? (
+                                <div className="qr-wrapper">
+                                    <img src={qrCode} alt="WhatsApp QR Code" />
+                                    <p>Escanea el código desde tu aplicación de WhatsApp</p>
+                                </div>
+                            ) : (
+                                <div className="loading-qr">
+                                    <div className="boutique-spinner"></div>
+                                    <p>Generando código QR...</p>
+                                    <p className="subtext">Esto puede tardar unos segundos</p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="modal-bottom">
+                            <button className="btn-boutique secondary wide" onClick={handleCloseModal}>Cancelar</button>
+                        </div>
                     </div>
                 </div>
             )}
 
             {showSuccessModal && (
-                <div className="modal-overlay" onClick={() => setShowSuccessModal(false)}>
-                    <div className="modal-content success-modal" onClick={e => e.stopPropagation()}>
-                        <div className="success-icon"><i className="bi bi-check-circle-fill"></i></div>
-                        <h2>¡Configuración Guardada!</h2>
-                        <button className="btn btn-primary" onClick={() => setShowSuccessModal(false)}>Aceptar</button>
+                <div className="boutique-modal-overlay">
+                    <div className="boutique-modal success animate-pop">
+                        <div className="success-icon"><i className="bi bi-check2-circle"></i></div>
+                        <h2>¡Cambios Guardados!</h2>
+                        <p>La configuración de WhatsApp se ha actualizado con éxito.</p>
+                        <button className="btn-boutique primary wide" onClick={() => setShowSuccessModal(false)}>Entendido</button>
                     </div>
                 </div>
             )}
-
-            <div className="config-card">
-                <div className="card-header">
-                    <h3>{editingId ? 'Editar Configuración' : 'Nueva Configuración'}</h3>
-                    {editingId && <button className="btn btn-link" onClick={() => {
-                        setEditingId(null);
-                        setSettings({ is_active: true, schedule_time: '09:00', session_name: 'luxe_session', phone_number_sender: '', birthday_message_template: '' });
-                    }}>Nueva</button>}
-                </div>
-                <div className="card-body">
-                    <div className="settings-form">
-                        <label><input type="checkbox" checked={settings.is_active} onChange={e => setSettings({ ...settings, is_active: e.target.checked })} /> Activar automático</label>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-                            <input type="time" value={settings.schedule_time} onChange={e => setSettings({ ...settings, schedule_time: e.target.value })} className="form-input" />
-                            <input type="text" value={settings.session_name} onChange={e => setSettings({ ...settings, session_name: e.target.value })} className="form-input" placeholder="Nombre Sesión" />
-                        </div>
-                        <textarea value={settings.birthday_message_template} onChange={e => setSettings({ ...settings, birthday_message_template: e.target.value })} className="form-textarea" rows={4} placeholder="Mensaje..." style={{ marginTop: '1rem' }} />
-                        <button className="btn btn-primary" onClick={handleSaveSettings} disabled={loading} style={{ width: '100%', marginTop: '1rem' }}>
-                            {editingId ? 'Guardar Cambios' : 'Crear'}
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div className="config-card">
-                <div className="card-header"><h3>Listado de Configuraciones</h3></div>
-                <div className="card-body">
-                    <table className="config-table" style={{ width: '100%' }}>
-                        <thead><tr><th>Sesión</th><th>Hora</th><th>Estado</th><th>Acciones</th></tr></thead>
-                        <tbody>
-                            {savedConfigs.map(config => (
-                                <tr key={config.id}>
-                                    <td>{config.session_name}</td>
-                                    <td>{config.schedule_time}</td>
-                                    <td>{config.is_active ? 'Activo' : 'Inactivo'}</td>
-                                    <td>
-                                        <button onClick={() => handleEditConfig(config)} className="btn btn-sm btn-secondary">Editar</button>
-                                        <button onClick={() => handleDeleteConfig(config.id)} className="btn btn-sm btn-error">Eliminar</button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div className="config-card">
-                <div className="card-header">
-                    <h3><i className="bi bi-clock-history"></i> Historial de Mensajes Enviados</h3>
-                    <button className="btn btn-secondary btn-sm" onClick={fetchHistory}><i className="bi bi-arrow-repeat"></i></button>
-                </div>
-                <div className="card-body">
-                    <div className="table-responsive">
-                        <table className="config-table" style={{ width: '100%' }}>
-                            <thead>
-                                <tr>
-                                    <th>Fecha/Hora</th>
-                                    <th>Cliente</th>
-                                    <th>Teléfono</th>
-                                    <th>Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {messageHistory.length === 0 ? (
-                                    <tr><td colSpan="4" className="no-data">No hay envíos registrados.</td></tr>
-                                ) : (
-                                    messageHistory.map((item, idx) => (
-                                        <tr key={idx}>
-                                            <td>{new Date(item.sent_at).toLocaleString()}</td>
-                                            <td>{item.customer_name}</td>
-                                            <td>{item.phone}</td>
-                                            <td><span className="badge badge-success">{item.status}</span></td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
         </div>
     );
 };

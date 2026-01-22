@@ -38,3 +38,36 @@ class WhatsAppSettings(models.Model):
 
     def __str__(self):
         return f"Configuración (Activa: {self.is_active}) - Hora: {self.schedule_time}"
+
+
+class MessageHistory(models.Model):
+    """
+    Tracks all WhatsApp messages sent through the system.
+    """
+    MESSAGE_TYPES = [
+        ('test', 'Mensaje de Prueba'),
+        ('birthday', 'Cumpleaños'),
+        ('promo', 'Promoción'),
+        ('manual', 'Manual'),
+    ]
+    STATUS_CHOICES = [
+        ('sent', 'Enviado'),
+        ('failed', 'Fallido'),
+        ('pending', 'Pendiente'),
+    ]
+    
+    phone = models.CharField(max_length=20, verbose_name="Teléfono")
+    message = models.TextField(verbose_name="Mensaje")
+    message_type = models.CharField(max_length=20, choices=MESSAGE_TYPES, default='manual')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='sent')
+    customer_name = models.CharField(max_length=100, blank=True, null=True, verbose_name="Nombre Cliente")
+    sent_at = models.DateTimeField(default=timezone.now, verbose_name="Fecha de Envío")
+    error_message = models.TextField(blank=True, null=True, verbose_name="Error (si hubo)")
+    
+    class Meta:
+        verbose_name = "Historial de Mensaje"
+        verbose_name_plural = "Historial de Mensajes"
+        ordering = ['-sent_at']
+    
+    def __str__(self):
+        return f"{self.phone} - {self.message_type} - {self.sent_at.strftime('%Y-%m-%d %H:%M')}"

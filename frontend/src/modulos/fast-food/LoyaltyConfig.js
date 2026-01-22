@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { useNavigate } from 'react-router-dom';
+import './Loyalty.css';
 
 const LoyaltyConfig = () => {
     const [loading, setLoading] = useState(true);
-    const [programConfig, setProgramConfig] = useState(null);
     const [earningRules, setEarningRules] = useState([]);
     const [earningRuleTypes, setEarningRuleTypes] = useState([]);
     const [rewardRules, setRewardRules] = useState([]);
@@ -19,7 +18,7 @@ const LoyaltyConfig = () => {
     // Form Data
     const [earningForm, setEarningForm] = useState({
         name: '',
-        rule_type: null,
+        rule_type: '',
         min_order_value: 0,
         amount_step: 10,
         points_to_award: 1,
@@ -44,13 +43,14 @@ const LoyaltyConfig = () => {
     const loadData = async () => {
         try {
             setLoading(true);
-            const typesRes = await api.get('/api/loyalty/config/earning-rule-types/', { baseURL: '/api/luxe' });
+            const [typesRes, earningRes, rewardRes] = await Promise.all([
+                api.get('/api/loyalty/config/earning-rule-types/', { baseURL: '/api/luxe' }),
+                api.get('/api/loyalty/config/earning-rules/', { baseURL: '/api/luxe' }),
+                api.get('/api/loyalty/config/reward-rules/', { baseURL: '/api/luxe' })
+            ]);
+
             setEarningRuleTypes(typesRes.data.results || typesRes.data);
-
-            const earningRes = await api.get('/api/loyalty/config/earning-rules/', { baseURL: '/api/luxe' });
             setEarningRules(earningRes.data.results || earningRes.data);
-
-            const rewardRes = await api.get('/api/loyalty/config/reward-rules/', { baseURL: '/api/luxe' });
             setRewardRules(rewardRes.data.results || rewardRes.data);
         } catch (error) {
             console.error("Error loading loyalty config", error);
@@ -172,11 +172,11 @@ const LoyaltyConfig = () => {
     };
 
     const handleReprocess = async () => {
-        if (!window.confirm("¡ATENCIÓN! Esto ELIMINARÁ todos los puntos actuales por compras y los RECALCULARÁ desde cero basados en el historial de facturas. ¿Deseas continuar?")) return;
+        if (!window.confirm("¡ATENCIÓN! Esto ELIMINARÁ todos los puntos actuales y los RECALCULARÁ desde cero. ¿Deseas continuar?")) return;
         try {
             setLoading(true);
             const res = await api.post('/api/loyalty/config/earning-rules/reprocess_past_orders/', {}, { baseURL: '/api/luxe' });
-            alert(`Sincronización Exitosa:\n- Órdenes procesadas: ${res.data.orders_processed}\n- Cuentas actualizadas: ${res.data.accounts_updated}\n\nLos balances han sido reiniciados según las reglas actuales.`);
+            alert(`Sincronización Exitosa:\n- Órdenes procesadas: ${res.data.orders_processed}\n- Cuentas actualizadas: ${res.data.accounts_updated}`);
             loadData();
         } catch (error) {
             console.error("Error al reprocesar:", error);
@@ -186,288 +186,254 @@ const LoyaltyConfig = () => {
         }
     };
 
-    if (loading) return <div className="p-4">Cargando configuración...</div>;
+    if (loading) return (
+        <div className="loyalty-container">
+            <div className="boutique-spinner-container">
+                <div className="boutique-spinner"></div>
+                <p>Cargando configuración...</p>
+            </div>
+        </div>
+    );
 
     return (
-        <div className="page-container" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px', color: '#1e293b' }}>
-                Configuración del Sistema de Puntos
-            </h1>
+        <div className="loyalty-container">
+            <div className="compact-header-row">
+                <div className="title-group">
+                    <i className="bi bi-gear-fill"></i>
+                    <div>
+                        <h1>Configuración de Puntos</h1>
+                        <p className="subtitle">Reglas, condiciones y premios del sistema</p>
+                    </div>
+                </div>
+            </div>
 
-            {/* EARNING RULES SECTION */}
-            <section style={{ marginBottom: '40px', backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                    <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#334155' }}>Reglas de Obtención (Ganar Puntos)</h2>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <button
-                            onClick={handleReprocess}
-                            style={{ padding: '8px 16px', backgroundColor: '#8b5cf6', color: 'white', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
-                            title="Procesar órdenes pasadas para otorgar puntos retroactivamente"
-                        >
-                            Reprocesar Órdenes
+            <div className="boutique-card">
+                <div className="card-header-row">
+                    <h2><i className="bi bi-star-fill" style={{ color: '#EAB308' }}></i> Reglas de Obtención</h2>
+                    <div className="header-actions" style={{ display: 'flex', gap: '10px' }}>
+                        <button className="btn-boutique secondary" onClick={handleReprocess} title="Reprocesar historial">
+                            <i className="bi bi-arrow-repeat"></i> Reprocesar
                         </button>
-                        <button
-                            onClick={() => setShowTypeModal(true)}
-                            style={{ padding: '8px 16px', backgroundColor: '#64748b', color: 'white', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
-                        >
+                        <button className="btn-boutique outline" onClick={() => setShowTypeModal(true)}>
                             Gestionar Tipos
                         </button>
-                        <button
-                            onClick={openNewEarning}
-                            style={{ padding: '8px 16px', backgroundColor: '#0f172a', color: 'white', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
-                        >
-                            + Nueva Regla
+                        <button className="btn-boutique primary" onClick={openNewEarning}>
+                            <i className="bi bi-plus-lg"></i> Nueva Regla
                         </button>
                     </div>
                 </div>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0', color: '#64748b' }}>
-                            <th style={{ padding: '10px' }}>Nombre</th>
-                            <th style={{ padding: '10px' }}>Tipo</th>
-                            <th style={{ padding: '10px' }}>Detalle</th>
-                            <th style={{ padding: '10px' }}>Puntos a Dar</th>
-                            <th style={{ padding: '10px' }}>Estado</th>
-                            <th style={{ padding: '10px' }}>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {earningRules.map(rule => (
-                            <tr key={rule.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                <td style={{ padding: '10px', fontWeight: '500' }}>{rule.name}</td>
-                                <td style={{ padding: '10px' }}>{rule.rule_type_name || 'Sin Asignar'}</td>
-                                <td style={{ padding: '10px' }}>
-                                    {rule.amount_step > 0 && rule.amount_step != null
-                                        ? `Cada $${rule.amount_step} gastado`
-                                        : `Mínimo $${rule.min_order_value}`}
-                                </td>
-                                <td style={{ padding: '10px', color: '#16a34a', fontWeight: 'bold' }}>+{rule.points_to_award} pts</td>
-                                <td style={{ padding: '10px' }}>
-                                    <span style={{
-                                        padding: '4px 8px', borderRadius: '12px', fontSize: '12px',
-                                        backgroundColor: rule.is_active ? '#dcfce7' : '#f1f5f9',
-                                        color: rule.is_active ? '#166534' : '#64748b'
-                                    }}>
-                                        {rule.is_active ? 'Activo' : 'Inactivo'}
-                                    </span>
-                                </td>
-                                <td style={{ padding: '10px' }}>
-                                    <button onClick={() => openEditEarning(rule)} style={{ marginRight: '10px', background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer' }}>Editar</button>
-                                    <button onClick={() => handleDeleteEarning(rule.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>Eliminar</button>
-                                </td>
+                <div className="boutique-table-wrapper">
+                    <table className="boutique-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Tipo</th>
+                                <th>Detalle</th>
+                                <th>Puntos</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </section>
+                        </thead>
+                        <tbody>
+                            {earningRules.map(rule => (
+                                <tr key={rule.id}>
+                                    <td><strong>{rule.name}</strong></td>
+                                    <td><span className="mini-badge neutral">{rule.rule_type_name || 'General'}</span></td>
+                                    <td>
+                                        {rule.amount_step > 0
+                                            ? `Cada $${rule.amount_step} gastado`
+                                            : `Compra mínima de $${rule.min_order_value}`}
+                                    </td>
+                                    <td><span className="points-badge positive">+{rule.points_to_award} pts</span></td>
+                                    <td>
+                                        <span className={`status-tag ${rule.is_active ? 'sent' : 'failed'}`}>
+                                            {rule.is_active ? 'Activo' : 'Inactivo'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div className="table-actions" style={{ display: 'flex', gap: '10px' }}>
+                                            <button className="btn-text primary" onClick={() => openEditEarning(rule)} title="Editar"><i className="bi bi-pencil-square"></i></button>
+                                            <button className="btn-text danger" onClick={() => handleDeleteEarning(rule.id)} title="Eliminar"><i className="bi bi-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-            {/* REWARD RULES SECTION */}
-            <section style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                    <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#334155' }}>Recompensas (Cupones Canjeables)</h2>
-                    <button
-                        onClick={openNewReward}
-                        style={{ padding: '8px 16px', backgroundColor: '#0f172a', color: 'white', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
-                    >
-                        + Nueva Recompensa
+            <div className="boutique-card">
+                <div className="card-header-row">
+                    <h2><i className="bi bi-gift-fill" style={{ color: '#CFB3A9' }}></i> Recompensas Disponibles</h2>
+                    <button className="btn-boutique primary" onClick={openNewReward}>
+                        <i className="bi bi-plus-lg"></i> Nueva Recompensa
                     </button>
                 </div>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ textAlign: 'left', borderBottom: '2px solid #e2e8f0', color: '#64748b' }}>
-                            <th style={{ padding: '10px' }}>Nombre</th>
-                            <th style={{ padding: '10px' }}>Costo (Pts)</th>
-                            <th style={{ padding: '10px' }}>Valor dscto.</th>
-                            <th style={{ padding: '10px' }}>Estado</th>
-                            <th style={{ padding: '10px' }}>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rewardRules.map(rule => (
-                            <tr key={rule.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                <td style={{ padding: '10px', fontWeight: '500' }}>{rule.name}
-                                    <div style={{ fontSize: '12px', color: '#94a3b8' }}>{rule.description}</div>
-                                </td>
-                                <td style={{ padding: '10px', color: '#ea580c', fontWeight: 'bold' }}>{rule.points_cost} pts</td>
-                                <td style={{ padding: '10px' }}>${rule.discount_value}</td>
-                                <td style={{ padding: '10px' }}>
-                                    <span style={{
-                                        padding: '4px 8px', borderRadius: '12px', fontSize: '12px',
-                                        backgroundColor: rule.is_active ? '#dcfce7' : '#f1f5f9',
-                                        color: rule.is_active ? '#166534' : '#64748b'
-                                    }}>
-                                        {rule.is_active ? 'Activo' : 'Inactivo'}
-                                    </span>
-                                </td>
-                                <td style={{ padding: '10px' }}>
-                                    <button onClick={() => openEditReward(rule)} style={{ marginRight: '10px', background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer' }}>Editar</button>
-                                    <button onClick={() => handleDeleteReward(rule.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>Eliminar</button>
-                                </td>
+                <div className="boutique-table-wrapper">
+                    <table className="boutique-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre / Descripción</th>
+                                <th>Costo (Pts)</th>
+                                <th>Valor Descuento</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </section>
+                        </thead>
+                        <tbody>
+                            {rewardRules.map(rule => (
+                                <tr key={rule.id}>
+                                    <td>
+                                        <strong>{rule.name}</strong>
+                                        <div style={{ fontSize: '11px', opacity: 0.6 }}>{rule.description}</div>
+                                    </td>
+                                    <td><span className="points-badge negative">{rule.points_cost} pts</span></td>
+                                    <td>{rule.reward_type === 'PERCENTAGE' ? `${rule.discount_value}%` : `$${rule.discount_value}`}</td>
+                                    <td>
+                                        <span className={`status-tag ${rule.is_active ? 'sent' : 'failed'}`}>
+                                            {rule.is_active ? 'Activo' : 'Inactivo'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div className="table-actions" style={{ display: 'flex', gap: '10px' }}>
+                                            <button className="btn-text primary" onClick={() => openEditReward(rule)} title="Editar"><i className="bi bi-pencil-square"></i></button>
+                                            <button className="btn-text danger" onClick={() => handleDeleteReward(rule.id)} title="Eliminar"><i className="bi bi-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-            {/* MODAL EARNING */}
+            {/* MODALS */}
             {showEarningModal && (
-                <div style={modalOverlayStyle}>
-                    <div style={modalStyle}>
-                        <h3>{editingEarning ? 'Editar Regla' : 'Nueva Regla de Obtención'}</h3>
-                        <form onSubmit={handleSaveEarning} style={formStyle}>
-                            <label>Nombre de la Regla</label>
-                            <input className="ff-input" value={earningForm.name} onChange={e => setEarningForm({ ...earningForm, name: e.target.value })} required placeholder="Ej. Puntos por Compra" />
-
-                            <label>Tipo de Regla</label>
-                            <select className="ff-input" value={earningForm.rule_type} onChange={e => setEarningForm({ ...earningForm, rule_type: e.target.value })}>
-                                {earningRuleTypes.map(type => (
-                                    <option key={type.id} value={type.id}>{type.name}</option>
-                                ))}
-                            </select>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                <div>
-                                    <label>
-                                        {earningForm.rule_type
-                                            ? (earningRuleTypes.find(t => t.id == earningForm.rule_type)?.code === 'PER_AMOUNT'
-                                                ? 'Monto Paso (Cada $X)'
-                                                : 'Monto Mínimo de Factura ($)')
-                                            : 'Monto ($)'}
-                                    </label>
-                                    <input type="number" className="ff-input" value={earningForm.amount_step || earningForm.min_order_value}
-                                        onChange={e => {
-                                            setEarningForm({ ...earningForm, amount_step: e.target.value, min_order_value: e.target.value })
-                                        }} />
+                <div className="boutique-modal-overlay">
+                    <div className="boutique-modal">
+                        <div className="modal-header-boutique">
+                            <h3>{editingEarning ? 'Editar Regla' : 'Nueva Regla'}</h3>
+                            <button className="close-btn" onClick={() => setShowEarningModal(false)}>&times;</button>
+                        </div>
+                        <form onSubmit={handleSaveEarning} className="boutique-form">
+                            <div className="form-group-boutique">
+                                <label>Nombre de la Regla</label>
+                                <input value={earningForm.name} onChange={e => setEarningForm({ ...earningForm, name: e.target.value })} required />
+                            </div>
+                            <div className="form-group-boutique">
+                                <label>Tipo bi Regla</label>
+                                <select value={earningForm.rule_type} onChange={e => setEarningForm({ ...earningForm, rule_type: e.target.value })}>
+                                    {earningRuleTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                </select>
+                            </div>
+                            <div className="form-grid-2">
+                                <div className="form-group-boutique">
+                                    <label>Monto Paso / Mínimo</label>
+                                    <input type="number" value={earningForm.amount_step || earningForm.min_order_value}
+                                        onChange={e => setEarningForm({ ...earningForm, amount_step: e.target.value, min_order_value: e.target.value })} />
                                 </div>
-                                <div>
+                                <div className="form-group-boutique">
                                     <label>Puntos a Otorgar</label>
-                                    <input type="number" className="ff-input" value={earningForm.points_to_award} onChange={e => setEarningForm({ ...earningForm, points_to_award: e.target.value })} required />
+                                    <input type="number" value={earningForm.points_to_award} onChange={e => setEarningForm({ ...earningForm, points_to_award: e.target.value })} />
                                 </div>
                             </div>
-
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
-                                <input type="checkbox" checked={earningForm.is_active} onChange={e => setEarningForm({ ...earningForm, is_active: e.target.checked })} />
-                                Regla Activa
-                            </label>
-
-                            <div style={{ marginTop: '20px', textAlign: 'right' }}>
-                                <button type="button" onClick={() => setShowEarningModal(false)} style={cancelBtnStyle}>Cancelar</button>
-                                <button type="submit" style={saveBtnStyle}>Guardar</button>
+                            <div className="checkbox-group" style={{ marginTop: '10px' }}>
+                                <input type="checkbox" id="earn_active" checked={earningForm.is_active} onChange={e => setEarningForm({ ...earningForm, is_active: e.target.checked })} />
+                                <label htmlFor="earn_active">Regla Activa</label>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+                                <button type="button" className="btn-boutique secondary" onClick={() => setShowEarningModal(false)}>Cancelar</button>
+                                <button type="submit" className="btn-boutique primary">Guardar Regla</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
 
-            {/* MODAL RULE TYPES */}
+            {showRewardModal && (
+                <div className="boutique-modal-overlay">
+                    <div className="boutique-modal">
+                        <div className="modal-header-boutique">
+                            <h3>{editingReward ? 'Editar Recompensa' : 'Nueva Recompensa'}</h3>
+                            <button className="close-btn" onClick={() => setShowRewardModal(false)}>&times;</button>
+                        </div>
+                        <form onSubmit={handleSaveReward} className="boutique-form">
+                            <div className="form-group-boutique">
+                                <label>Nombre del Cupón</label>
+                                <input value={rewardForm.name} onChange={e => setRewardForm({ ...rewardForm, name: e.target.value })} required />
+                            </div>
+                            <div className="form-group-boutique">
+                                <label>Descripción</label>
+                                <textarea rows={2} value={rewardForm.description} onChange={e => setRewardForm({ ...rewardForm, description: e.target.value })} />
+                            </div>
+                            <div className="form-grid-2">
+                                <div className="form-group-boutique">
+                                    <label>Costo en Puntos</label>
+                                    <input type="number" value={rewardForm.points_cost} onChange={e => setRewardForm({ ...rewardForm, points_cost: e.target.value })} />
+                                </div>
+                                <div className="form-group-boutique">
+                                    <label>Tipo Descuento</label>
+                                    <select value={rewardForm.reward_type} onChange={e => setRewardForm({ ...rewardForm, reward_type: e.target.value })}>
+                                        <option value="FIXED_AMOUNT">Monto Fijo ($)</option>
+                                        <option value="PERCENTAGE">Porcentaje (%)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="form-group-boutique">
+                                <label>Valor del Descuento</label>
+                                <input type="number" value={rewardForm.discount_value} onChange={e => setRewardForm({ ...rewardForm, discount_value: e.target.value })} />
+                            </div>
+                            <div className="checkbox-group">
+                                <input type="checkbox" id="rw_active" checked={rewardForm.is_active} onChange={e => setRewardForm({ ...rewardForm, is_active: e.target.checked })} />
+                                <label htmlFor="rw_active">Recompensa Activa</label>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+                                <button type="button" className="btn-boutique secondary" onClick={() => setShowRewardModal(false)}>Cancelar</button>
+                                <button type="submit" className="btn-boutique primary">Guardar Recompensa</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {showTypeModal && (
-                <div style={modalOverlayStyle}>
-                    <div style={modalStyle}>
-                        <h3>Gestionar Tipos de Reglas</h3>
-                        <div style={{ marginBottom: '20px', maxHeight: '200px', overflowY: 'auto' }}>
-                            <table style={{ width: '100%', fontSize: '14px' }}>
+                <div className="boutique-modal-overlay">
+                    <div className="boutique-modal" style={{ maxWidth: '500px' }}>
+                        <div className="modal-header-boutique">
+                            <h3>Tipos de Reglas</h3>
+                            <button className="close-btn" onClick={() => setShowTypeModal(false)}>&times;</button>
+                        </div>
+                        <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '20px' }}>
+                            <table className="boutique-table mini">
+                                <thead>
+                                    <tr><th>Nombre / Código</th><th></th></tr>
+                                </thead>
                                 <tbody>
-                                    {earningRuleTypes.map(type => (
-                                        <tr key={type.id} style={{ borderBottom: '1px solid #eee' }}>
-                                            <td style={{ padding: '8px' }}>{type.name} <br /> <small style={{ color: '#888' }}>{type.code}</small></td>
-                                            <td style={{ padding: '8px', textAlign: 'right' }}>
-                                                <button onClick={() => handleDeleteType(type.id)} style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer' }}>X</button>
+                                    {earningRuleTypes.map(t => (
+                                        <tr key={t.id}>
+                                            <td>{t.name} <br /><small>{t.code}</small></td>
+                                            <td style={{ textAlign: 'right' }}>
+                                                <button className="btn-text danger" onClick={() => handleDeleteType(t.id)}><i className="bi bi-x-circle"></i></button>
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
-
-                        <h4>Agregar Nuevo Tipo</h4>
-                        <form onSubmit={handleSaveType} style={formStyle}>
-                            <label>Nombre</label>
-                            <input className="ff-input" value={typeForm.name} onChange={e => setTypeForm({ ...typeForm, name: e.target.value })} required placeholder="Ej. Por Cumpleaños" />
-
-                            <label>Código Interno (ÚNICO)</label>
-                            <input className="ff-input" value={typeForm.code} onChange={e => setTypeForm({ ...typeForm, code: e.target.value.toUpperCase().replace(/\s/g, '_') })} required placeholder="Ej. BIRTHDAY_POINTS" />
-
-                            <label>Descripción</label>
-                            <input className="ff-input" value={typeForm.description} onChange={e => setTypeForm({ ...typeForm, description: e.target.value })} />
-
-                            <div style={{ marginTop: '20px', textAlign: 'right' }}>
-                                <button type="button" onClick={() => setShowTypeModal(false)} style={cancelBtnStyle}>Cerrar</button>
-                                <button type="submit" style={saveBtnStyle}>Agregar</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL REWARD */}
-            {showRewardModal && (
-                <div style={modalOverlayStyle}>
-                    <div style={modalStyle}>
-                        <h3>{editingReward ? 'Editar Recompensa' : 'Nueva Recompensa'}</h3>
-                        <form onSubmit={handleSaveReward} style={formStyle}>
-                            <label>Nombre del Cupón</label>
-                            <input className="ff-input" value={rewardForm.name} onChange={e => setRewardForm({ ...rewardForm, name: e.target.value })} required placeholder="Ej. $5 Descuento" />
-
-                            <label>Descripción</label>
-                            <input className="ff-input" value={rewardForm.description} onChange={e => setRewardForm({ ...rewardForm, description: e.target.value })} placeholder="Válido en compras superiores a..." />
-
-                            <label>Tipo de Recompensa</label>
-                            <select className="ff-input" value={rewardForm.reward_type} onChange={e => setRewardForm({ ...rewardForm, reward_type: e.target.value })}>
-                                <option value="FIXED_AMOUNT">Descuento Fijo ($)</option>
-                                <option value="PERCENTAGE">Descuento Porcentaje (%)</option>
-                            </select>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                <div>
-                                    <label>Costo en Puntos</label>
-                                    <input type="number" className="ff-input" value={rewardForm.points_cost} onChange={e => setRewardForm({ ...rewardForm, points_cost: e.target.value })} required />
-                                </div>
-                                <div>
-                                    <label>{rewardForm.reward_type === 'PERCENTAGE' ? 'Porcentaje (%)' : 'Valor Descuento ($)'}</label>
-                                    <input type="number" className="ff-input" value={rewardForm.discount_value} onChange={e => setRewardForm({ ...rewardForm, discount_value: e.target.value })} required />
-                                </div>
-                            </div>
-
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
-                                <input type="checkbox" checked={rewardForm.is_active} onChange={e => setRewardForm({ ...rewardForm, is_active: e.target.checked })} />
-                                Recompensa Activa
-                            </label>
-
-                            <div style={{ marginTop: '20px', textAlign: 'right' }}>
-                                <button type="button" onClick={() => setShowRewardModal(false)} style={cancelBtnStyle}>Cancelar</button>
-                                <button type="submit" style={saveBtnStyle}>Guardar</button>
-                            </div>
+                        <h4 style={{ marginBottom: '10px', fontWeight: 700 }}>Agregar Nuevo</h4>
+                        <form onSubmit={handleSaveType} className="boutique-form">
+                            <input value={typeForm.name} onChange={e => setTypeForm({ ...typeForm, name: e.target.value })} placeholder="Nombre" required style={{ marginBottom: '10px', width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
+                            <input value={typeForm.code} onChange={e => setTypeForm({ ...typeForm, code: e.target.value.toUpperCase().replace(/\s/g, '_') })} placeholder="CÓDIGO_ÚNICO" required style={{ marginBottom: '10px', width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
+                            <button type="submit" className="btn-boutique dark" style={{ width: '100%' }}>Agregar Tipo</button>
                         </form>
                     </div>
                 </div>
             )}
         </div>
     );
-};
-
-// Styles helpers
-const modalOverlayStyle = {
-    position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)',
-    display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
-};
-
-const modalStyle = {
-    backgroundColor: 'white', padding: '25px', borderRadius: '8px',
-    width: '500px', maxWidth: '90%', boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-};
-
-const formStyle = { display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' };
-
-const cancelBtnStyle = {
-    padding: '8px 16px', marginRight: '10px', border: '1px solid #cbd5e1',
-    backgroundColor: 'white', borderRadius: '4px', cursor: 'pointer'
-};
-
-const saveBtnStyle = {
-    padding: '8px 16px', border: 'none', backgroundColor: '#0f172a',
-    color: 'white', borderRadius: '4px', cursor: 'pointer'
 };
 
 export default LoyaltyConfig;

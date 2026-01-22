@@ -1,6 +1,5 @@
 from django.core.management.base import BaseCommand
-from apps.whatsapp_bot.models import RemoteCustomer, BirthdaySentHistory
-from apps.whatsapp_bot.models_config import RemoteWhatsAppSettings
+from apps.whatsapp_bot.models import RemoteCustomer, BirthdaySentHistory, RemoteWhatsAppSettings, RemoteMessageHistory
 from django.utils import timezone
 import requests
 import json
@@ -74,7 +73,7 @@ class Command(BaseCommand):
                 if response.status_code == 201 or response.status_code == 200:
                     self.stdout.write(self.style.SUCCESS(f"✅ Sent to {full_name}"))
                     
-                    # Log to history
+                    # Log to local history (automation_db)
                     BirthdaySentHistory.objects.create(
                         customer_id=customer.id,
                         customer_name=full_name,
@@ -82,12 +81,49 @@ class Command(BaseCommand):
                         message=message,
                         status='sent'
                     )
+
+                    # Log to centralized history (luxe_db)
+                    try:
+                        RemoteMessageHistory.objects.create(
+                            phone=customer.phone,
+                            message=message,
+                            message_type='birthday',
+                            status='sent',
+                            customer_name=full_name,
+                            sent_at=timezone.now()
+                        )
+                    except Exception as log_err:
+                        self.stdout.write(self.style.WARNING(f"⚠️ Could not log to centralized history: {log_err}"))
                     
                     count += 1
                 else:
                     self.stdout.write(self.style.ERROR(f"❌ Failed: {response.text}"))
+                    # Log failure to centralized
+                    try:
+                        RemoteMessageHistory.objects.create(
+                            phone=customer.phone,
+                            message=message,
+                            message_type='birthday',
+                            status='failed',
+                            customer_name=full_name,
+                            sent_at=timezone.now(),
+                            error_message=str(response.text)[:500]
+                        )
+                    except: pass
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"❌ Connection Error: {e}"))
+                # Log error to centralized
+                try:
+                    RemoteMessageHistory.objects.create(
+                        phone=customer.phone,
+                        message=message,
+                        message_type='birthday',
+                        status='failed',
+                        customer_name=full_name,
+                        sent_at=timezone.now(),
+                        error_message=str(e)[:500]
+                    )
+                except: pass
 
         self.stdout.write(self.style.SUCCESS(f"✨ Completed. Sent {count} messages."))
 

@@ -2,8 +2,8 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
-from .models import WhatsAppSettings
-from .serializers import WhatsAppSettingsSerializer
+from .models import WhatsAppSettings, MessageHistory
+from .serializers import WhatsAppSettingsSerializer, MessageHistorySerializer
 import requests
 
 def get_wpp_token(session_name):
@@ -243,20 +243,55 @@ class WhatsAppTestMessageView(APIView):
             response = requests.post(url, json=payload, headers=headers, timeout=15)
             
             if response.status_code in [200, 201]:
+                # Save to history
+                MessageHistory.objects.create(
+                    phone=phone,
+                    message=message,
+                    message_type='test',
+                    status='sent',
+                    customer_name='Mensaje de Prueba'
+                )
                 return Response({
                     'status': 'sent',
                     'message': f'Test message sent to {phone}'
                 })
             else:
+                # Save failed attempt
+                MessageHistory.objects.create(
+                    phone=phone,
+                    message=message,
+                    message_type='test',
+                    status='failed',
+                    customer_name='Mensaje de Prueba',
+                    error_message=str(response.text)[:500]
+                )
                 return Response({
                     'status': 'failed',
                     'details': response.json()
                 }, status=status.HTTP_400_BAD_REQUEST)
         except requests.exceptions.RequestException as e:
+            # Save error
+            MessageHistory.objects.create(
+                phone=phone,
+                message=message,
+                message_type='test',
+                status='failed',
+                error_message=str(e)[:500]
+            )
             return Response({
                 'status': 'error',
                 'message': str(e)
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+class MessageHistoryListView(generics.ListAPIView):
+    """
+    List all sent messages (for history display)
+    """
+    queryset = MessageHistory.objects.all()[:100]  # Last 100 messages
+    serializer_class = MessageHistorySerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
 
 class WhatsAppLogoutView(APIView):
     """

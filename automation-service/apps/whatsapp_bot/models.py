@@ -44,3 +44,27 @@ class BirthdaySentHistory(models.Model):
 
     def __str__(self):
         return f"{self.customer_name} - {self.sent_at.strftime('%Y-%m-%d')}"
+
+
+class RemoteMessageHistory(models.Model):
+    """
+    Mirror mirror of integrations_messagehistory in luxe-service.
+    Used for centralized logging.
+    """
+    phone = models.CharField(max_length=20)
+    message = models.TextField()
+    message_type = models.CharField(max_length=20, default='birthday')
+    status = models.CharField(max_length=20, default='sent')
+    customer_name = models.CharField(max_length=100, blank=True, null=True)
+    sent_at = models.DateTimeField()
+    error_message = models.TextField(blank=True, null=True)
+
+    # Flag for the Router
+    use_luxe_db = True
+
+    class Meta:
+        managed = False
+        db_table = 'integrations_messagehistory'
+
+    def __str__(self):
+        return f"{self.phone} - {self.message_type}"
