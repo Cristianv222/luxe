@@ -31,7 +31,8 @@ const LoyaltyConfig = () => {
         points_cost: 100,
         reward_type: 'FIXED_AMOUNT',
         discount_value: 5.00,
-        is_active: true
+        is_active: true,
+        is_birthday_reward: false
     });
 
     const [typeForm, setTypeForm] = useState({ name: '', code: '', description: '', is_active: true });
@@ -156,7 +157,8 @@ const LoyaltyConfig = () => {
             points_cost: 100,
             reward_type: 'FIXED_AMOUNT',
             discount_value: 5.00,
-            is_active: true
+            is_active: true,
+            is_birthday_reward: false
         });
         setShowRewardModal(true);
     };
@@ -288,9 +290,19 @@ const LoyaltyConfig = () => {
                                 <tr key={rule.id}>
                                     <td>
                                         <strong>{rule.name}</strong>
+                                        {rule.is_birthday_reward && (
+                                            <span className="mini-badge" style={{ backgroundColor: '#ff69b4', color: 'white', marginLeft: '5px' }}>
+                                                <i className="bi bi-gift-fill"></i> Cumpleaños
+                                            </span>
+                                        )}
                                         <div style={{ fontSize: '11px', opacity: 0.6 }}>{rule.description}</div>
                                     </td>
-                                    <td><span className="points-badge negative">{rule.points_cost} pts</span></td>
+                                    <td>
+                                        {rule.is_birthday_reward || rule.points_cost === 0
+                                            ? <span className="points-badge positive">GRATIS</span>
+                                            : <span className="points-badge negative">{rule.points_cost} pts</span>
+                                        }
+                                    </td>
                                     <td>{rule.reward_type === 'PERCENTAGE' ? `${rule.discount_value}%` : `$${rule.discount_value}`}</td>
                                     <td>
                                         <span className={`status-tag ${rule.is_active ? 'sent' : 'failed'}`}>
@@ -370,10 +382,12 @@ const LoyaltyConfig = () => {
                                 <textarea rows={2} value={rewardForm.description} onChange={e => setRewardForm({ ...rewardForm, description: e.target.value })} />
                             </div>
                             <div className="form-grid-2">
-                                <div className="form-group-boutique">
-                                    <label>Costo en Puntos</label>
-                                    <input type="number" value={rewardForm.points_cost} onChange={e => setRewardForm({ ...rewardForm, points_cost: e.target.value })} />
-                                </div>
+                                {!rewardForm.is_birthday_reward && (
+                                    <div className="form-group-boutique">
+                                        <label>Costo en Puntos</label>
+                                        <input type="number" value={rewardForm.points_cost} onChange={e => setRewardForm({ ...rewardForm, points_cost: e.target.value })} />
+                                    </div>
+                                )}
                                 <div className="form-group-boutique">
                                     <label>Tipo Descuento</label>
                                     <select value={rewardForm.reward_type} onChange={e => setRewardForm({ ...rewardForm, reward_type: e.target.value })}>
@@ -385,6 +399,19 @@ const LoyaltyConfig = () => {
                             <div className="form-group-boutique">
                                 <label>Valor del Descuento</label>
                                 <input type="number" value={rewardForm.discount_value} onChange={e => setRewardForm({ ...rewardForm, discount_value: e.target.value })} />
+                            </div>
+                            <div className="checkbox-group">
+                                <input type="checkbox" id="rw_birthday" checked={rewardForm.is_birthday_reward}
+                                    onChange={e => {
+                                        const isBirthday = e.target.checked;
+                                        setRewardForm({
+                                            ...rewardForm,
+                                            is_birthday_reward: isBirthday,
+                                            points_cost: isBirthday ? 0 : rewardForm.points_cost
+                                        });
+                                    }}
+                                />
+                                <label htmlFor="rw_birthday">🎁 ¿Es regalo de cumpleaños?</label>
                             </div>
                             <div className="checkbox-group">
                                 <input type="checkbox" id="rw_active" checked={rewardForm.is_active} onChange={e => setRewardForm({ ...rewardForm, is_active: e.target.checked })} />

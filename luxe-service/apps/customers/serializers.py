@@ -10,13 +10,14 @@ class CustomerSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     loyalty_points = serializers.SerializerMethodField()
     customer_since_days = serializers.SerializerMethodField()
+    calculated_tier = serializers.SerializerMethodField()
     
     class Meta:
         model = Customer
         fields = [
-            'id', 'email', 'phone', 'cedula', 'first_name', 'last_name', 'full_name', # <-- CEDULA AÑADIDA
+            'id', 'email', 'phone', 'cedula', 'first_name', 'last_name', 'full_name',
             'birth_date', 'gender', 'address', 'city', 'state', 'zip_code', 'country',
-            'customer_type', 'is_active', 'is_vip', 'preferences',
+            'customer_type', 'calculated_tier', 'is_active', 'is_vip', 'preferences',
             'total_orders', 'total_spent', 'last_order_date', 'average_order_value',
             'newsletter_subscribed', 'marketing_emails', 'marketing_sms',
             'loyalty_points', 'customer_since_days',
@@ -31,16 +32,32 @@ class CustomerSerializer(serializers.ModelSerializer):
             'phone': {'required': True},
             'first_name': {'required': True},
             'last_name': {'required': True},
-            # CEDULA NO DEBE SER REQUERIDA AQUÍ si se maneja como opcional/nulleable
         }
     
     def get_full_name(self, obj):
         return obj.get_full_name()
     
+    def get_calculated_tier(self, obj):
+        spent = float(obj.total_spent)
+        if spent >= 1000:
+            return 'diamond'
+        elif spent >= 300:
+            return 'platinum'
+        elif spent >= 150:
+            return 'gold'
+        elif spent >= 80:
+            return 'silver'
+        return 'bronze'
+    
     def get_loyalty_points(self, obj):
+        # Intentar obtener del nuevo sistema de fidelidad (app loyalty)
+        if hasattr(obj, 'loyalty_account'):
+            return obj.loyalty_account.points_balance
+        
+        # Fallback al sistema antiguo (app customers)
         try:
             return obj.loyalty.points_balance
-        except CustomerLoyalty.DoesNotExist:
+        except (AttributeError, CustomerLoyalty.DoesNotExist):
             return 0
     
     def get_customer_since_days(self, obj):

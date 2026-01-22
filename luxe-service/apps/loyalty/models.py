@@ -139,6 +139,11 @@ class RewardRule(models.Model):
         help_text=_("Monto en $ o Porcentaje (0-100).")
     )
     is_active = models.BooleanField(default=True, verbose_name=_("Activa"))
+    is_birthday_reward = models.BooleanField(
+        default=False, 
+        verbose_name=_("Es regalo de cumpleaños"),
+        help_text=_("Si es True, este cupón se habilita gratis el día del cumpleaños del cliente.")
+    )
     
     # Auto-apply logic?
     auto_redeem_threshold = models.BooleanField(

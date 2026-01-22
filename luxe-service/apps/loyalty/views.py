@@ -149,21 +149,50 @@ class LoyaltyAccountViewSet(viewsets.ReadOnlyModelViewSet):
         except (RewardRule.DoesNotExist, LoyaltyAccount.DoesNotExist):
             return Response({"error": "Recompensa o cuenta no válida"}, status=404)
 
-        if account.points_balance < reward.points_cost:
+        # Lógica de recompensa de cumpleaños
+        is_free_redemption = False
+        if reward.is_birthday_reward:
+            customer = account.customer
+            if not customer.birth_date:
+                return Response({"error": "El cliente no tiene fecha de nacimiento registrada"}, status=400)
+            
+            from django.utils import timezone
+            today = timezone.localtime().date()
+            is_birthday = (customer.birth_date.day == today.day and customer.birth_date.month == today.month)
+            
+            if not is_birthday:
+                 return Response({"error": "Esta recompensa solo es válida el día del cumpleaños"}, status=400)
+
+            # Verificar si ya se usó este año
+            if UserCoupon.objects.filter(customer=customer, reward_rule=reward, created_at__year=today.year).exists():
+                 return Response({"error": "El regalo de cumpleaños ya fue canjeado este año"}, status=400)
+            
+            is_free_redemption = True
+
+        if not is_free_redemption and account.points_balance < reward.points_cost:
             return Response({"error": "Puntos insuficientes"}, status=400)
 
         with transaction.atomic():
-            # Deduct points
-            account.points_balance -= reward.points_cost
-            account.save()
-            
-            # Record transaction
-            PointTransaction.objects.create(
-                account=account,
-                transaction_type='REDEEM',
-                points=-reward.points_cost,
-                description=f"Canje de recompensa: {reward.name}"
-            )
+            if not is_free_redemption:
+                # Deduct points
+                account.points_balance -= reward.points_cost
+                account.save()
+                
+                # Record transaction
+                PointTransaction.objects.create(
+                    account=account,
+                    transaction_type='REDEEM',
+                    points=-reward.points_cost,
+                    description=f"Canje de recompensa: {reward.name}"
+                )
+            else:
+                 # Registro de canje gratuito (0 puntos)
+                 PointTransaction.objects.create(
+                    account=account,
+                    transaction_type='REDEEM',
+                    points=0,
+                    description=f"Canje de Cumpleaños: {reward.name}"
+                 )
             
             # Issue Coupon
             import uuid
@@ -203,23 +232,51 @@ class LoyaltyAccountViewSet(viewsets.ReadOnlyModelViewSet):
         except LoyaltyAccount.DoesNotExist:
             return Response({"error": "No tienes cuenta de puntos activa"}, status=404)
 
-        if account.points_balance < reward.points_cost:
+        # Lógica de recompensa de cumpleaños
+        is_free_redemption = False
+        if reward.is_birthday_reward:
+            if not customer.birth_date:
+                return Response({"error": "No tienes fecha de nacimiento registrada para validar el cumpleaños"}, status=400)
+            
+            from django.utils import timezone
+            today = timezone.localtime().date()
+            is_birthday = (customer.birth_date.day == today.day and customer.birth_date.month == today.month)
+            
+            if not is_birthday:
+                 return Response({"error": "Este cupón de regalo solo está disponible el día de tu cumpleaños"}, status=400)
+
+            # Verificar si ya se usó este año
+            if UserCoupon.objects.filter(customer=customer, reward_rule=reward, created_at__year=today.year).exists():
+                 return Response({"error": "Ya has canjeado tu regalo de cumpleaños este año"}, status=400)
+            
+            is_free_redemption = True
+
+        if not is_free_redemption and account.points_balance < reward.points_cost:
             return Response({
                 "error": f"Puntos insuficientes. Necesitas {reward.points_cost} puntos, tienes {account.points_balance}"
             }, status=400)
 
         with transaction.atomic():
-            # Deducir puntos
-            account.points_balance -= reward.points_cost
-            account.save()
-            
-            # Registrar transacción
-            PointTransaction.objects.create(
-                account=account,
-                transaction_type='REDEEM',
-                points=-reward.points_cost,
-                description=f"Canje de recompensa: {reward.name}"
-            )
+            if not is_free_redemption:
+                # Deducir puntos
+                account.points_balance -= reward.points_cost
+                account.save()
+                
+                # Registrar transacción
+                PointTransaction.objects.create(
+                    account=account,
+                    transaction_type='REDEEM',
+                    points=-reward.points_cost,
+                    description=f"Canje de recompensa: {reward.name}"
+                )
+            else:
+                # Registro de canje gratuito
+                 PointTransaction.objects.create(
+                    account=account,
+                    transaction_type='REDEEM',
+                    points=0,
+                    description=f"Canje de Cumpleaños: {reward.name}"
+                 )
             
             # Generar cupón con código único
             import uuid
@@ -232,7 +289,7 @@ class LoyaltyAccountViewSet(viewsets.ReadOnlyModelViewSet):
         
         return Response({
             "success": True,
-            "message": f"¡Felicidades! Has canjeado '{reward.name}'",
+            "message": f"¡Felicidades! Has canjeado '{reward.name}'" if not is_free_redemption else f"¡Feliz Cumpleaños! Disfruta tu '{reward.name}'",
             "coupon": UserCouponSerializer(coupon).data,
             "new_balance": account.points_balance
         })

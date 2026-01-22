@@ -47,14 +47,12 @@ const BarraLateralLuxe = () => {
                         Inventario
                     </Link>
                 </li>
-                {/* COMENTADO POR SOLICITUD DEL USUARIO - SE DEBE USAR 'USUARIOS' EN SU LUGAR 
-                <li className={isActive('/fast-food/customers')}>
-                    <Link to="/fast-food/customers">
-                        <i className="bi bi-people" style={{ marginRight: '10px' }}></i>
+                <li className={isActive('/luxe/customers')}>
+                    <Link to="/luxe/customers">
+                        <i className="bi bi-people-fill" style={{ marginRight: '10px' }}></i>
                         Clientes
                     </Link>
                 </li>
-                */}
                 <li className={isActive('/luxe/shift')}>
                     <Link to="/luxe/shift">
                         <i className="bi bi-cash-coin" style={{ marginRight: '10px' }}></i>

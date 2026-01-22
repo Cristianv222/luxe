@@ -637,7 +637,30 @@ def admin_customer_list(request):
     end = start + page_size
     
     total = queryset.count()
-    customers = queryset.order_by('-created_at')[start:end]
+    from django.db.models import Max
+    
+    customers = queryset.order_by('-total_spent', '-created_at')[start:end]
+    
+    # Lógica de sincronización: Si el gasto es 0 pero existen órdenes, recalculamos
+    for c in customers:
+        if c.total_spent == 0:
+            paid_orders = c.orders.filter(payment_status='paid')
+            if paid_orders.exists():
+                stats = paid_orders.aggregate(
+                    total_amnt=Sum('total'),
+                    order_count=Count('id'),
+                    last_date=Max('created_at')
+                )
+                c.total_spent = stats['total_amnt'] or 0
+                c.total_orders = stats['order_count'] or 0
+                c.last_order_date = stats['last_date']
+                
+                if c.total_orders > 0:
+                    c.average_order_value = c.total_spent / c.total_orders
+                else:
+                    c.average_order_value = 0
+                    
+                c.save(update_fields=['total_spent', 'total_orders', 'last_order_date', 'average_order_value'])
     
     serializer = CustomerSerializer(customers, many=True)
     
@@ -655,12 +678,15 @@ def admin_customer_list(request):
     })
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def admin_customer_detail(request, customer_id):
     """
-    Ver detalle de un cliente (solo admin)
+    Operaciones CRUD en un cliente (solo admin)
     GET /api/customers/admin/{id}/
+    PUT /api/customers/admin/{id}/
+    PATCH /api/customers/admin/{id}/
+    DELETE /api/customers/admin/{id}/
     """
     try:
         customer = Customer.objects.get(id=customer_id)
@@ -670,26 +696,108 @@ def admin_customer_detail(request, customer_id):
             'message': 'Cliente no encontrado'
         }, status=status.HTTP_404_NOT_FOUND)
     
-    serializer = CustomerSerializer(customer)
-    
-    # Obtener información adicional
-    addresses = CustomerAddressSerializer(customer.addresses.all(), many=True).data
-    notes = CustomerNoteSerializer(customer.notes.all(), many=True).data
-    
-    try:
-        loyalty = CustomerLoyaltySerializer(customer.loyalty).data
-    except CustomerLoyalty.DoesNotExist:
-        loyalty = None
-    
-    data = serializer.data
-    data['addresses'] = addresses
-    data['notes'] = notes
-    data['loyalty'] = loyalty
-    
-    return Response({
-        'status': 'success',
-        'data': data
-    })
+    if request.method == 'GET':
+        serializer = CustomerSerializer(customer)
+        
+        # Obtener información adicional
+        addresses = CustomerAddressSerializer(customer.addresses.all(), many=True).data
+        notes = CustomerNoteSerializer(customer.notes.all(), many=True).data
+        
+        # Obtener información de lealtad (Prioridad: Nuevo Sistema)
+        loyalty_data = None
+        if hasattr(customer, 'loyalty_account'):
+            account = customer.loyalty_account
+            balance = account.points_balance
+            
+            # Calcular Tier Dinámicamente basado en GASTO TOTAL ($)
+            total_spent = float(customer.total_spent)
+            
+            if total_spent >= 1000:
+                tier = 'diamond'
+                tier_display = 'Diamante ($1000+ gastados)'
+                discount = 20
+                next_tier_progress = 100
+            elif total_spent >= 300:
+                tier = 'platinum'
+                tier_display = 'Platino ($300-$999 gastados)'
+                discount = 15
+                next_tier_progress = min(100, (total_spent / 1000) * 100)
+            elif total_spent >= 150:
+                tier = 'gold'
+                tier_display = 'Oro ($150-$299 gastados)'
+                discount = 10
+                next_tier_progress = min(100, (total_spent / 300) * 100)
+            elif total_spent >= 80:
+                tier = 'silver'
+                tier_display = 'Plata ($80-$149 gastados)'
+                discount = 5
+                next_tier_progress = min(100, (total_spent / 150) * 100)
+            else:
+                tier = 'bronze'
+                tier_display = 'Bronce ($0-$79 gastados)'
+                discount = 0
+                next_tier_progress = min(100, (total_spent / 80) * 100)
+
+            loyalty_data = {
+                'id': account.id,
+                'points_balance': balance,
+                'total_points_earned': account.total_points_earned,
+                'current_tier': tier,
+                'current_tier_display': tier_display,
+                'next_tier_progress': next_tier_progress,
+                'discount_rate': discount,
+                # Campos adicionales para compatibilidad
+                'customer': customer.id,
+                'customer_name': customer.get_full_name()
+            }
+        
+        # Fallback sistema antiguo
+        if not loyalty_data:
+            try:
+                loyalty_data = CustomerLoyaltySerializer(customer.loyalty).data
+            except (AttributeError, CustomerLoyalty.DoesNotExist):
+                loyalty_data = None
+        
+        data = serializer.data
+        data['addresses'] = addresses
+        data['notes'] = notes
+        data['loyalty'] = loyalty_data
+        
+        return Response({
+            'status': 'success',
+            'data': data
+        })
+
+    elif request.method == 'DELETE':
+        # Nota: Aquí podríamos añadir lógica para desactivar en lugar de eliminar
+        # o llamar al Auth Service para eliminar la cuenta web.
+        customer_name = customer.get_full_name()
+        customer.delete()
+        return Response({
+            'status': 'success',
+            'message': f'Cliente {customer_name} eliminado correctamente'
+        }, status=status.HTTP_200_OK)
+
+    else:  # PUT o PATCH
+        partial = request.method == 'PATCH'
+        serializer = CustomerUpdateSerializer(customer, data=request.data, partial=partial)
+        
+        if serializer.is_valid():
+            serializer.save()
+            
+            # Retornar datos actualizados usando el serializer completo
+            full_serializer = CustomerSerializer(customer)
+            return Response({
+                'status': 'success',
+                'message': 'Cliente actualizado exitosamente',
+                'data': full_serializer.data
+            })
+        
+        return Response({
+            'status': 'error',
+            'message': 'Error al actualizar cliente',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])

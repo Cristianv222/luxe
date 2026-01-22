@@ -39,6 +39,12 @@ const PanelLuxe = () => {
             title: 'Gestión Puntos',
             description: 'Ver clientes y saldos',
             path: '/luxe/loyalty-management',
+            icon: 'bi-star-fill'
+        },
+        {
+            title: 'Clientes',
+            description: 'Directorio de perfiles y contacto',
+            path: '/luxe/customers',
             icon: 'bi-people-fill'
         },
         {

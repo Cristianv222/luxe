@@ -66,10 +66,49 @@ class LoyaltyAccountDetailSerializer(LoyaltyAccountSerializer):
         return UserCouponSerializer(available_coupons, many=True, context=self.context).data
 
     def get_available_rewards(self, obj):
-        # Recompensas que puede canjear con sus puntos actuales
-        rewards = RewardRule.objects.filter(
+        from django.utils import timezone
+        from django.db.models import Q
+        
+        # 1. Recompensas estándar (NO cumpleañeras) que puede pagar
+        standard_rewards = RewardRule.objects.filter(
             is_active=True,
-            points_cost__lte=obj.points_balance  # Solo las que puede pagar
-        ).order_by('points_cost')
-        return RewardRuleSerializer(rewards, many=True).data
+            is_birthday_reward=False,
+            points_cost__lte=obj.points_balance
+        )
+        
+        # 2. Recompensas de Cumpleaños
+        birthday_rewards_to_show = []
+        
+        if obj.customer.birth_date:
+            today = timezone.localtime().date()
+            is_birthday = (
+                obj.customer.birth_date.day == today.day and 
+                obj.customer.birth_date.month == today.month
+            )
+            
+            if is_birthday:
+                # Buscar reglas de cumple activas
+                birthday_rules = RewardRule.objects.filter(
+                    is_active=True, 
+                    is_birthday_reward=True
+                )
+                
+                for rule in birthday_rules:
+                    # Verificar si ya redimió esta recompensa este año
+                    already_redeemed = UserCoupon.objects.filter(
+                        customer=obj.customer,
+                        reward_rule=rule,
+                        created_at__year=today.year
+                    ).exists()
+                    
+                    if not already_redeemed:
+                        birthday_rewards_to_show.append(rule)
+        
+        # Combinar resultados
+        all_rewards = list(standard_rewards) + birthday_rewards_to_show
+        
+        # Ordenar por costo (opcional)
+        all_rewards.sort(key=lambda x: x.points_cost)
+        
+        return RewardRuleSerializer(all_rewards, many=True).data
 

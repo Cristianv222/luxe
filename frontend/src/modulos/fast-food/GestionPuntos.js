@@ -158,11 +158,16 @@ const GestionPuntos = () => {
                             <div className="detail-left">
                                 <h4 className="detail-section-title"><i className="bi bi-gift"></i> Canjes Disponibles</h4>
                                 <div className="rewards-grid-boutique">
-                                    {rewardRules.filter(r => r.is_active && selectedAccount.points_balance >= r.points_cost).map(reward => (
+                                    {selectedAccount.available_rewards && selectedAccount.available_rewards.map(reward => (
                                         <div key={reward.id} className="reward-card-boutique">
                                             <div>
                                                 <div className="reward-title">{reward.name}</div>
-                                                <div className="reward-cost">{reward.points_cost} pts</div>
+                                                <div className="reward-cost">
+                                                    {reward.is_birthday_reward || reward.points_cost === 0
+                                                        ? <span className="points-badge positive">GRATIS</span>
+                                                        : `${reward.points_cost} pts`
+                                                    }
+                                                </div>
                                             </div>
                                             <button
                                                 className="btn-boutique primary"
@@ -174,9 +179,9 @@ const GestionPuntos = () => {
                                             </button>
                                         </div>
                                     ))}
-                                    {rewardRules.filter(r => r.is_active && selectedAccount.points_balance >= r.points_cost).length === 0 && (
+                                    {(!selectedAccount.available_rewards || selectedAccount.available_rewards.length === 0) && (
                                         <div style={{ gridColumn: 'span 2', padding: '2rem', textAlign: 'center', border: '1px dashed #ddd', borderRadius: '10px', opacity: 0.6 }}>
-                                            No hay recompensas suficientes para el saldo actual.
+                                            No hay recompensas disponibles para este cliente en este momento.
                                         </div>
                                     )}
                                 </div>

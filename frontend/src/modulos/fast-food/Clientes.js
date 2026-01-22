@@ -1,753 +1,530 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
+import Modal from '../../comun/Modal';
+import './FastFood.css';
+import './Loyalty.css';
 
 const Clientes = () => {
+    // --- States ---
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [showModal, setShowModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [pagination, setPagination] = useState({ page: 1, total_pages: 1, total: 0 });
+
+    // Modals
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+    // Data for Modals
+    const [editingCustomer, setEditingCustomer] = useState(null);
+    const [viewingCustomer, setViewingCustomer] = useState(null);
     const [submitting, setSubmitting] = useState(false);
-    const [newCustomer, setNewCustomer] = useState({
+
+    const [formData, setFormData] = useState({
         email: '',
         username: '',
-        password: 'Password123!',
-        password_confirm: 'Password123!',
         first_name: '',
         last_name: '',
         phone: '',
         address: '',
         city: '',
-        identification_number: '',
-        date_of_birth: ''
+        cedula: '',
+        birth_date: '',
+        password: 'Password123!',
+        password_confirm: 'Password123!'
     });
 
-    useEffect(() => {
-        fetchCustomers();
-    }, []);
-
-    useEffect(() => {
-        const handleEscape = (e) => {
-            if (e.key === 'Escape' && showModal) {
-                closeModal();
-            }
-        };
-
-        if (showModal) {
-            document.addEventListener('keydown', handleEscape);
-            document.body.style.overflow = 'hidden';
-        }
-
-        return () => {
-            document.removeEventListener('keydown', handleEscape);
-            document.body.style.overflow = 'unset';
-        };
-    }, [showModal]);
-
-    const fetchCustomers = async (search = '') => {
+    // --- Effects ---
+    const fetchCustomers = useCallback(async (page = 1, search = '') => {
         setLoading(true);
         setError('');
         try {
-            const params = search ? { search } : {};
             const response = await api.get('/api/customers/admin/list/', {
                 baseURL: process.env.REACT_APP_LUXE_SERVICE,
-                params
+                params: { page, search, page_size: 15 }
             });
-            setCustomers(response.data.data.customers || []);
+
+            if (response.data.status === 'success') {
+                setCustomers(response.data.data.customers || []);
+                setPagination(response.data.data.pagination);
+            }
         } catch (err) {
             console.error('Error fetching customers:', err);
-            setError('Error al cargar clientes: ' + (err.response?.data?.message || err.message));
+            setError('Error al cargar la base de datos de clientes.');
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
+    useEffect(() => {
+        fetchCustomers();
+    }, [fetchCustomers]);
+
+    // --- Handlers ---
     const handleSearch = (e) => {
         e.preventDefault();
-        fetchCustomers(searchTerm);
-    };
-
-    const handleCreateCustomer = async (e) => {
-        e.preventDefault();
-        setSubmitting(true);
-        try {
-            // 1. Prepare payload for LUXE SERVICE (Customer Profile)
-            const customerPayload = {
-                ...newCustomer,
-                cedula: newCustomer.identification_number || null,
-                birth_date: newCustomer.date_of_birth || null,
-                password_confirmation: newCustomer.password_confirm
-            };
-
-            console.log("Creando perfil de cliente...");
-            await api.post('api/customers/register/', customerPayload, { baseURL: '/api/luxe' });
-
-            // 2. Prepare payload for AUTH SERVICE (User Login)
-            try {
-                console.log("Creando cuenta de usuario web...");
-                // Send EXACTLY what Registro.js sends
-                const authPayload = {
-                    first_name: newCustomer.first_name,
-                    last_name: newCustomer.last_name,
-                    identification_number: newCustomer.identification_number,
-                    date_of_birth: newCustomer.date_of_birth,
-                    email: newCustomer.email,
-                    phone: newCustomer.phone,
-                    username: newCustomer.username || newCustomer.email, // Fallback to email if empty
-                    password: newCustomer.password,
-                    password_confirm: newCustomer.password_confirm
-                };
-
-                // Call Auth Service (default baseURL is AUTH_SERVICE)
-                await api.post('/api/authentication/register/', authPayload);
-
-                showNotification('¡Cliente y Cuenta de Usuario creados exitosamente!', 'success');
-            } catch (authErr) {
-                console.error("Error creando usuario en Auth Service:", authErr);
-                const msg = JSON.stringify(authErr.response?.data) || authErr.message;
-                alert(`AVISO: Cliente registrado en sistema, pero falló la creación de cuenta web: ${msg}`);
-            }
-
-            closeModal();
-            fetchCustomers();
-        } catch (err) {
-            console.error('Error creating customer:', err);
-            const errorData = err.response?.data;
-            let errorMessage = 'Error al crear cliente';
-
-            if (errorData?.errors) {
-                errorMessage += ':\n' + Object.entries(errorData.errors)
-                    .map(([key, val]) => `- ${key}: ${val}`)
-                    .join('\n');
-            } else if (errorData?.message) {
-                errorMessage += ': ' + errorData.message;
-            } else {
-                errorMessage += ': ' + err.message;
-            }
-
-            alert(errorMessage);
-        } finally {
-            setSubmitting(false);
-        }
+        fetchCustomers(1, searchTerm);
     };
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setNewCustomer(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const closeModal = () => {
-        setShowModal(false);
-        setNewCustomer({
+    const openCreateModal = () => {
+        setEditingCustomer(null);
+        setFormData({
             email: '',
             username: '',
-            password: 'Password123!',
-            password_confirm: 'Password123!',
             first_name: '',
             last_name: '',
             phone: '',
             address: '',
             city: '',
-            identification_number: '',
-            date_of_birth: ''
+            cedula: '',
+            birth_date: '',
+            password: 'Password123!',
+            password_confirm: 'Password123!'
         });
+        setIsFormModalOpen(true);
     };
 
-    const showNotification = (message, type) => {
-        // Simple notification - you can replace with a toast library
-        alert(message);
+    const openEditModal = (customer) => {
+        setEditingCustomer(customer);
+        setFormData({
+            email: customer.email || '',
+            username: customer.username || customer.email || '',
+            first_name: customer.first_name || '',
+            last_name: customer.last_name || '',
+            phone: customer.phone || '',
+            address: customer.address || '',
+            city: customer.city || '',
+            cedula: customer.cedula || '',
+            birth_date: customer.birth_date || '',
+            password: '', // Don't show password on edit
+            password_confirm: ''
+        });
+        setIsFormModalOpen(true);
     };
 
-    const getCustomerTypeColor = (type) => {
-        const colors = {
-            'regular': 'bg-blue-100 text-blue-700 border-blue-200',
-            'premium': 'bg-purple-100 text-purple-700 border-purple-200',
-            'vip': 'bg-amber-100 text-amber-700 border-amber-200'
+    const openDetailModal = async (customerId) => {
+        try {
+            const res = await api.get(`/api/customers/admin/${customerId}/`, {
+                baseURL: process.env.REACT_APP_LUXE_SERVICE
+            });
+            setViewingCustomer(res.data.data);
+            setIsDetailModalOpen(true);
+        } catch (err) {
+            alert('Error al obtener detalles del cliente');
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            if (editingCustomer) {
+                // Update
+                await api.patch(`/api/customers/admin/${editingCustomer.id}/`, formData, {
+                    baseURL: process.env.REACT_APP_LUXE_SERVICE
+                });
+                alert('Cliente actualizado exitosamente');
+            } else {
+                // Create
+                const luxePayload = {
+                    ...formData,
+                    identification_number: formData.cedula,
+                    date_of_birth: formData.birth_date
+                };
+
+                // 1. Luxe Service
+                await api.post('/api/customers/register/', luxePayload, {
+                    baseURL: process.env.REACT_APP_LUXE_SERVICE
+                });
+
+                // 2. Auth Service (Optional/Best effort)
+                try {
+                    const authPayload = {
+                        ...formData,
+                        identification_number: formData.cedula,
+                        date_of_birth: formData.birth_date
+                    };
+                    await api.post('/api/authentication/register/', authPayload);
+                } catch (authErr) {
+                    console.warn("Auth account creation failed, but customer profile was created.");
+                }
+
+                alert('Cliente creado exitosamente');
+            }
+
+            setIsFormModalOpen(false);
+            fetchCustomers(pagination.page, searchTerm);
+        } catch (err) {
+            console.error(err);
+            const msg = err.response?.data?.message || err.response?.data?.detail || 'Error en la operación';
+            alert(`Error: ${msg}`);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleDelete = async (id, name) => {
+        if (window.confirm(`¿Estás seguro de que deseas eliminar permanentemente a ${name}? Esta acción no se puede deshacer.`)) {
+            try {
+                await api.delete(`/api/customers/admin/${id}/`, {
+                    baseURL: process.env.REACT_APP_LUXE_SERVICE
+                });
+                alert('Cliente eliminado correctamente');
+                fetchCustomers(pagination.page, searchTerm);
+            } catch (err) {
+                alert('Error al eliminar cliente');
+            }
+        }
+    };
+
+    // --- UI Helpers ---
+    const getTierBadge = (tier) => {
+        const styles = {
+            bronze: { bg: '#F1EEEB', color: '#A09086', label: 'Bronce' },
+            silver: { bg: '#F8FAFC', color: '#64748B', label: 'Plata' },
+            gold: { bg: '#FFFBEB', color: '#D97706', label: 'Oro' },
+            platinum: { bg: '#F5F3FF', color: '#7C3AED', label: 'Platino' },
+            diamond: { bg: 'linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%)', color: '#0369A1', label: 'Diamante' }
         };
-        return colors[type?.toLowerCase()] || 'bg-gray-100 text-gray-700 border-gray-200';
+        const config = styles[tier?.toLowerCase()] || styles.bronze;
+        return (
+            <span className="status-tag" style={{ background: config.bg, color: config.color }}>
+                {config.label}
+            </span>
+        );
     };
 
-    if (loading && customers.length === 0) {
-        return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#f9fafb' }}>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{
-                        display: 'inline-block',
-                        width: '48px',
-                        height: '48px',
-                        border: '4px solid #e5e7eb',
-                        borderTopColor: '#2563eb',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite'
-                    }}></div>
-                    <p style={{ marginTop: '16px', color: '#4b5563', fontWeight: '500' }}>Cargando clientes...</p>
-                </div>
-            </div>
-        );
-    }
+    // Helper to avoid timezone shifts on simple dates
+    const formatDate = (dateString) => {
+        if (!dateString) return '---';
+        const [year, month, day] = dateString.split('-');
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString();
+    };
 
     return (
-        <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom right, #f9fafb, #f3f4f6)', padding: '24px' }}>
-            <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-                {/* Header */}
-                <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div className="loyalty-container">
+            <div className="compact-header-row">
+                <div className="title-group">
+                    <i className="bi bi-people-fill"></i>
                     <div>
-                        <h1 style={{ fontSize: '30px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px' }}>Gestión de Clientes</h1>
-                        <p style={{ color: '#6b7280' }}>Administra la base de datos de clientes del restaurante</p>
+                        <h1>Gestión de Clientes</h1>
+                        <p className="subtitle">Administra perfiles, lealtad y estadísticas</p>
                     </div>
-                    <button
-                        onClick={() => setShowModal(true)}
-                        style={{
-                            backgroundColor: '#2563eb',
-                            color: 'white',
-                            padding: '12px 24px',
-                            borderRadius: '8px',
-                            border: 'none',
-                            fontWeight: '500',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            transition: 'all 0.2s',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1d4ed8';
-                            e.currentTarget.style.transform = 'translateY(-1px)';
-                            e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.15)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#2563eb';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-                        }}
-                    >
-                        <svg style={{ width: '20px', height: '20px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        Nuevo Cliente
-                    </button>
                 </div>
-
-                {/* Search Bar */}
-                <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '16px', marginBottom: '24px' }}>
-                    <form onSubmit={handleSearch} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                        <div style={{ flex: 1, position: 'relative' }}>
-                            <svg
-                                style={{
-                                    position: 'absolute',
-                                    left: '12px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    width: '20px',
-                                    height: '20px',
-                                    color: '#9ca3af'
-                                }}
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
+                <div className="header-actions">
+                    <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px' }}>
+                        <div className="search-wrapper-boutique" style={{ position: 'relative' }}>
+                            <i className="bi bi-search" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }}></i>
                             <input
                                 type="text"
-                                placeholder="Buscar por nombre, email o teléfono..."
+                                className="search-input-boutique"
+                                placeholder="Buscar cliente..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px 16px 10px 44px',
-                                    border: '1px solid #d1d5db',
-                                    borderRadius: '8px',
-                                    outline: 'none',
-                                    fontSize: '14px',
-                                    transition: 'all 0.2s'
-                                }}
-                                onFocus={(e) => {
-                                    e.target.style.borderColor = '#3b82f6';
-                                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                                }}
-                                onBlur={(e) => {
-                                    e.target.style.borderColor = '#d1d5db';
-                                    e.target.style.boxShadow = 'none';
-                                }}
+                                style={{ paddingLeft: '35px', width: '250px' }}
                             />
                         </div>
-                        <button
-                            type="submit"
-                            style={{
-                                backgroundColor: '#6b7280',
-                                color: 'white',
-                                padding: '10px 20px',
-                                borderRadius: '8px',
-                                border: 'none',
-                                fontWeight: '500',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4b5563'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#6b7280'}
-                        >
-                            Buscar
+                        <button type="submit" className="btn-boutique dark">Buscar</button>
+                        <button type="button" className="btn-boutique success" onClick={openCreateModal}>
+                            <i className="bi bi-person-plus-fill"></i> Nuevo Cliente
                         </button>
                     </form>
                 </div>
-
-                {/* Error Message */}
-                {error && (
-                    <div style={{
-                        backgroundColor: '#fef2f2',
-                        border: '1px solid #fecaca',
-                        borderRadius: '8px',
-                        padding: '12px 16px',
-                        marginBottom: '24px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                    }}>
-                        <svg style={{ width: '20px', height: '20px', color: '#ef4444' }} fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                        </svg>
-                        <span style={{ color: '#991b1b', fontSize: '14px' }}>{error}</span>
-                    </div>
-                )}
-
-                {/* Customers Table */}
-                <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead style={{ background: 'linear-gradient(to right, #f9fafb, #f3f4f6)', borderBottom: '1px solid #e5e7eb' }}>
-                                <tr>
-                                    <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                        Cliente
-                                    </th>
-                                    <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                        Contacto
-                                    </th>
-                                    <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                        Ciudad
-                                    </th>
-                                    <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                        Tipo
-                                    </th>
-                                    <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                        Registro
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {customers.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="5" style={{ padding: '48px 24px', textAlign: 'center' }}>
-                                            <svg
-                                                style={{ width: '48px', height: '48px', margin: '0 auto 16px', color: '#d1d5db' }}
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                            </svg>
-                                            <p style={{ color: '#6b7280', fontWeight: '500', fontSize: '16px', margin: 0 }}>
-                                                {searchTerm ? 'No se encontraron clientes' : 'No hay clientes registrados'}
-                                            </p>
-                                            {searchTerm && (
-                                                <p style={{ color: '#9ca3af', fontSize: '14px', marginTop: '8px' }}>
-                                                    Intenta con otros términos de búsqueda
-                                                </p>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    customers.map(customer => (
-                                        <tr
-                                            key={customer.id}
-                                            style={{
-                                                borderBottom: '1px solid #e5e7eb',
-                                                transition: 'background-color 0.2s'
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                        >
-                                            <td style={{ padding: '16px 24px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                    <div style={{
-                                                        width: '40px',
-                                                        height: '40px',
-                                                        borderRadius: '50%',
-                                                        backgroundColor: '#eff6ff',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        fontWeight: '600',
-                                                        color: '#2563eb',
-                                                        fontSize: '14px'
-                                                    }}>
-                                                        {customer.first_name?.charAt(0)}{customer.last_name?.charAt(0)}
-                                                    </div>
-                                                    <div>
-                                                        <p style={{ margin: 0, fontWeight: '600', color: '#1f2937' }}>
-                                                            {customer.first_name} {customer.last_name}
-                                                        </p>
-                                                        <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#6b7280' }}>
-                                                            {customer.email}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: '16px 24px', whiteSpace: 'nowrap' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    <svg style={{ width: '16px', height: '16px', color: '#6b7280' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                                    </svg>
-                                                    <span style={{ color: '#374151', fontSize: '14px' }}>
-                                                        {customer.phone || 'Sin teléfono'}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: '16px 24px', whiteSpace: 'nowrap' }}>
-                                                <span style={{ color: '#4b5563', fontSize: '14px' }}>
-                                                    {customer.city || '-'}
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: '16px 24px', whiteSpace: 'nowrap' }}>
-                                                <span
-                                                    className={getCustomerTypeColor(customer.customer_type)}
-                                                    style={{
-                                                        padding: '4px 12px',
-                                                        borderRadius: '9999px',
-                                                        fontSize: '12px',
-                                                        fontWeight: '500',
-                                                        border: '1px solid',
-                                                        display: 'inline-block'
-                                                    }}
-                                                >
-                                                    {customer.customer_type}
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: '16px 24px', whiteSpace: 'nowrap' }}>
-                                                <span style={{ fontSize: '14px', color: '#4b5563' }}>
-                                                    {new Date(customer.created_at).toLocaleDateString('es-ES', {
-                                                        day: '2-digit',
-                                                        month: 'short',
-                                                        year: 'numeric'
-                                                    })}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {/* Footer Stats */}
-                {customers.length > 0 && (
-                    <div style={{ marginTop: '24px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb', padding: '16px' }}>
-                        <p style={{ fontSize: '14px', color: '#4b5563', margin: 0 }}>
-                            Mostrando <span style={{ fontWeight: '600', color: '#1f2937' }}>{customers.length}</span> cliente{customers.length !== 1 ? 's' : ''}
-                        </p>
-                    </div>
-                )}
             </div>
 
-            {/* Create Customer Modal */}
-            {showModal && (
-                <div
-                    onClick={closeModal}
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 1000,
-                        padding: '20px'
-                    }}
-                >
-                    <div
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                            backgroundColor: 'white',
-                            borderRadius: '16px',
-                            maxWidth: '600px',
-                            width: '100%',
-                            maxHeight: '90vh',
-                            overflow: 'auto',
-                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-                        }}
-                    >
-                        {/* Modal Header */}
-                        <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                                <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
-                                    Nuevo Cliente
-                                </h2>
-                                <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '4px', marginBottom: 0 }}>
-                                    Completa la información del cliente
-                                </p>
-                            </div>
+            {loading && customers.length === 0 ? (
+                <div className="boutique-spinner-container">
+                    <div className="boutique-spinner"></div>
+                    <p>Cargando base de datos...</p>
+                </div>
+            ) : error ? (
+                <div className="boutique-card" style={{ textAlign: 'center', padding: '3rem' }}>
+                    <i className="bi bi-exclamation-octagon" style={{ fontSize: '3rem', color: '#EF4444' }}></i>
+                    <p style={{ marginTop: '1rem', color: '#6B7280' }}>{error}</p>
+                    <button className="btn-boutique outline" onClick={() => fetchCustomers()}>Reintentar</button>
+                </div>
+            ) : (
+                <>
+                    <div className="boutique-card" style={{ padding: 0 }}>
+                        <div className="boutique-table-wrapper">
+                            <table className="boutique-table">
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th>Identificación / SKU</th>
+                                        <th>Contacto</th>
+                                        <th>Cumpleaños</th>
+                                        <th>Nivel</th>
+                                        <th>Gasto Total</th>
+                                        <th style={{ textAlign: 'right' }}>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {customers.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="7" style={{ textAlign: 'center', padding: '5rem', opacity: 0.5 }}>
+                                                <i className="bi bi-people" style={{ fontSize: '2rem', display: 'block', marginBottom: '1rem' }}></i>
+                                                No se encontraron clientes con los criterios de búsqueda.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        customers.map(customer => (
+                                            <tr key={customer.id}>
+                                                <td>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                        <div style={{
+                                                            width: '40px',
+                                                            height: '40px',
+                                                            borderRadius: '50%',
+                                                            background: 'linear-gradient(135deg, #CFB3A9 0%, #E4D8CB 100%)',
+                                                            color: 'white',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            fontWeight: 700,
+                                                            fontSize: '0.9rem'
+                                                        }}>
+                                                            {customer.first_name?.charAt(0)}{customer.last_name?.charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ fontWeight: 700 }}>{customer.first_name} {customer.last_name}</div>
+                                                            <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>{customer.email}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div style={{ fontFamily: 'monospace', fontWeight: 600, color: '#A09086' }}>
+                                                        {customer.cedula || '---'}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div><i className="bi bi-telephone" style={{ marginRight: '6px', fontSize: '0.8rem' }}></i> {customer.phone || 'N/A'}</div>
+                                                </td>
+                                                <td>
+                                                    <div style={{ fontSize: '0.9rem' }}>
+                                                        {formatDate(customer.birth_date)}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    {getTierBadge(customer.calculated_tier)}
+                                                </td>
+                                                <td>
+                                                    <div style={{ fontWeight: 800 }}>${Number(customer.total_spent || 0).toFixed(2)}</div>
+                                                    <div style={{ fontSize: '0.75rem', opacity: 0.5 }}>{customer.total_orders || 0} órdenes</div>
+                                                </td>
+                                                <td style={{ textAlign: 'right' }}>
+                                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                                        <button className="btn-boutique outline icon-only" title="Ver Detalle" onClick={() => openDetailModal(customer.id)}>
+                                                            <i className="bi bi-eye"></i>
+                                                        </button>
+                                                        <button className="btn-boutique outline icon-only" title="Editar" onClick={() => openEditModal(customer)}>
+                                                            <i className="bi bi-pencil-square"></i>
+                                                        </button>
+                                                        <button className="btn-boutique outline icon-only delete" title="Eliminar" onClick={() => handleDelete(customer.id, `${customer.first_name} ${customer.last_name}`)}>
+                                                            <i className="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Pagination */}
+                    {pagination.total_pages > 1 && (
+                        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem', gap: '10px' }}>
                             <button
-                                onClick={closeModal}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    fontSize: '24px',
-                                    cursor: 'pointer',
-                                    color: '#6b7280',
-                                    padding: '4px 8px',
-                                    lineHeight: 1
-                                }}
-                                aria-label="Cerrar modal"
+                                className="btn-boutique outline"
+                                disabled={pagination.page === 1}
+                                onClick={() => fetchCustomers(pagination.page - 1, searchTerm)}
                             >
-                                ×
+                                Anterior
+                            </button>
+                            <span style={{ alignSelf: 'center', fontWeight: 600, color: '#A09086' }}>
+                                Página {pagination.page} de {pagination.total_pages}
+                            </span>
+                            <button
+                                className="btn-boutique outline"
+                                disabled={pagination.page === pagination.total_pages}
+                                onClick={() => fetchCustomers(pagination.page + 1, searchTerm)}
+                            >
+                                Siguiente
                             </button>
                         </div>
-
-                        {/* Modal Body */}
-                        <form onSubmit={handleCreateCustomer}>
-                            <div style={{ padding: '24px' }}>
-                                {/* Email y Usuario */}
-                                <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                                            Email *
-                                        </label>
-                                        <input
-                                            type="email"
-                                            name="email"
-                                            value={newCustomer.email}
-                                            onChange={handleInputChange}
-                                            required
-                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
-                                        />
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                                            Usuario (Web) *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="username"
-                                            value={newCustomer.username}
-                                            onChange={handleInputChange}
-                                            required
-                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Nombre y Apellido */}
-                                <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                                            Nombre *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="first_name"
-                                            value={newCustomer.first_name}
-                                            onChange={handleInputChange}
-                                            required
-                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
-                                        />
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                                            Apellido *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="last_name"
-                                            value={newCustomer.last_name}
-                                            onChange={handleInputChange}
-                                            required
-                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Cédula y Fecha Nacimiento */}
-                                <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                                            Cédula / RUC
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="identification_number"
-                                            value={newCustomer.identification_number}
-                                            onChange={handleInputChange}
-                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
-                                        />
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                                            Fecha Nacimiento
-                                        </label>
-                                        <input
-                                            type="date"
-                                            name="date_of_birth"
-                                            value={newCustomer.date_of_birth}
-                                            onChange={handleInputChange}
-                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Teléfono y Ciudad */}
-                                <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                                            Teléfono
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="phone"
-                                            value={newCustomer.phone}
-                                            onChange={handleInputChange}
-                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
-                                        />
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                                            Ciudad
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="city"
-                                            value={newCustomer.city}
-                                            onChange={handleInputChange}
-                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '8px', outline: 'none', fontSize: '14px' }}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Info Note */}
-                                <div style={{
-                                    backgroundColor: '#eff6ff',
-                                    border: '1px solid #bfdbfe',
-                                    borderRadius: '8px',
-                                    padding: '12px',
-                                    display: 'flex',
-                                    gap: '8px',
-                                    marginBottom: '20px'
-                                }}>
-                                    <svg style={{ width: '20px', height: '20px', color: '#2563eb', flexShrink: 0, marginTop: '2px' }} fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                    </svg>
-                                    <p style={{ margin: 0, fontSize: '13px', color: '#1e40af', lineHeight: '1.5' }}>
-                                        Se asignará automáticamente la contraseña predeterminada: <strong>Password123!</strong>
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Modal Footer */}
-                            <div style={{
-                                padding: '16px 24px',
-                                borderTop: '1px solid #e5e7eb',
-                                display: 'flex',
-                                justifyContent: 'flex-end',
-                                gap: '12px',
-                                backgroundColor: '#f9fafb'
-                            }}>
-                                <button
-                                    type="button"
-                                    onClick={closeModal}
-                                    disabled={submitting}
-                                    style={{
-                                        backgroundColor: 'white',
-                                        color: '#374151',
-                                        padding: '10px 20px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #d1d5db',
-                                        fontWeight: '500',
-                                        cursor: submitting ? 'not-allowed' : 'pointer',
-                                        fontSize: '14px',
-                                        transition: 'all 0.2s',
-                                        opacity: submitting ? 0.5 : 1
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!submitting) {
-                                            e.currentTarget.style.backgroundColor = '#f9fafb';
-                                            e.currentTarget.style.borderColor = '#9ca3af';
-                                        }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = 'white';
-                                        e.currentTarget.style.borderColor = '#d1d5db';
-                                    }}
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={submitting}
-                                    style={{
-                                        backgroundColor: submitting ? '#93c5fd' : '#2563eb',
-                                        color: 'white',
-                                        padding: '10px 24px',
-                                        borderRadius: '8px',
-                                        border: 'none',
-                                        fontWeight: '500',
-                                        cursor: submitting ? 'not-allowed' : 'pointer',
-                                        fontSize: '14px',
-                                        transition: 'all 0.2s',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!submitting) {
-                                            e.currentTarget.style.backgroundColor = '#1d4ed8';
-                                        }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!submitting) {
-                                            e.currentTarget.style.backgroundColor = '#2563eb';
-                                        }
-                                    }}
-                                >
-                                    {submitting ? (
-                                        <>
-                                            <div style={{
-                                                width: '16px',
-                                                height: '16px',
-                                                border: '2px solid white',
-                                                borderTopColor: 'transparent',
-                                                borderRadius: '50%',
-                                                animation: 'spin 0.6s linear infinite'
-                                            }}></div>
-                                            Guardando...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg style={{ width: '16px', height: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                            Guardar Cliente
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+                    )}
+                </>
             )}
 
-            <style>{`
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
+            {/* --- Modals --- */}
+
+            {/* Form Modal (Create/Edit) */}
+            <Modal
+                isOpen={isFormModalOpen}
+                onClose={() => setIsFormModalOpen(false)}
+                title={editingCustomer ? "Actualizar Cliente" : "Registrar Nuevo Cliente"}
+            >
+                <form onSubmit={handleSubmit} className="boutique-form">
+                    <div className="form-grid-2">
+                        <div className="form-group-boutique">
+                            <label>Nombre(s) *</label>
+                            <input type="text" name="first_name" value={formData.first_name} onChange={handleInputChange} required />
+                        </div>
+                        <div className="form-group-boutique">
+                            <label>Apellido(s) *</label>
+                            <input type="text" name="last_name" value={formData.last_name} onChange={handleInputChange} required />
+                        </div>
+                    </div>
+
+                    <div className="form-grid-2">
+                        <div className="form-group-boutique">
+                            <label>Email *</label>
+                            <input type="email" name="email" value={formData.email} onChange={handleInputChange} required disabled={!!editingCustomer} />
+                        </div>
+                        <div className="form-group-boutique">
+                            <label>Teléfono *</label>
+                            <input type="text" name="phone" value={formData.phone} onChange={handleInputChange} required />
+                        </div>
+                    </div>
+
+                    <div className="form-grid-2">
+                        <div className="form-group-boutique">
+                            <label>Cédula / RUC</label>
+                            <input type="text" name="cedula" value={formData.cedula} onChange={handleInputChange} />
+                        </div>
+                        <div className="form-group-boutique">
+                            <label>Fecha de Nacimiento</label>
+                            <input type="date" name="birth_date" value={formData.birth_date} onChange={handleInputChange} />
+                        </div>
+                    </div>
+
+                    <div className="form-group-boutique">
+                        <label>Dirección Principal</label>
+                        <input type="text" name="address" value={formData.address} onChange={handleInputChange} placeholder="Av. Principal N-10..." />
+                    </div>
+
+                    <div className="form-group-boutique">
+                        <label>Ciudad</label>
+                        <input type="text" name="city" value={formData.city} onChange={handleInputChange} />
+                    </div>
+
+                    {!editingCustomer && (
+                        <div className="inventory-control-section" style={{ background: '#F1EEEB', padding: '1rem', borderRadius: '0.8rem' }}>
+                            <p style={{ fontSize: '0.8rem', fontWeight: 700, margin: '0 0 0.8rem 0', color: '#A09086', textTransform: 'uppercase' }}>Configuración de Cuenta Web</p>
+                            <div className="form-grid-2">
+                                <div className="form-group-boutique">
+                                    <label>Usuario</label>
+                                    <input type="text" name="username" value={formData.username} onChange={handleInputChange} placeholder="Opcional" style={{ background: 'white' }} />
+                                </div>
+                                <div className="form-group-boutique">
+                                    <label>Password Temporal</label>
+                                    <input type="password" name="password" value={formData.password} onChange={handleInputChange} style={{ background: 'white' }} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="modal-footer-boutique" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem', borderTop: '1px solid #E4D8CB', paddingTop: '1.5rem' }}>
+                        <button type="button" className="btn-boutique dark" onClick={() => setIsFormModalOpen(false)}>Cancelar</button>
+                        <button type="submit" className="btn-boutique primary" disabled={submitting}>
+                            {submitting ? 'Guardando...' : editingCustomer ? 'Guardar Cambios' : 'Registrar Cliente'}
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Detail Modal */}
+            <Modal
+                isOpen={isDetailModalOpen}
+                onClose={() => setIsDetailModalOpen(false)}
+                title="Perfil del Cliente"
+            >
+                {viewingCustomer && (
+                    <div className="detail-container-boutique">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '2rem', background: '#F5F5F0', padding: '1.5rem', borderRadius: '1rem' }}>
+                            <div style={{
+                                width: '80px', height: '80px', borderRadius: '50%', background: '#CFB3A9', color: 'white',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', fontWeight: 800
+                            }}>
+                                {viewingCustomer.first_name?.charAt(0)}{viewingCustomer.last_name?.charAt(0)}
+                            </div>
+                            <div>
+                                <h2 style={{ margin: 0, color: '#2C2C2C' }}>{viewingCustomer.first_name} {viewingCustomer.last_name}</h2>
+                                <p style={{ margin: '4px 0', opacity: 0.6 }}>Cliente desde {new Date(viewingCustomer.created_at).toLocaleDateString()}</p>
+                                {getTierBadge(viewingCustomer.calculated_tier)}
+                            </div>
+                        </div>
+
+                        <div className="gestion-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                            <div>
+                                <h3 className="detail-section-title">Información Personal</h3>
+                                <div className="detail-item"><strong>Email:</strong> {viewingCustomer.email}</div>
+                                <div className="detail-item"><strong>Cédula:</strong> {viewingCustomer.cedula || 'N/A'}</div>
+                                <div className="detail-item"><strong>Teléfono:</strong> {viewingCustomer.phone || 'N/A'}</div>
+                                <div className="detail-item"><strong>Cumpleaños:</strong> {formatDate(viewingCustomer.birth_date)}</div>
+                                <div className="detail-item"><strong>Ciudad:</strong> {viewingCustomer.city || 'N/A'}</div>
+                            </div>
+                            <div>
+                                <h3 className="detail-section-title">Actividad Cometcial</h3>
+                                <div className="detail-item"><strong>Total Órdenes:</strong> {viewingCustomer.total_orders}</div>
+                                <div className="detail-item"><strong>Gasto Promedio:</strong> ${Number(viewingCustomer.average_order_value).toFixed(2)}</div>
+                                <div className="detail-item"><strong>Última Compra:</strong> {viewingCustomer.last_order_date ? new Date(viewingCustomer.last_order_date).toLocaleDateString() : 'Nunca'}</div>
+                                <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#FFFBEB', borderRadius: '0.8rem', border: '1px solid #FEF3C7' }}>
+                                    <div style={{ fontWeight: 700, color: '#D97706', fontSize: '0.9rem' }}>Balace de Lealtad</div>
+                                    <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#92400E' }}>{viewingCustomer.loyalty_points} <small style={{ fontSize: '0.9rem', fontWeight: 400 }}>puntos</small></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {viewingCustomer.notes && viewingCustomer.notes.length > 0 && (
+                            <div style={{ marginTop: '2rem' }}>
+                                <h3 className="detail-section-title">Notas Administrativas</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {viewingCustomer.notes.map(note => (
+                                        <div key={note.id} style={{ padding: '1rem', background: '#F8FAFC', borderRadius: '0.8rem', borderLeft: '4px solid #CBD5E1' }}>
+                                            <div style={{ fontSize: '0.85rem', color: '#64748B', marginBottom: '4px' }}>{new Date(note.created_at).toLocaleString()} - Por: {note.created_by_name}</div>
+                                            <div style={{ color: '#334155' }}>{note.content}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="modal-footer-boutique" style={{ marginTop: '2.5rem', display: 'flex', justifyContent: 'center' }}>
+                            <button className="btn-boutique dark" onClick={() => setIsDetailModalOpen(false)}>Cerrar Perfil</button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
+
+            <style jsx>{`
+                .detail-item {
+                    margin-bottom: 0.8rem;
+                    font-size: 0.95rem;
+                    color: #4B5563;
+                }
+                .detail-item strong {
+                    color: #A09086;
+                    display: inline-block;
+                    width: 120px;
+                }
+                .btn-boutique.icon-only {
+                    padding: 0.4rem 0.6rem;
+                    min-width: auto;
+                }
+                .btn-boutique.icon-only.delete:hover {
+                    background: #FEF2F2 !important;
+                    color: #DC2626 !important;
+                    border-color: #FEE2E2 !important;
                 }
             `}</style>
         </div>
