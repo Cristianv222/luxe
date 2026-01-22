@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from apps.whatsapp_bot.models import RemoteCustomer
+from apps.whatsapp_bot.models import RemoteCustomer, BirthdaySentHistory
 from apps.whatsapp_bot.models_config import RemoteWhatsAppSettings
 from django.utils import timezone
 import requests
@@ -10,11 +10,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # 1. Load Configuration from Luxe DB
-        try:
-            config = RemoteWhatsAppSettings.objects.using('luxe_db').first()
-        except Exception:
-            self.stdout.write(self.style.WARNING("⚠️ No configuration found in Luxe DB. Using defaults."))
-            config = None
+        config = self.get_whatsapp_settings()
 
         if config and not config.is_active:
             self.stdout.write(self.style.WARNING("⏹️ Automation is disabled in settings."))
@@ -23,7 +19,13 @@ class Command(BaseCommand):
         session_name = config.session_name if config else 'luxe_session'
         message_template = config.birthday_message_template if config else '🎉 ¡Feliz Cumpleaños {first_name}!'
 
-        # 2. Check for Birthdays
+        # 2. Check Session Status before proceeding
+        if not self.check_session_status(session_name):
+            self.stdout.write(self.style.ERROR(f"❌ WhatsApp Session '{session_name}' is not CONNECTED. Skipping birthday task."))
+            self.stdout.write(self.style.WARNING("💡 Please scan the QR code in the settings panel to activate the session."))
+            return
+
+        # 3. Check for Birthdays
         today = timezone.localtime().date()
         self.stdout.write(f"🔍 Checking birthdays for: {today.strftime('%d/%m')}")
 
@@ -33,19 +35,18 @@ class Command(BaseCommand):
             is_active=True
         )
 
+        if not birthday_people.exists():
+            self.stdout.write("✨ No birthdays today. Nothing to do.")
+            return
+
         count = 0
         wpp_url = f"http://luxe_wppconnect:21465/api/{session_name}/send-message"
         
-        # Simple check if WPPConnect is up (Token generation usually required first)
-        # Authentication: WPPConnect creates a token that we need to use.
-        # For this MVP, we assume the token is generated via the web UI step we added to Admin.
-        # But we need to pass that token here. 
-        # Since we don't have a secure way to share the token yet between services automatically without more complex logic,
-        # we will assume a known secret or we will just try to hit the endpoint (some configs allow no-auth if local).
-        # Assuming we need to Generate Token first...
-        # Let's try to generate token dynamically for the session 'luxe_session' using the secret key
-        
         token = self.get_session_token(session_name)
+        if not token:
+            self.stdout.write(self.style.ERROR("❌ Could not get authentication token. Skipping."))
+            return
+
         headers = {
             'Content-Type': 'application/json',
             'Authorization': f'Bearer {token}'
@@ -72,6 +73,16 @@ class Command(BaseCommand):
                 
                 if response.status_code == 201 or response.status_code == 200:
                     self.stdout.write(self.style.SUCCESS(f"✅ Sent to {full_name}"))
+                    
+                    # Log to history
+                    BirthdaySentHistory.objects.create(
+                        customer_id=customer.id,
+                        customer_name=full_name,
+                        phone=customer.phone,
+                        message=message,
+                        status='sent'
+                    )
+                    
                     count += 1
                 else:
                     self.stdout.write(self.style.ERROR(f"❌ Failed: {response.text}"))
@@ -80,27 +91,62 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(f"✨ Completed. Sent {count} messages."))
 
-    def get_session_token(self, session):
-        # In a real scenario, we would store this token in Redis or DB.
-        # For now, we utilize the generate-token endpoint with the secret key defined in docker-compose.
+    def get_whatsapp_settings(self):
         try:
-            url = f"http://luxe_wppconnect:21465/api/{session}/generate-token"
-            # It usually requires a secret key in header or body depending on version.
-            # WPPConnect server by default uses SECRET_KEY env var validation if configured.
-            # Simplified: We just try to get the token or assume we have one if we scanned the QR.
-            # If we need to start session:
-            start_response = requests.post(f"http://luxe_wppconnect:21465/api/{session}/start-session", 
-                                           headers={'Authorization': 'Bearer luxe_wpp_secret'}, # Using secret as initial bearer
-                                           json={"webhook": None})
-            if start_response.status_code == 200:
-                data = start_response.json()
-                return data.get('token') or data.get('session') # Varies by version
-            return "luxe_wpp_secret" # Fallback
-        except:
-            return "luxe_wpp_secret"
+            return RemoteWhatsAppSettings.objects.using('luxe_db').first()
+        except Exception:
+            return None
+
+    def check_session_status(self, session):
+        """Checks if the WPPConnect session is actually connected"""
+        try:
+            # First try the status endpoint
+            token = self.get_session_token(session)
+            if not token:
+                self.stdout.write("⚠️ Could not get token for status check")
+                return False
+                
+            headers = {'Authorization': f'Bearer {token}'}
+            
+            # Try the status endpoint
+            url = f"http://luxe_wppconnect:21465/api/{session}/status-session"
+            response = requests.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.stdout.write(f"📊 Session status: {data}")
+                
+                # WPPConnect returns status in different formats
+                status = data.get('status')
+                if status == 'CONNECTED' or status == 'isLogged' or status is True:
+                    return True
+                    
+                # Also check for nested response
+                if isinstance(data.get('response'), dict):
+                    inner_status = data['response'].get('status')
+                    if inner_status == 'CONNECTED' or inner_status == 'isLogged':
+                        return True
+                
+            return False
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f"⚠️ Status check error: {e}"))
+            return False
+
+    def get_session_token(self, session):
+        try:
+            secret = "THISISMYSECURETOKEN"
+            url = f"http://luxe_wppconnect:21465/api/{session}/{secret}/generate-token"
+            response = requests.post(url, timeout=10)
+            if response.status_code in [200, 201]:
+                return response.json().get('token')
+            return None
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"Error generating token: {e}"))
+            return None
 
     def format_phone(self, phone):
         # Basic formatter for 593 (Ecuador)
+        if not phone: return ""
         clean = ''.join(filter(str.isdigit, phone))
         if clean.startswith('09'):
             return '593' + clean[1:]

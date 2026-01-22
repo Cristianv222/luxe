@@ -60,6 +60,7 @@ services:
       - CSRF_TRUSTED_ORIGINS=http://luxe.local
       - DEBUG=False
       - PYTHONUNBUFFERED=1
+      - TZ=America/Guayaquil
     expose:
       - "8000"
     depends_on:
@@ -110,6 +111,7 @@ services:
       - CSRF_TRUSTED_ORIGINS=http://luxe.local
       - DEBUG=False
       - PYTHONUNBUFFERED=1
+      - TZ=America/Guayaquil
     expose:
       - "8000"
     depends_on:
@@ -141,10 +143,8 @@ services:
         echo "✅ PostgreSQL is ready!"
         echo "🔄 Running migrations..."
         python manage.py migrate --noinput
-        # In production, you would run celery or a scheduler here.
-        # For now, we keep it alive to execute commands manually or via cron
-        echo "🚀 Automation Service Ready - Keeping alive..."
-        tail -f /dev/null
+        echo "🚀 Starting Luxe Automation (API + Scheduler)..."
+        exec python scheduler.py
     volumes:
       - ./automation-service:/app
     environment:
@@ -155,6 +155,7 @@ services:
       - DB_PASSWORD=postgres
       - DB_HOST=postgres
       - DEBUG=True
+      - TZ=America/Guayaquil
     depends_on:
       postgres:
         condition: service_healthy
@@ -171,6 +172,7 @@ services:
       - PORT=21465
       - SECRET_KEY=luxe_wpp_secret
       - AUTHENTICATION_TYPE=false
+      - TZ=America/Guayaquil
     ports:
       - "21465:21465"
     networks:

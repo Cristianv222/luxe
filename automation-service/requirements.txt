@@ -4,3 +4,5 @@ requests
 python-decouple
 celery
 redis
+schedule
+djangorestframework

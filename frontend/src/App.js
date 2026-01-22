@@ -17,7 +17,8 @@ import LoyaltyConfig from './modulos/fast-food/LoyaltyConfig';
 import GestionPuntos from './modulos/fast-food/GestionPuntos';
 import WhatsAppConfig from './modulos/fast-food/WhatsAppConfig';
 import DisenoLuxe from './modulos/fast-food/DisenoFastFood';
-import LandingPage from './modulos/pagina-web/LandingPage'; // Keeping as backup for now or remove? User wanted switch.
+import LandingPage from './modulos/pagina-web/LandingPage';
+import { CartProvider } from './context/CartContext';
 import BoutiqueLanding from './modulos/pagina-web/BoutiqueLanding';
 import Registro from './modulos/pagina-web/Registro';
 import MiPerfil from './modulos/pagina-web/MiPerfil';
@@ -78,7 +79,6 @@ const Dashboard = () => (
   </div>
 );
 
-import { CartProvider } from './context/CartContext';
 // ... imports ...
 
 function App() {

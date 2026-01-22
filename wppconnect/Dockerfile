@@ -21,8 +21,11 @@ RUN git clone https://github.com/wppconnect-team/wppconnect-server.git . && \
     npm install && \
     npm run build
 
+# Copy custom configuration (disables auto-close, enables persistence)
+COPY config.json ./config.json
+
 # Expose port
 EXPOSE 21465
 
-# Start the server (using the built version)
-CMD ["node", "dist/server.js"]
+# Start the server with custom config
+CMD ["node", "dist/server.js", "--config", "./config.json"]

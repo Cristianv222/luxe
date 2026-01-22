@@ -86,7 +86,6 @@ const FormularioUsuario = ({ userToEdit, onSave, onCancel }) => {
                     cedula: user.identification_number || null,
                     identification_number: user.identification_number || null,
                     date_of_birth: user.date_of_birth || null,
-                    date_of_birth: user.date_of_birth || null,
                     address: user.address || '',
                     city: user.city || ''
                 };

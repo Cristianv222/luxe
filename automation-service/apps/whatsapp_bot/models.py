@@ -25,3 +25,22 @@ class RemoteCustomer(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+
+class BirthdaySentHistory(models.Model):
+    """
+    Tracks messages successfully sent to customers.
+    This table lives in the automation_service_db.
+    """
+    customer_id = models.UUIDField()
+    customer_name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=20)
+    sent_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, default='sent')
+    message = models.TextField()
+
+    class Meta:
+        ordering = ['-sent_at']
+        verbose_name = 'Historial de Envío'
+
+    def __str__(self):
+        return f"{self.customer_name} - {self.sent_at.strftime('%Y-%m-%d')}"

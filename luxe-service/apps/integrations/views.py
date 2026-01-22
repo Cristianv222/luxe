@@ -28,19 +28,26 @@ def get_wpp_token(session_name):
         print(f"Error generating WPP token: {str(e)}")
     return None
 
-class WhatsAppSettingsView(generics.RetrieveUpdateAPIView):
+class WhatsAppSettingsView(generics.ListCreateAPIView):
     """
-    GET: Retrieve current WhatsApp configuration
-    PUT/PATCH: Update configuration
+    GET: List all WhatsApp configurations
+    POST: Create a new configuration
     """
+    queryset = WhatsAppSettings.objects.all()
     serializer_class = WhatsAppSettingsSerializer
     permission_classes = [AllowAny]
     authentication_classes = []
-    
-    def get_object(self):
-        # Singleton pattern - get or create the only instance
-        obj, created = WhatsAppSettings.objects.get_or_create(pk=1)
-        return obj
+
+class WhatsAppSettingsDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET: Retrieve a specific configuration
+    PUT/PATCH: Update a specific configuration
+    DELETE: Remove a specific configuration
+    """
+    queryset = WhatsAppSettings.objects.all()
+    serializer_class = WhatsAppSettingsSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
 
 class WhatsAppStatusView(APIView):
     """
