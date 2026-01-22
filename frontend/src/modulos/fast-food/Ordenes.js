@@ -218,7 +218,7 @@ const Ordenes = () => {
                                     <td>
                                         <span style={{ fontWeight: '700', color: 'var(--color-latte)' }}>#{order.order_number}</span>
                                     </td>
-                                    <td>{order.customer_name || 'Cliente Casual'}</td>
+                                    <td>{(order.customer_name === 'Cliente Casual' || !order.customer_name) ? 'Consumidor Final' : order.customer_name}</td>
                                     <td>{order.order_type_display}</td>
                                     <td><strong>${order.total}</strong></td>
                                     <td>
@@ -273,7 +273,7 @@ const Ordenes = () => {
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
                                 <div>
                                     <h4 style={{ fontFamily: 'var(--font-serif)', marginBottom: '0.5rem' }}>Cliente</h4>
-                                    <p style={{ fontSize: '1.1rem' }}>{selectedOrder.customer_name || 'Cliente Casual'}</p>
+                                    <p style={{ fontSize: '1.1rem' }}>{(selectedOrder.customer_name === 'Cliente Casual' || !selectedOrder.customer_name) ? 'Consumidor Final' : selectedOrder.customer_name}</p>
                                 </div>
                                 <div>
                                     <button onClick={handlePrintTicket} className="ff-button ff-button-primary">
