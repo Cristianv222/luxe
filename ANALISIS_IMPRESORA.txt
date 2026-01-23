@@ -1,0 +1,46 @@
+ANÁLISIS DE INTEGRACIÓN DE IMPRESORA TÉRMICA & BOT AGENTE
+
+1. RESUMEN EJECUTIVO
+El sistema de impresión está correctamente implementado y diseñado para funcionar DE MANERA ASÍNCRONA usando un intermediario (Windows Agent / "Bot").
+El Backend (Django) NO se conecta directamente a la impresora USB/COM. En su lugar, pone las órdenes en una "cola de impresión" que el Bot descarga, imprime y confirma.
+
+2. FLUJO DE IMPRESIÓN (Funcionamiento Actual)
+
+   [Front-End POS] -> (1. Solicitud) -> [Backend Django] -> (2. Cola) -> [Base de Datos] -> (3. Polling) -> [Windows Agent .exe] -> (4. USB) -> [Impresora]
+
+   Paso 1: Venta en Front-end
+   - Archivo: frontend/src/modulos/fast-food/PuntosVenta.js
+   - Acción: Al finalizar venta (finalPlaceOrder), llama a `printerService.printReceipt(payload)`.
+   - Payload: Envía los ítems, totales, cliente, etc.
+
+   Paso 2: Procesamiento en Backend
+   - Archivo: luxe-service/apps/printer/views.py (Clase `PrintReceiptView`)
+   - Endpoint: `/api/hardware/print/receipt/`
+   - Lógica:
+     - Recibe los datos de la venta.
+     - Genera el diseño del ticket (texto plano centrado y formateado).
+     - Crea un registro en la tabla `PrintJob` con estado 'pending'.
+     - Respuesta al Front: "Ticket creado, el agente lo imprimirá" (No espera a que salga papel).
+
+   Paso 3: El "Bot" (Agente de Windows)
+   - El archivo .exe que mencionas debe estar ejecutándose en la computadora con la impresora.
+   - El Backend tiene endpoints específicos para este Bot en `views.py`:
+     - `agente_registrar`: El bot se anuncia al iniciar.
+     - `agente_trabajos_pendientes`: El bot pregunta periódicamente "¿Hay algo para imprimir?". La vista le devuelve los comandos ESC/POS (hexadecimal) listos.
+     - `agente_reportar_resultado`: El bot avisa si imprimió bien o falló.
+
+3. ESTADO DE LA INTEGRACIÓN
+   
+   [OK] Backend (Modelos): Tabla `PrintJob` existe para encolar trabajos.
+   [OK] Backend (Vistas): Generación de comandos ESC/POS (abrir caja, imprimir texto) implementada.
+   [OK] Backend (API Bot): Endpoints `/agente/trabajos` y `/agente/registrar` existen y no requieren autenticación compleja (AllowAny), lo cual facilita que el .exe funcione sin Login manual.
+   [OK] Frontend: `PuntosVenta.js` está enviando la solicitud correctamente.
+
+4. CONCLUSIÓN
+El sistema está 100% operativo a nivel de código.
+- Si el "Bot .exe" está corriendo en la máquina del cliente, detectará la impresora USB localmente.
+- El Bot consultará al servidor.
+- El servidor le dará la orden de venta que acabas de hacer.
+- La impresora imprimirá.
+
+No es necesario realizar cambios de código. Solo asegurarse de que el programa .exe esté abierto en la PC Caja.

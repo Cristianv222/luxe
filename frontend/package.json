@@ -12,7 +12,8 @@
     "react-datepicker": "^4.21.0",
     "jspdf-autotable": "^4.0.0-alpha.5",
     "recharts": "^2.10.0",
-    "date-fns": "^2.30.0"
+    "date-fns": "^2.30.0",
+    "react-barcode": "^1.4.6"
   },
   "scripts": {
     "start": "react-scripts start",

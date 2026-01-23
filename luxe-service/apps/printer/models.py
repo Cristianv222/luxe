@@ -8,6 +8,7 @@ class Printer(models.Model):
     """Impresoras configuradas en el sistema"""
     PRINTER_TYPES = [
         ('thermal', 'Térmica (Tickets)'),
+        ('label', 'Etiquetas (TSPL)'),
         ('laser', 'Láser (Facturas)'),
         ('matrix', 'Matriz de Puntos'),
     ]

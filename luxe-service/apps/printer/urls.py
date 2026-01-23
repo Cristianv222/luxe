@@ -31,6 +31,7 @@ urlpatterns = [
     # ============================================================================
     path('print/', views.PrintAPIView.as_view(), name='print'),
     path('print/receipt/', views.PrintReceiptView.as_view(), name='print-receipt'),
+    path('print/label/', views.PrintLabelView.as_view(), name='print-label'),
     
     # ============================================================================
     # ENDPOINTS DE UTILIDAD

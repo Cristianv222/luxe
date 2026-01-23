@@ -12,7 +12,8 @@ import Clientes from './modulos/fast-food/Clientes';
 import Reportes from './modulos/fast-food/Reportes';
 import PuntosVenta from './modulos/fast-food/PuntosVenta';
 import ShiftManager from './modulos/fast-food/ShiftManager';
-import Impresoras from './modulos/fast-food/Impresoras';
+import Etiquetas from './modulos/fast-food/Etiquetas';
+import SistemaMaquinas from './modulos/fast-food/SistemaMaquinas';
 import LoyaltyConfig from './modulos/fast-food/LoyaltyConfig';
 import GestionPuntos from './modulos/fast-food/GestionPuntos';
 import WhatsAppConfig from './modulos/fast-food/WhatsAppConfig';
@@ -149,9 +150,14 @@ function App() {
                 <ShiftManager onShiftActive={() => { }} />
               </LuxeRoute>
             } />
-            <Route path="/luxe/printers" element={
+            <Route path="/luxe/labels" element={
               <LuxeRoute>
-                <Impresoras />
+                <Etiquetas />
+              </LuxeRoute>
+            } />
+            <Route path="/luxe/machines" element={
+              <LuxeRoute>
+                <SistemaMaquinas />
               </LuxeRoute>
             } />
             <Route path="/luxe/loyalty-config" element={

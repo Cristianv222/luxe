@@ -358,13 +358,25 @@ def agente_trabajos_pendientes(request):
             
             trabajo.mark_as_printing()
             
-            comandos_hex = generar_comandos_escpos(trabajo)
+            # Detectar si es trabajo de etiquetas (TSPL) o de tickets (ESC/POS)
+            job_data = trabajo.data or {}
+            is_label_job = job_data.get('type') == 'label'
+            
+            if is_label_job:
+                # Para etiquetas, enviar comandos TSPL directamente en HEX
+                comandos_hex = trabajo.content.encode('utf-8', errors='ignore').hex()
+                tipo_impresora = 'label'
+            else:
+                # Para tickets, generar comandos ESC/POS
+                comandos_hex = generar_comandos_escpos(trabajo)
+                tipo_impresora = 'receipt'
             
             trabajos_data.append({
                 'id': str(trabajo.id),
                 'impresora': trabajo.printer.name,
                 'comandos': comandos_hex,
                 'tipo': trabajo.document_type,
+                'tipo_impresora': tipo_impresora,  # Nuevo campo para el Bot
                 'copias': trabajo.copies,
                 'usuario': trabajo.created_by or 'Sistema',
                 'abrir_caja': trabajo.open_cash_drawer
@@ -849,6 +861,145 @@ class PrintReceiptView(APIView):
         lines.append("\n" * 3)
     
         return "\n".join(lines)
+
+# ============================================================================
+# IMPRESIÓN DE ETIQUETAS (TSPL - 3nStar LDT114)
+# ============================================================================
+
+class PrintLabelView(APIView):
+    """API para imprimir etiquetas de productos con código de barras"""
+    permission_classes = [AllowAny]
+    
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+    
+    def post(self, request):
+        """
+        Imprime etiquetas para uno o varios productos.
+        Payload esperado:
+        {
+            "products": [
+                {"name": "Producto 1", "code": "12345678", "price": 15.99},
+                ...
+            ],
+            "copies": 1,  # Copias por etiqueta
+            "printer_id": null  # Opcional, usa default si no se especifica
+        }
+        """
+        products = request.data.get('products', [])
+        copies = request.data.get('copies', 1)
+        printer_id = request.data.get('printer_id')
+        
+        if not products:
+            return Response({
+                'error': 'Debe proporcionar al menos un producto'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Obtener impresora
+        if not printer_id:
+            printer = Printer.get_default()
+            if not printer:
+                return Response({
+                    'error': 'No hay impresora de etiquetas configurada'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            try:
+                printer = Printer.objects.get(pk=printer_id, is_active=True)
+            except Printer.DoesNotExist:
+                return Response({
+                    'error': 'Impresora no encontrada o inactiva'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Generar contenido TSPL para todas las etiquetas
+            tspl_content = self.generate_tspl_labels(products, copies)
+            
+            username = request.user.username if request.user.is_authenticated else 'system'
+            print_job = PrintJob.objects.create(
+                printer=printer,
+                document_type='other',
+                content=tspl_content,
+                data={'products': products, 'copies': copies, 'type': 'label'},
+                open_cash_drawer=False,
+                created_by=username,
+                status='pending'
+            )
+            
+            return Response({
+                'status': 'success',
+                'message': f'{len(products)} etiqueta(s) enviada(s) al Bot',
+                'job_id': str(print_job.id),
+                'job_number': print_job.job_number
+            })
+                
+        except Exception as e:
+            logger.error(f"Error al crear etiqueta: {str(e)}")
+            return Response({
+                'status': 'error',
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def generate_tspl_labels(self, products, copies=1):
+        """
+        Genera comandos TSPL para la impresora 3nStar LDT114
+        Tamaño de etiqueta: 57mm x 27mm (aprox 456 x 216 dots a 203 DPI)
+        """
+        # Configuración de etiqueta 57x27mm
+        # 1mm = 8 dots a 203 DPI
+        WIDTH_MM = 57
+        HEIGHT_MM = 27
+        WIDTH_DOTS = WIDTH_MM * 8  # 456 dots
+        HEIGHT_DOTS = HEIGHT_MM * 8  # 216 dots
+        GAP_MM = 2  # Espacio entre etiquetas
+        
+        lines = []
+        
+        # Configuración inicial TSPL
+        lines.append(f"SIZE {WIDTH_MM} mm, {HEIGHT_MM} mm")
+        lines.append(f"GAP {GAP_MM} mm, 0 mm")
+        lines.append("DIRECTION 1")
+        lines.append("CLS")
+        
+        for product in products:
+            name = product.get('name', 'Sin nombre')[:25]  # Limitar caracteres
+            code = product.get('code', '00000000')
+            price = product.get('price', 0)
+            
+            # Formatear precio
+            price_str = f"${float(price):.2f}"
+            
+            # Limpiar área
+            lines.append("CLS")
+            
+            # Nombre del producto (arriba, centrado)
+            # TEXTO: X, Y, fuente, rotación, x-mult, y-mult, texto
+            lines.append(f'TEXT 10,10,"2",0,1,1,"{name}"')
+            
+            # Código de barras (centro)
+            # BARCODE: X, Y, tipo, altura, human_readable, rotación, narrow, wide, código
+            lines.append(f'BARCODE 30,40,"128",60,1,0,2,4,"{code}"')
+            
+            # Precio (abajo, grande)
+            lines.append(f'TEXT 10,180,"3",0,1,1,"{price_str}"')
+            
+            # Imprimir etiqueta
+            lines.append(f"PRINT {copies}")
+        
+        return "\n".join(lines)
+
+
+def generar_comandos_tspl_hex(trabajo):
+    """Genera comandos TSPL en hexadecimal para el trabajo de impresión de etiquetas"""
+    try:
+        contenido = trabajo.content
+        # Convertir a bytes y luego a hex
+        comandos = contenido.encode('utf-8', errors='ignore')
+        return comandos.hex()
+    except Exception as e:
+        logger.error(f"❌ Error generando comandos TSPL: {e}")
+        return b'SIZE 57 mm, 27 mm\nCLS\nTEXT 10,10,"2",0,1,1,"ERROR"\nPRINT 1\n'.hex()
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

@@ -197,6 +197,7 @@ services:
       - WATCHPACK_POLLING=true
       - NODE_ENV=development
       - NODE_OPTIONS=--max-old-space-size=4096
+      - HOST=0.0.0.0
       - REACT_APP_API_BASE_URL=http://luxe.local/api
       - REACT_APP_AUTH_SERVICE=http://luxe.local/api/auth
       - REACT_APP_LUXE_SERVICE=http://luxe.local/api/luxe
@@ -206,7 +207,7 @@ services:
       - luxe-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3

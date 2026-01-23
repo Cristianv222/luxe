@@ -42,10 +42,6 @@ const PuntosVenta = () => {
     const [discountCode, setDiscountCode] = useState('');
     const [appliedDiscount, setAppliedDiscount] = useState(null);
 
-    // 2.5 ESTADO ESCÁNER / CÓDIGO
-    const [barcodeBuffer, setBarcodeBuffer] = useState('');
-    const [lastScanTime, setLastScanTime] = useState(0);
-
     // 3.5 ESTADO DE CALCULADORA DE VUELTO
     const [cashGiven, setCashGiven] = useState(null);
     const [inputCash, setInputCash] = useState('');
@@ -119,45 +115,97 @@ const PuntosVenta = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // LÓGICA DEL ESCÁNER DE CÓDIGOS DE BARRAS
+    // LÓGICA DEL ESCÁNER DE CÓDIGOS DE BARRAS (MEJORADA - FUNCIONA SIEMPRE)
+    // Usamos refs para evitar re-renders y mantener estado preciso entre eventos rápidos
+    const barcodeBufferRef = React.useRef('');
+    const lastKeyTimeRef = React.useRef(0);
+    const scannerTimeoutRef = React.useRef(null);
+    const SCANNER_SPEED_THRESHOLD = 50; // Los escáneres escriben < 50ms entre teclas
+    const MIN_BARCODE_LENGTH = 4; // Mínimo caracteres para considerar código válido
+
     const handleBarcodeScan = useCallback((code) => {
-        // Buscar producto por código EXACTO
-        const product = products.find(p => p.code === code || p.slug === code); // Fallback slug if code empty
+        // Buscar producto por código EXACTO (campo 'code' del producto)
+        const product = products.find(p => p.code === code);
         if (product) {
             addToCart(product);
-            console.log("Producto agregado por escáner:", product.name);
+            // Feedback visual/sonoro opcional
+            console.log("✅ Producto agregado por escáner:", product.name, "- Código:", code);
+            // Limpiar campo de búsqueda si tiene el código
+            if (searchTerm === code) {
+                setSearchTerm('');
+            }
         } else {
-            console.warn("Producto no encontrado para el código:", code);
+            console.warn("⚠️ Producto no encontrado para el código:", code);
+            // Opcional: Mostrar notificación al usuario
+            alert(`Producto con código "${code}" no encontrado`);
         }
-    }, [products]); // addToCart es estable, pero products cambia
+    }, [products, searchTerm]);
 
-    // Listener Global de Teclas
+    // Listener Global de Teclas - SIEMPRE ACTIVO (incluso en inputs)
     useEffect(() => {
         const handleKeyDown = (e) => {
-            // Ignorar si el foco está en un input (para permitir escribir normal)
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
             const currentTime = Date.now();
+            const timeSinceLastKey = currentTime - lastKeyTimeRef.current;
+
+            // Limpiar timeout anterior
+            if (scannerTimeoutRef.current) {
+                clearTimeout(scannerTimeoutRef.current);
+            }
 
             if (e.key === 'Enter') {
-                if (barcodeBuffer.length > 0) {
-                    handleBarcodeScan(barcodeBuffer);
-                    setBarcodeBuffer('');
+                const scannedCode = barcodeBufferRef.current.trim();
+
+                // Solo procesar si parece un código de escáner (mínimo 4 caracteres, entrada rápida)
+                if (scannedCode.length >= MIN_BARCODE_LENGTH) {
+                    // Buscar si existe el producto
+                    const product = products.find(p => p.code === scannedCode);
+                    if (product) {
+                        e.preventDefault(); // Evitar que el Enter haga submit o algo más
+                        e.stopPropagation();
+                        handleBarcodeScan(scannedCode);
+
+                        // Limpiar el input si el código está ahí
+                        if (e.target.tagName === 'INPUT' && e.target.value.includes(scannedCode)) {
+                            e.target.value = e.target.value.replace(scannedCode, '');
+                            // También actualizar el estado de React si es el campo de búsqueda
+                            setSearchTerm('');
+                        }
+                    }
                 }
-            } else if (e.key.length === 1) { // Caracteres imprimibles
-                // Si ha pasado mucho tiempo desde la última tecla, reiniciar buffer (diferenciar typing manual lento vs escáner rápido)
-                if (currentTime - lastScanTime > 100) {
-                    setBarcodeBuffer(e.key);
+                barcodeBufferRef.current = '';
+                lastKeyTimeRef.current = 0;
+            } else if (e.key.length === 1 && /[a-zA-Z0-9]/.test(e.key)) {
+                // Solo caracteres alfanuméricos (típicos de códigos de barras)
+
+                // Si pasó mucho tiempo desde la última tecla, es escritura manual - reiniciar
+                if (timeSinceLastKey > 200) {
+                    barcodeBufferRef.current = e.key;
+                } else if (timeSinceLastKey <= SCANNER_SPEED_THRESHOLD) {
+                    // Entrada muy rápida = probablemente un escáner
+                    barcodeBufferRef.current += e.key;
                 } else {
-                    setBarcodeBuffer(prev => prev + e.key);
+                    // Velocidad intermedia - podría ser escáner o humano rápido, acumular
+                    barcodeBufferRef.current += e.key;
                 }
-                setLastScanTime(currentTime);
+
+                lastKeyTimeRef.current = currentTime;
+
+                // Auto-limpiar el buffer después de 500ms sin actividad
+                scannerTimeoutRef.current = setTimeout(() => {
+                    barcodeBufferRef.current = '';
+                }, 500);
             }
         };
 
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [barcodeBuffer, lastScanTime, handleBarcodeScan]);
+        // Usar capture: true para interceptar ANTES que los inputs
+        window.addEventListener('keydown', handleKeyDown, { capture: true });
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown, { capture: true });
+            if (scannerTimeoutRef.current) {
+                clearTimeout(scannerTimeoutRef.current);
+            }
+        };
+    }, [products, handleBarcodeScan]);
 
 
     // =====================================

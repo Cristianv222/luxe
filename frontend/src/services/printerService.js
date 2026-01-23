@@ -38,6 +38,20 @@ class PrinterService {
       return null;
     }
   }
+
+  async printLabels(products, copies = 1, printerId = null) {
+    try {
+      const response = await api.post(`${PRINTER_API_URL}/print/label/`, {
+        products: products,
+        copies: copies,
+        printer_id: printerId
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error al imprimir etiquetas:', error);
+      throw error;
+    }
+  }
 }
 
 const printerServiceInstance = new PrinterService();
