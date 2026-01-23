@@ -47,7 +47,7 @@ services:
         echo "🔄 Collecting static files..."
         python manage.py collectstatic --noinput
         echo "🚀 Starting Django..."
-        exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120
+        exec gunicorn auth_service.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120
     volumes:
       - ./auth-service:/app
       - auth-static:/app/staticfiles
@@ -91,7 +91,7 @@ services:
         echo "🔄 Collecting static files..."
         python manage.py collectstatic --noinput
         echo "🚀 Starting Django..."
-        exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120
+        exec gunicorn luxe_service.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120
     volumes:
       - ./luxe-service:/app
       - luxe-static:/app/staticfiles
