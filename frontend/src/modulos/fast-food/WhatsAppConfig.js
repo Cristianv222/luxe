@@ -154,7 +154,8 @@ const WhatsAppConfig = () => {
                 attempts++;
                 try {
                     const qrResponse = await api.get('/api/integrations/whatsapp/qrcode/', {
-                        baseURL: process.env.REACT_APP_LUXE_SERVICE
+                        baseURL: process.env.REACT_APP_LUXE_SERVICE,
+                        params: { _t: Date.now() }
                     });
 
                     if (qrResponse.data.qrcode) {
@@ -166,7 +167,8 @@ const WhatsAppConfig = () => {
                     }
 
                     const statusRes = await api.get('/api/integrations/whatsapp/status/', {
-                        baseURL: process.env.REACT_APP_LUXE_SERVICE
+                        baseURL: process.env.REACT_APP_LUXE_SERVICE,
+                        params: { _t: Date.now() }
                     });
 
                     if (statusRes.data.status === 'connected') {
