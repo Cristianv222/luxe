@@ -34,6 +34,8 @@ INSTALLED_APPS = [
     'apps.reports',
     'apps.loyalty',
     'apps.integrations',
+    # Storage
+    'storages',
 ]
 
 
@@ -97,9 +99,33 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 STATICFILES_DIRS = []
 
-# Media files
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# ============================================
+# MEDIA FILES - DIGITALOCEAN SPACES
+# ============================================
+USE_SPACES = os.getenv('USE_SPACES', 'False') == 'True'
+
+if USE_SPACES:
+    # Configuración de DigitalOcean Spaces (compatible con S3)
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME', 'fronteratech')
+    AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'nyc3')
+    AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL', f'https://{AWS_S3_REGION_NAME}.digitaloceanspaces.com')
+    AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN', f'{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_REGION_NAME}.digitaloceanspaces.com')
+    AWS_LOCATION = os.getenv('AWS_LOCATION', 'media-luxury')
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400',  # Cache por 1 día
+    }
+    AWS_QUERYSTRING_AUTH = False  # URLs públicas sin firma
+    
+    # Usar S3 para archivos de media
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_LOCATION}/'
+else:
+    # Almacenamiento local (desarrollo)
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

@@ -24,3 +24,7 @@ reportlab==4.0.4
 # Para Excel
 openpyxl==3.1.5
 django-import-export==4.3.14
+
+# DigitalOcean Spaces / S3 Storage
+boto3>=1.34.0
+django-storages>=1.14.0
