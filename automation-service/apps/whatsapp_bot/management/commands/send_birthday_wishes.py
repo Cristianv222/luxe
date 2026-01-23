@@ -39,7 +39,7 @@ class Command(BaseCommand):
             return
 
         count = 0
-        wpp_url = f"http://luxe_wppconnect:21465/api/{session_name}/send-message"
+        wpp_url = f"http://luxe_whatsapp:21465/api/{session_name}/send-message"
         
         token = self.get_session_token(session_name)
         if not token:
@@ -145,7 +145,7 @@ class Command(BaseCommand):
             headers = {'Authorization': f'Bearer {token}'}
             
             # Try the status endpoint
-            url = f"http://luxe_wppconnect:21465/api/{session}/status-session"
+            url = f"http://luxe_whatsapp:21465/api/{session}/status-session"
             response = requests.get(url, headers=headers, timeout=10)
             
             if response.status_code == 200:
@@ -171,7 +171,7 @@ class Command(BaseCommand):
     def get_session_token(self, session):
         try:
             secret = "THISISMYSECURETOKEN"
-            url = f"http://luxe_wppconnect:21465/api/{session}/{secret}/generate-token"
+            url = f"http://luxe_whatsapp:21465/api/{session}/{secret}/generate-token"
             response = requests.post(url, timeout=10)
             if response.status_code in [200, 201]:
                 return response.json().get('token')

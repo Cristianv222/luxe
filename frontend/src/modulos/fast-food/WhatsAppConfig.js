@@ -186,7 +186,7 @@ const WhatsAppConfig = () => {
                 } catch (err) {
                     console.error('Polling error:', err);
                 }
-            }, 3000);
+            }, 5000);
 
             window.activeQrPoll = pollQr;
 

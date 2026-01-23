@@ -145,7 +145,7 @@ Ejecuta este script en segundo plano.
 
 ### Verificar Logs de WPPConnect
 ```powershell
-docker logs luxe_wppconnect --tail 50 --follow
+docker logs luxe_whatsapp --tail 50 --follow
 ```
 
 ### Verificar Logs del Automation Service
@@ -203,7 +203,7 @@ El sistema guarda en el campo `status_log` del Admin:
 
 1. **Verifica que WPPConnect esté conectado**:
    ```powershell
-   docker exec luxe_wppconnect sh -c "curl http://localhost:21465/api/luxe_session/status-session"
+   docker exec luxe_whatsapp sh -c "curl http://localhost:21465/api/luxe_session/status-session"
    ```
    
 2. **Revisa los logs del automation service**:

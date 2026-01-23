@@ -26,6 +26,25 @@ class RemoteCustomer(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
+class RemoteWhatsAppSettings(models.Model):
+    """
+    Mirror of integrations_whatsappsettings in luxe-service.
+    Allows accessing WhatsApp session configuration.
+    """
+    session_name = models.CharField(max_length=100)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+
+    use_luxe_db = True
+
+    class Meta:
+        managed = False
+        db_table = 'integrations_whatsappsettings'
+        verbose_name = 'Configuración WhatsApp Remota'
+
+    def __str__(self):
+        return self.session_name
+
 class BirthdaySentHistory(models.Model):
     """
     Tracks messages successfully sent to customers.

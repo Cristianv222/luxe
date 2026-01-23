@@ -1,0 +1,35 @@
+# Etapa 1: Construcción (Build)
+FROM node:18-alpine as build
+
+WORKDIR /app
+
+# Copia optimizada de dependencias
+COPY package*.json ./
+# Instalamos dependencias (incluyendo devDependencies para el build)
+RUN npm ci --silent
+
+# Copiamos el código fuente
+COPY . .
+
+# Variables de entorno para el build (Rutas relativas para evitar CORS)
+# REACT_APP_AUTH_SERVICE debe ser raiz porque el codigo ya incluye /api/authentication
+ENV REACT_APP_API_BASE_URL=/api
+ENV REACT_APP_AUTH_SERVICE=/
+ENV REACT_APP_LUXE_SERVICE=/api/luxe
+ENV NODE_ENV=production
+
+# Ejecutamos el build. Esto crea la carpeta /app/build con HTML/JS/CSS optimizados
+RUN npm run build
+
+# Etapa 2: Servidor Web (Nginx) - ¡Esta imagen es la única que queda viva!
+FROM nginx:alpine
+
+# Copiamos los archivos compilados de la etapa anterior al directorio de Nginx
+COPY --from=build /app/build /usr/share/nginx/html
+
+# Copiamos una config básica de Nginx para SPA (Single Page Application)
+COPY nginx-custom.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

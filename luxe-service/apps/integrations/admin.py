@@ -11,9 +11,9 @@ class WhatsAppSettingsAdmin(admin.ModelAdmin):
     
     def check_connection_status(self, obj):
         # We try to ping the wppconnect service
-        # Since this runs inside the luxe-service container, it can talk to luxe_wppconnect
+        # Since this runs inside the luxe-service container, it can talk to luxe_whatsapp
         try:
-            url = f"http://luxe_wppconnect:21465/api/{obj.session_name}/status-session"
+            url = f"http://luxe_whatsapp:21465/api/{obj.session_name}/status-session"
             headers = {'Authorization': 'Bearer luxe_wpp_secret'} 
             # Note: WPPConnect creates token on generate-token. 
             # For simplicity in this specialized environment, we might use a fixed secret key if supported or manage connection differently.
