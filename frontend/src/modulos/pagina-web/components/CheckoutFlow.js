@@ -131,10 +131,38 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
         setDiscountError('');
     };
 
-    // Calcular totales
-    const subtotal = getCartTotal();
-    const discountAmount = discountInfo ? discountInfo.amount : 0;
-    const finalTotal = subtotal - discountAmount;
+    // Calcular totales con useMemo y rounding
+    const roundCurrency = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
+
+    const subtotal = React.useMemo(() => {
+        return roundCurrency(getCartTotal());
+    }, [cart, getCartTotal]);
+
+    const taxAmount = React.useMemo(() => {
+        const rawTax = cart.reduce((totalTax, item) => {
+            const itemTaxRate = item.tax_rate || 0;
+            // Calcular precio base del item (considerando talla si aplica, lógica similar a getCartTotal)
+            let price = parseFloat(item.price);
+            if (item.selectedSize) {
+                price = parseFloat(item.selectedSize.price);
+            }
+            // Extras
+            const extrasTotal = item.selectedExtras ?
+                item.selectedExtras.reduce((sum, extra) => sum + parseFloat(extra.price), 0) : 0;
+
+            const itemTotal = (price + extrasTotal) * item.quantity;
+            return totalTax + (itemTotal * (itemTaxRate / 100));
+        }, 0);
+        return roundCurrency(rawTax);
+    }, [cart]);
+
+    const discountAmount = React.useMemo(() => {
+        return discountInfo ? roundCurrency(parseFloat(discountInfo.amount)) : 0;
+    }, [discountInfo]);
+
+    const finalTotal = React.useMemo(() => {
+        return roundCurrency(subtotal + taxAmount - discountAmount);
+    }, [subtotal, taxAmount, discountAmount]);
 
     // Submit Checkout
     const handleCheckoutSubmit = async (e) => {
@@ -246,7 +274,13 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
             msg += `(Detalle de productos en sistema)\n`;
         }
 
-        msg += `\n*Subtotal:* $${parseFloat(createdOrder.subtotal).toFixed(2)}\n`;
+        msg += `\n*Subtotal:* $${parseFloat(createdOrder.subtotal || 0).toFixed(2)}\n`;
+
+        // IVA
+        const taxVal = parseFloat(createdOrder.tax_amount || 0);
+        if (taxVal > 0) {
+            msg += `*IVA:* $${taxVal.toFixed(2)}\n`;
+        }
 
         // Descuento
         const discountVal = parseFloat(createdOrder.discount_amount || 0);
@@ -455,9 +489,12 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
 
                         <div className="checkout-totals">
                             <div className="total-row"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
+                            {taxAmount > 0 && (
+                                <div className="total-row"><span>IVA</span><span>${taxAmount.toFixed(2)}</span></div>
+                            )}
                             {discountInfo && (
                                 <div className="total-row" style={{ color: 'green' }}>
-                                    <span>Descuento</span><span>-${parseFloat(discountAmount).toFixed(2)}</span>
+                                    <span>Descuento</span><span>-${discountAmount.toFixed(2)}</span>
                                 </div>
                             )}
                             <div className="total-row final"><span>Total</span><span>${finalTotal.toFixed(2)}</span></div>
