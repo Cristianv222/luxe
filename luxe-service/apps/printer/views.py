@@ -845,10 +845,13 @@ class PrintReceiptView(APIView):
     
         # Totales
         subtotal = order_data.get('subtotal', 0)
+        tax = order_data.get('tax', 0)
         discount = order_data.get('discount', 0)
         total = order_data.get('total', 0)
     
         lines.append(f"{'Subtotal:':<30} ${subtotal:>10.2f}")
+        if tax > 0:
+            lines.append(f"{'IVA:':<30} ${tax:>10.2f}")
         if discount > 0:
             lines.append(f"{'Descuento:':<30} -${discount:>10.2f}")
         lines.append("=" * chars_per_line)

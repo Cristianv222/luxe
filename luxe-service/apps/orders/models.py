@@ -224,12 +224,22 @@ class Order(models.Model):
     def calculate_totals(self):
         """Calcula los totales de la orden"""
         # Calcular subtotal de items
-        items_total = sum(item.line_total for item in self.items.all())
+        # Usamos select_related para optimizar el acceso a producto
+        items = self.items.select_related('product').all()
+        
+        items_total = sum(item.line_total for item in items)
         self.subtotal = items_total
         
-        # Calcular impuestos (ejemplo: 12%)
-        tax_rate = Decimal('0.00')
-        self.tax_amount = self.subtotal * tax_rate
+        # Calcular impuestos sumando el IVA de cada producto individualmente
+        total_tax = Decimal('0.00')
+        
+        for item in items:
+            if hasattr(item.product, 'tax_rate') and item.product.tax_rate > 0:
+                # Calcula el impuesto basado en el total de la línea y la tasa del producto
+                item_tax = item.line_total * (item.product.tax_rate / Decimal('100.00'))
+                total_tax += item_tax
+                
+        self.tax_amount = total_tax
         
         # Calcular total
         self.total = (

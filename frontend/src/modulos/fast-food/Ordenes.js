@@ -316,6 +316,12 @@ const Ordenes = () => {
                                         <span>Subtotal:</span>
                                         <span>${selectedOrder.subtotal}</span>
                                     </div>
+                                    {selectedOrder.tax_amount > 0 && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                            <span>IVA:</span>
+                                            <span>${selectedOrder.tax_amount}</span>
+                                        </div>
+                                    )}
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--color-dark)' }}>
                                         <span>Total:</span>
                                         <span>${selectedOrder.total}</span>

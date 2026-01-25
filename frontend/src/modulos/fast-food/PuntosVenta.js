@@ -240,7 +240,8 @@ const PuntosVenta = () => {
                     quantity: 1,
                     image: product.image,
                     note: '',
-                    code: product.code
+                    code: product.code,
+                    tax_rate: parseFloat(product.tax_rate || 0) // Guardar la tasa de impuesto
                 }];
             }
         });
@@ -279,13 +280,43 @@ const PuntosVenta = () => {
     // =====================================
     // 6. CÁLCULOS
     // =====================================
-    const calculateSubtotal = useMemo(() => cart.reduce((t, i) => t + (i.price * i.quantity), 0), [cart]);
+    // =====================================
+    // 6. CÁLCULOS
+    // =====================================
+
+    // Función auxiliar para redondear a 2 decimales y evitar problemas de punto flotante
+    const roundCurrency = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
+
+    const calculateSubtotal = useMemo(() => {
+        const sub = cart.reduce((t, i) => t + (i.price * i.quantity), 0);
+        return roundCurrency(sub);
+    }, [cart]);
+
+    const calculateTax = useMemo(() => {
+        const rawTax = cart.reduce((totalTax, item) => {
+            const itemTaxRate = item.tax_rate || 0;
+            const itemTotal = item.price * item.quantity;
+            return totalTax + (itemTotal * (itemTaxRate / 100));
+        }, 0);
+        // Redondeamos el impuesto AQUÍ para que el valor mostrado (ej: 0.23) 
+        // sea EXACTAMENTE el que se suma al total.
+        return roundCurrency(rawTax);
+    }, [cart]);
+
     const calculateDiscountAmount = useMemo(() => {
         if (!appliedDiscount) return 0;
-        if (appliedDiscount.discount_type === 'percentage') return calculateSubtotal * (parseFloat(appliedDiscount.discount_value) / 100);
-        return Math.min(parseFloat(appliedDiscount.discount_value), calculateSubtotal);
+        let discount = 0;
+        if (appliedDiscount.discount_type === 'percentage') {
+            discount = calculateSubtotal * (parseFloat(appliedDiscount.discount_value) / 100);
+        } else {
+            discount = Math.min(parseFloat(appliedDiscount.discount_value), calculateSubtotal);
+        }
+        return roundCurrency(discount);
     }, [appliedDiscount, calculateSubtotal]);
-    const calculateTotal = useMemo(() => calculateSubtotal - calculateDiscountAmount, [calculateSubtotal, calculateDiscountAmount]);
+
+    const calculateTotal = useMemo(() => {
+        return roundCurrency(calculateSubtotal + calculateTax - calculateDiscountAmount);
+    }, [calculateSubtotal, calculateTax, calculateDiscountAmount]);
 
     const handleApplyDiscount = async () => {
         if (!discountCode) return;
@@ -403,7 +434,7 @@ const PuntosVenta = () => {
                 order_type: selectedDeliveryMethod, // ENVIAR order_type para el backend nuevo
                 table_number: tableNumber, // Legacy
                 items: cart.map(i => ({ name: i.name, quantity: i.quantity, price: i.price, total: i.price * i.quantity, note: i.note })),
-                subtotal: calculateSubtotal, discount: calculateDiscountAmount, tax: calculateSubtotal * 0.12, total: calculateTotal,
+                subtotal: calculateSubtotal, discount: calculateDiscountAmount, tax: calculateTax, total: calculateTotal,
                 printed_at: new Date().toISOString()
             });
             alert('Orden confirmada e impresa');
@@ -619,6 +650,12 @@ const PuntosVenta = () => {
                                 <span>- {formatCurrency(calculateDiscountAmount)}</span>
                             </div>
                         )}
+                        {calculateTax > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#64748b' }}>
+                                <span>IVA</span>
+                                <span>{formatCurrency(calculateTax)}</span>
+                            </div>
+                        )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>
                             <span>Total</span>
                             <span>{formatCurrency(calculateTotal)}</span>
@@ -674,6 +711,12 @@ const PuntosVenta = () => {
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#10b981' }}>
                                         <span>Descuento</span>
                                         <span>- {formatCurrency(calculateDiscountAmount)}</span>
+                                    </div>
+                                )}
+                                {calculateTax > 0 && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#64748b' }}>
+                                        <span>IVA</span>
+                                        <span>{formatCurrency(calculateTax)}</span>
                                     </div>
                                 )}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>
