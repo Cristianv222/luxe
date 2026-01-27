@@ -12,7 +12,7 @@ urlpatterns = [
     path('luxe/api/customers/', include('apps.customers.urls')),
     path('luxe/api/reports/', include('apps.reports.urls')),
     path('luxe/api/loyalty/', include('apps.loyalty.urls')),
-
+    path('luxe/api/integrations/', include('apps.integrations.urls')), # Light API
     path('luxe/api/sri/', include('apps.sri.urls')),
 
 ]

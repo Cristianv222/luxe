@@ -32,8 +32,9 @@ const BarraLateral = () => {
         { path: '/luxe/reports', icon: 'bi-graph-up', label: 'Reportes' },
         { path: '/luxe/loyalty-config', icon: 'bi-gift', label: 'Config. Puntos' },
         { path: '/luxe/loyalty-management', icon: 'bi-star', label: 'Gestión Puntos' },
-        
-        
+        { path: '/luxe/whatsapp-config', icon: 'bi-whatsapp', label: 'WhatsApp' },
+
+        { path: '/luxe/sri-config', icon: 'bi-file-earmark-text', label: 'Facturación SRI' },
         { path: '/users', icon: 'bi-people', label: 'Usuarios del Sistema' },
     ];
 

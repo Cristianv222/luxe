@@ -575,3 +575,81 @@
     font-size: 0.8rem;
     cursor: help;
 }
+
+/* Template Editor & Preview */
+.template-editor textarea {
+    width: 100%;
+    border-radius: 0.6rem 0.6rem 0 0;
+    resize: vertical;
+}
+
+.tags-helper {
+    background: var(--boutique-creme);
+    padding: 0.8rem;
+    border: 1px solid var(--boutique-chai);
+    border-top: none;
+    border-radius: 0 0 0.6rem 0.6rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.tag-pill {
+    background: white;
+    padding: 0.2rem 0.6rem;
+    border-radius: 1rem;
+    font-weight: 700;
+    font-family: monospace;
+    color: var(--boutique-cinna);
+    border: 1px solid var(--boutique-chai);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tag-pill:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.preview-box {
+    margin-top: 1rem;
+    padding: 1.5rem;
+    background: #f0f2f5;
+    /* WhatsApp chat background like */
+    border-radius: 1rem;
+}
+
+.whatsapp-bubble {
+    background: white;
+    padding: 1rem;
+    border-radius: 0 1rem 1rem 1rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    max-width: 80%;
+    margin-left: 0;
+    display: table;
+    position: relative;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.whatsapp-bubble::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -10px;
+    width: 0;
+    height: 0;
+    border: 10px solid transparent;
+    border-top-color: white;
+    border-right-color: white;
+}
+
+.whatsapp-bubble .time {
+    display: block;
+    text-align: right;
+    font-size: 0.7rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+}

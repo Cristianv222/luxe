@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'apps.customers',
     'apps.reports',
     'apps.loyalty',
+    'apps.integrations', # New light integration service
     'apps.sri', # SRI Integration
     # Storage
     'storages',

@@ -83,7 +83,12 @@ const BarraLateralLuxe = () => {
                         Gestión Puntos
                     </Link>
                 </li>
-
+                <li className={isActive('/luxe/whatsapp-config')}>
+                    <Link to="/luxe/whatsapp-config">
+                        <i className="bi bi-whatsapp" style={{ marginRight: '10px' }}></i>
+                        WhatsApp
+                    </Link>
+                </li>
                 <li className={isActive('/luxe/sri-config')}>
                     <Link to="/luxe/sri-config">
                         <i className="bi bi-file-earmark-text" style={{ marginRight: '10px' }}></i>
