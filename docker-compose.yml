@@ -20,7 +20,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128M
+          memory: 512M
 
   redis:
     image: redis:7-alpine
@@ -36,7 +36,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 64M
+          memory: 128M
 
   auth-service:
     build: ./auth-service
@@ -82,7 +82,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128M
+          memory: 350M
 
   luxe-service:
     build: ./luxe-service
@@ -131,7 +131,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 160M
+          memory: 512M
 
 
 
@@ -150,7 +150,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 32M
+          memory: 128M
 
   nginx:
     image: nginx:alpine
