@@ -29,7 +29,8 @@ class WhatsAppHistoryView(generics.ListAPIView):
     """
     serializer_class = WhatsAppLogSerializer
     permission_classes = [IsAuthenticated]
-    queryset = WhatsAppLog.objects.all()
+    pagination_class = None
+    queryset = WhatsAppLog.objects.all().order_by('-created_at')[:100] # Limit to last 100 for performance
 
 class WhatsAppStatusView(views.APIView):
     permission_classes = [IsAuthenticated]

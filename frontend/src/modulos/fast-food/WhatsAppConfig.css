@@ -653,3 +653,70 @@
     opacity: 0.6;
     margin-top: 0.5rem;
 }
+
+/* Modal Improvements */
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--boutique-chai);
+    background: var(--boutique-froth);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--boutique-dark);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.2rem;
+}
+
+.modal-body {
+    padding: 2rem;
+    text-align: center;
+    font-size: 1.1rem;
+    color: var(--boutique-dark);
+}
+
+.modal-actions {
+    padding: 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    background: #fafafa;
+    border-top: 1px solid #eee;
+}
+
+/* Success/Info Modal layout */
+.boutique-modal.success,
+.boutique-modal.info,
+.boutique-modal.error {
+    padding: 3rem 2rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.success-icon {
+    font-size: 4rem;
+    color: var(--wpp-green);
+    margin-bottom: 0.5rem;
+    line-height: 1;
+}
+
+.boutique-modal.error .success-icon {
+    color: #ef4444;
+    /* Red */
+}
+
+.boutique-modal.info .success-icon {
+    color: #3b82f6;
+    /* Blue */
+}
+
+.boutique-modal h2 {
+    font-size: 1.5rem;
+    margin: 0;
+    color: var(--boutique-dark);
+}

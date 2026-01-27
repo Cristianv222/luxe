@@ -24,6 +24,11 @@ const WhatsAppConfig = () => {
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [activeTab, setActiveTab] = useState('settings'); // settings, test, birthdays, history
 
+    // Custom Modals State
+    const [confirmModal, setConfirmModal] = useState(null); // { show: boolean, onConfirm: func }
+    const [resultModal, setResultModal] = useState(null);   // { show: boolean, type: 'success'|'info'|'error', title: string, message: string }
+
+
     // Historial
     const [history, setHistory] = useState([]);
 
@@ -160,7 +165,7 @@ const WhatsAppConfig = () => {
                         className={`tab-item ${activeTab === 'birthday' ? 'active' : ''}`}
                         onClick={() => setActiveTab('birthday')}
                     >
-                        <i className="bi bi-gift"></i> Configuración Cumpleaños
+                        <i className="bi bi-gift"></i> Cumpleaños
                     </button>
                     <button
                         className={`tab-item ${activeTab === 'history' ? 'active' : ''}`}
@@ -324,25 +329,19 @@ const WhatsAppConfig = () => {
                             <div className="boutique-grid">
                                 <div className="grid-main">
                                     <div className="info-card">
-                                        <h3> <i className="bi bi-gift-fill" style={{ color: '#d63384' }}></i> Automatización de Felicitaciones</h3>
+                                        <h3><i className="bi bi-gift-fill" style={{ color: '#d63384' }}></i> Cumpleaños</h3>
                                         <p className="section-desc">
-                                            Configura cuándo y cómo se enviarán los mensajes automáticos a los clientes que cumplan años.
+                                            Personaliza el mensaje y envía felicitaciones manualmente.
                                         </p>
 
                                         <div className="boutique-form-grid" style={{ gridTemplateColumns: '1fr' }}>
-                                            <div className="input-group">
-                                                <label>Hora de Envío Diario</label>
-                                                <input
-                                                    type="time"
-                                                    value={settings.schedule_time || '09:00'}
-                                                    onChange={e => setSettings({ ...settings, schedule_time: e.target.value })}
-                                                    style={{ maxWidth: '150px' }}
-                                                />
-                                                <small className="hint">El sistema revisará todos los días a esta hora si hay cumpleañeros.</small>
-                                            </div>
+
+                                            {/* Oculto según solicitud, pero mantenemos estado */}
+                                            {/* <div className="input-group"> ...Hora... </div> */}
+                                            {/* <div className="form-group-checkbox"> ...Activar... </div> */}
 
                                             <div className="input-group">
-                                                <label>Plantilla del Mensaje</label>
+                                                <label>Mensaje Personalizado</label>
                                                 <div className="template-editor">
                                                     <textarea
                                                         rows={4}
@@ -359,45 +358,6 @@ const WhatsAppConfig = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="form-group-checkbox">
-                                                <label>Activar Felicitaciones Automáticas</label>
-                                                <input
-                                                    type="checkbox"
-                                                    name="is_active"
-                                                    checked={settings.is_active}
-                                                    onChange={e => setSettings({ ...settings, is_active: e.target.checked })} // Assuming handleChange is now inline or defined elsewhere
-                                                />
-                                            </div>
-
-                                            <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                                                <h4>Prueba Manual</h4>
-                                                <p style={{ fontSize: '0.9em', color: '#666' }}>
-                                                    Ejecuta la verificación de cumpleaños inmediatamente para probar si hay clientes que cumplan años hoy.
-                                                </p>
-                                                <button
-                                                    type="button"
-                                                    className="btn-boutique accent" // Changed to btn-boutique accent for consistency
-                                                    style={{ backgroundColor: '#6c757d', marginTop: '10px' }}
-                                                    onClick={async () => {
-                                                        try {
-                                                            if (!window.confirm("¿Estás seguro de ejecutar el envío masivo ahora? Esto enviará mensajes a quienes cumplan años hoy.")) return;
-
-                                                            const response = await api.post('/api/integrations/maytapi/run-birthdays/', {}, {
-                                                                baseURL: process.env.REACT_APP_LUXE_SERVICE
-                                                            });
-                                                            alert(response.data.message);
-                                                            fetchHistory(); // Actualizar historial
-                                                        } catch (error) {
-                                                            console.error(error);
-                                                            const serverError = error.response?.data?.error || error.response?.data?.detail || error.message;
-                                                            alert(`Error del servidor: ${serverError}`);
-                                                        }
-                                                    }}
-                                                >
-                                                    <i className="bi bi-play-fill"></i> Ejecutar Verificación Ahora
-                                                </button>
-                                            </div>
-
                                             <div className="preview-box">
                                                 <label>Vista Previa:</label>
                                                 <div className="whatsapp-bubble">
@@ -406,27 +366,71 @@ const WhatsAppConfig = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="form-footer">
+                                            <div className="form-footer" style={{ justifyContent: 'space-between', marginTop: '20px' }}>
                                                 <button
                                                     className="btn-boutique primary"
                                                     onClick={handleSaveSettings}
                                                     disabled={loading}
                                                 >
-                                                    {loading ? 'Guardando...' : <><i className="bi bi-save"></i> Guardar Cambios</>}
+                                                    {loading ? 'Guardando...' : <><i className="bi bi-save"></i> Guardar Plantilla</>}
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    className="btn-boutique accent"
+                                                    style={{ backgroundColor: '#6c757d' }}
+                                                    onClick={() => setConfirmModal({
+                                                        show: true,
+                                                        onConfirm: async () => {
+                                                            setConfirmModal(null); // Cerrar confirm
+                                                            setLoading(true); // Mostrar loading visual si se desea, o usar modal de progreso
+                                                            try {
+                                                                const response = await api.post('/api/integrations/maytapi/run-birthdays/', {}, {
+                                                                    baseURL: process.env.REACT_APP_LUXE_SERVICE
+                                                                });
+
+                                                                fetchHistory();
+
+                                                                const msg = response.data.message || '';
+                                                                // Extraer número si es posible: "x mensajes enviados"
+                                                                const match = msg.match(/(\d+)\s+mensajes/);
+                                                                const count = match ? parseInt(match[1]) : 0;
+
+                                                                if (count > 0) {
+                                                                    setResultModal({
+                                                                        show: true,
+                                                                        type: 'success',
+                                                                        title: '¡Enviado con Éxito!',
+                                                                        message: `Se enviaron ${count} mensajes de felicitación.`
+                                                                    });
+                                                                } else {
+                                                                    setResultModal({
+                                                                        show: true,
+                                                                        type: 'info',
+                                                                        title: 'Sin Cumpleañeros',
+                                                                        message: 'No hay clientes que cumplan años hoy.'
+                                                                    });
+                                                                }
+
+                                                            } catch (error) {
+                                                                console.error(error);
+                                                                const serverError = error.response?.data?.error || error.response?.data?.detail || error.message;
+                                                                setResultModal({
+                                                                    show: true,
+                                                                    type: 'error',
+                                                                    title: 'Error',
+                                                                    message: `Error del servidor: ${serverError}`
+                                                                });
+                                                            } finally {
+                                                                setLoading(false);
+                                                            }
+                                                        }
+                                                    })}
+                                                >
+                                                    <i className="bi bi-send-fill"></i> Enviar Felicitaciones
                                                 </button>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-
-                                <div className="grid-side">
-                                    <div className="info-card instructions">
-                                        <h4><i className="bi bi-lightbulb"></i> Tips</h4>
-                                        <ul className="info-list">
-                                            <li>Usa emojis 🎂🎈🎁 para hacer el mensaje más atractivo.</li>
-                                            <li>Incluye una llamada a la acción, como "Visítanos hoy".</li>
-                                            <li>La variable <code>{'{name}'}</code> se reemplazará automáticamente por el nombre del cliente.</li>
-                                        </ul>
                                     </div>
                                 </div>
                             </div>
@@ -501,6 +505,39 @@ const WhatsAppConfig = () => {
                         <h2>¡Guardado!</h2>
                         <p>Tus credenciales de Maytapi se han actualizado.</p>
                         <button className="btn-boutique primary wide" onClick={() => setShowSuccessModal(false)}>Aceptar</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Custom Modal for Confirmation */}
+            {confirmModal && confirmModal.show && (
+                <div className="boutique-modal-overlay">
+                    <div className="boutique-modal animate-pop">
+                        <div className="modal-header">
+                            <h3><i className="bi bi-question-circle"></i> Confirmar Envío</h3>
+                        </div>
+                        <div className="modal-body">
+                            <p>¿Estás seguro de enviar felicitaciones ahora?</p>
+                            <p className="text-muted small">Esto enviará mensajes a todos los clientes que cumplan años hoy ({new Date().toLocaleDateString()}).</p>
+                        </div>
+                        <div className="modal-actions">
+                            <button className="btn-boutique secondary" onClick={() => setConfirmModal(null)}>Cancelar</button>
+                            <button className="btn-boutique primary" onClick={confirmModal.onConfirm}>Confirmar y Enviar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Custom Modal for Results */}
+            {resultModal && resultModal.show && (
+                <div className="boutique-modal-overlay">
+                    <div className={`boutique-modal ${resultModal.type} animate-pop`}>
+                        <div className={`success-icon`}>
+                            <i className={`bi bi-${resultModal.type === 'success' ? 'check2-circle' : resultModal.type === 'error' ? 'x-circle' : 'info-circle'}`}></i>
+                        </div>
+                        <h2>{resultModal.title}</h2>
+                        <p>{resultModal.message}</p>
+                        <button className="btn-boutique primary wide" onClick={() => setResultModal(null)}>Aceptar</button>
                     </div>
                 </div>
             )}
