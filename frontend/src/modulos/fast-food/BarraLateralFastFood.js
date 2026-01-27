@@ -89,6 +89,12 @@ const BarraLateralLuxe = () => {
                         WhatsApp
                     </Link>
                 </li>
+                <li className={isActive('/luxe/sri-config')}>
+                    <Link to="/luxe/sri-config">
+                        <i className="bi bi-file-earmark-text" style={{ marginRight: '10px' }}></i>
+                        Facturación SRI
+                    </Link>
+                </li>
             </ul>
             <div className="sidebar-footer">
                 <button

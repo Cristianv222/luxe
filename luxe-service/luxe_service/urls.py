@@ -14,6 +14,7 @@ urlpatterns = [
     path('luxe/api/loyalty/', include('apps.loyalty.urls')),
     # Integrations (WhatsApp Automation, etc.)
     path('luxe/api/integrations/', include('apps.integrations.urls')),
+    path('luxe/api/sri/', include('apps.sri.urls')),
 
 ]
 

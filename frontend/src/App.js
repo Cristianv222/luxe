@@ -19,6 +19,7 @@ import GestionPuntos from './modulos/fast-food/GestionPuntos';
 import WhatsAppConfig from './modulos/fast-food/WhatsAppConfig';
 import DisenoLuxe from './modulos/fast-food/DisenoFastFood';
 import LandingPage from './modulos/pagina-web/LandingPage';
+import ConfiguracionSRI from './modulos/fast-food/ConfiguracionSRI';
 import { CartProvider } from './context/CartContext';
 import BoutiqueLanding from './modulos/pagina-web/BoutiqueLanding';
 import Registro from './modulos/pagina-web/Registro';
@@ -170,9 +171,15 @@ function App() {
                 <GestionPuntos />
               </LuxeRoute>
             } />
+
             <Route path="/luxe/whatsapp-config" element={
               <LuxeRoute>
                 <WhatsAppConfig />
+              </LuxeRoute>
+            } />
+            <Route path="/luxe/sri-config" element={
+              <LuxeRoute>
+                <ConfiguracionSRI />
               </LuxeRoute>
             } />
 
