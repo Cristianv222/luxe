@@ -33,7 +33,6 @@ INSTALLED_APPS = [
     'apps.customers',
     'apps.reports',
     'apps.loyalty',
-    'apps.integrations',
     'apps.sri', # SRI Integration
     # Storage
     'storages',

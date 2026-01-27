@@ -1,8 +1,0 @@
-Django>=4.2,<5.0
-psycopg2-binary
-requests
-python-decouple
-celery
-redis
-schedule
-djangorestframework

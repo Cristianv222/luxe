@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_MULTIPLE_DATABASES: auth_service_db,luxe_service_db,automation_service_db
+      POSTGRES_MULTIPLE_DATABASES: auth_service_db,luxe_service_db
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./scripts/create-multiple-postgresql-databases.sh:/docker-entrypoint-initdb.d/create-multiple-postgresql-databases.sh
@@ -133,84 +133,7 @@ services:
         limits:
           memory: 160M
 
-  automation-service:
-    build: ./automation-service
-    container_name: luxe_automation
-    entrypoint: /bin/sh
-    command:
-      - -c
-      - |
-        echo "🔄 Waiting for PostgreSQL..."
-        until python -c 'import socket; socket.create_connection(("postgres", 5432), timeout=1)' 2>/dev/null; do
-          sleep 1
-        done
-        echo "✅ PostgreSQL is ready!"
-        echo "🔄 Running migrations..."
-        python manage.py migrate --noinput
-        echo "🚀 Starting Luxe Automation (API + Scheduler)..."
-        exec python scheduler.py
-    volumes:
-      - ./automation-service:/app
-    environment:
-      - SECRET_KEY=luxe-automation-secret-key-iso25010
-      - DB_NAME=automation_service_db
-      - LUXE_DB_NAME=luxe_service_db
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_HOST=postgres
-      - DEBUG=False
-      - TZ=America/Guayaquil
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - luxe-network
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 64M
 
-  # WhatsApp Service (Baileys - Ultra ligero, sin Chromium)
-  whatsapp:
-    build:
-      context: ./whatsapp-service
-      dockerfile: Dockerfile
-    container_name: luxe_whatsapp
-    # Forzamos ejecución como root para arreglar permisos de volumen
-    user: root
-    # Arreglamos permisos y luego iniciamos como usuario 'nodejs'
-    command: >
-      sh -c "
-        mkdir -p /app/auth_info &&
-        chown -R 1001:1001 /app/auth_info &&
-        chmod -R 755 /app/auth_info &&
-        su -s /bin/sh nodejs -c 'node --max-old-space-size=100 server.js'
-      "
-    environment:
-      - PORT=21465
-      - SECRET_KEY=THISISMYSECURETOKEN
-      - TZ=America/Guayaquil
-      - NODE_ENV=production
-    expose:
-      - "21465"
-    networks:
-      - luxe-network
-    restart: always
-    volumes:
-      - whatsapp-auth:/app/auth_info
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:21465/health"]
-      interval: 45s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
 
   frontend:
     build: 
@@ -261,5 +184,3 @@ volumes:
     name: luxe_service_static
   luxe-media:
     name: luxe_service_media
-  whatsapp-auth:
-    name: luxe_whatsapp_auth
