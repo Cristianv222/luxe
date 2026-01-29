@@ -16,3 +16,5 @@ class Migration(migrations.Migration):
             field=models.CharField(choices=[('in_store', 'En Tienda'), ('pickup', 'Recogida'), ('delivery', 'Envío')], default='in_store', max_length=20, verbose_name='Tipo de Orden'),
         ),
     ]
+
+

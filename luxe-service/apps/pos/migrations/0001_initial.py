@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('customers', '0002_customer_last_login_customer_password'),
-        ('menu', '0002_alter_product_image'),
+        ('inventario', '0002_alter_product_image'),
         ('orders', '0002_alter_order_status_and_more'),
         ('payments', '0001_initial'),
     ]
@@ -77,8 +77,8 @@ class Migration(migrations.Migration):
                 ('created_by', models.CharField(blank=True, help_text='User ID de quien creó el descuento', max_length=50, verbose_name='Creado por')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('applicable_categories', models.ManyToManyField(blank=True, help_text='Categorías a las que aplica el descuento', related_name='discounts', to='menu.category', verbose_name='Categorías Aplicables')),
-                ('applicable_products', models.ManyToManyField(blank=True, help_text='Productos a los que aplica el descuento', related_name='discounts', to='menu.product', verbose_name='Productos Aplicables')),
+                ('applicable_categories', models.ManyToManyField(blank=True, help_text='Categorías a las que aplica el descuento', related_name='discounts', to='inventario.category', verbose_name='Categorías Aplicables')),
+                ('applicable_products', models.ManyToManyField(blank=True, help_text='Productos a los que aplica el descuento', related_name='discounts', to='inventario.product', verbose_name='Productos Aplicables')),
             ],
             options={
                 'verbose_name': 'Descuento',
@@ -216,3 +216,5 @@ class Migration(migrations.Migration):
             index=models.Index(fields=['qr_code'], name='pos_table_qr_code_019dc5_idx'),
         ),
     ]
+
+

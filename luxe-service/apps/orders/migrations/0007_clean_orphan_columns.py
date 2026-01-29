@@ -53,3 +53,5 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(clean_orphan_columns, reverse_code=migrations.RunPython.noop),
     ]
+
+

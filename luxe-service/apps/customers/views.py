@@ -1072,3 +1072,4 @@ def sync_external_customer(request):
             'message': f'Error al sincronizar cliente: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+

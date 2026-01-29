@@ -6,7 +6,7 @@ import requests
 import logging
 
 from .models import Order, OrderItem, OrderItemExtra, DeliveryInfo, OrderStatusHistory
-from apps.menu.serializers import ProductListSerializer, SizeSerializer, ExtraSerializer
+from apps.inventario.serializers import ProductListSerializer, SizeSerializer, ExtraSerializer
 from apps.customers.serializers import CustomerSerializer
 
 # Configurar logger
@@ -60,7 +60,7 @@ class OrderItemCreateSerializer(serializers.Serializer):
     
     def validate_product_id(self, value):
         """Valida que el producto exista y esté disponible"""
-        from apps.menu.models import Product
+        from apps.inventario.models import Product
         try:
             product = Product.objects.get(id=value)
             if not product.is_available_now():
@@ -72,7 +72,7 @@ class OrderItemCreateSerializer(serializers.Serializer):
     def validate_size_id(self, value):
         """Valida que el tamaño exista si se proporciona"""
         if value:
-            from apps.menu.models import Size
+            from apps.inventario.models import Size
             try:
                 size = Size.objects.get(id=value)
                 if not size.is_active:
@@ -85,7 +85,7 @@ class OrderItemCreateSerializer(serializers.Serializer):
     def validate_extra_ids(self, value):
         """Valida que los extras existan"""
         if value:
-            from apps.menu.models import Extra
+            from apps.inventario.models import Extra
             extras = Extra.objects.filter(id__in=value, is_active=True)
             if extras.count() != len(value):
                 raise serializers.ValidationError('Uno o más extras no son válidos')
@@ -272,7 +272,7 @@ class OrderCreateSerializer(serializers.Serializer):
     @transaction.atomic
     def create(self, validated_data):
         """Crea la orden con todos sus items"""
-        from apps.menu.models import Product, Size, Extra
+        from apps.inventario.models import Product, Size, Extra
         from apps.customers.models import Customer
         from apps.pos.models import Discount
         from apps.loyalty.models import UserCoupon

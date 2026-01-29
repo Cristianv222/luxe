@@ -56,3 +56,4 @@ class PrinterService {
 
 const printerServiceInstance = new PrinterService();
 export default printerServiceInstance;
+

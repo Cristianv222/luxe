@@ -15,3 +15,5 @@ class Migration(migrations.Migration):
             reverse_sql='-- No reverse, este campo no debería existir'
         ),
     ]
+
+

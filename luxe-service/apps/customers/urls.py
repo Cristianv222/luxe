@@ -52,3 +52,4 @@ urlpatterns = [
     path('admin/<uuid:customer_id>/notes/', views.admin_create_customer_note, name='admin-create-note'),
     path('admin/<uuid:customer_id>/loyalty/add-points/', views.admin_add_loyalty_points, name='admin-add-points'),
 ]
+

@@ -160,3 +160,4 @@ class ProcessBirthdayGreetingsView(views.APIView):
              logger = logging.getLogger(__name__)
              logger.error(f"Error in run-birthdays: {e}", exc_info=True)
              return Response({'error': f'Error interno: {str(e)}'}, status=500)
+

@@ -294,3 +294,4 @@ class LoyaltyAccountViewSet(viewsets.ReadOnlyModelViewSet):
             "new_balance": account.points_balance
         })
 
+

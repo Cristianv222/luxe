@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('customers', '0001_initial'),
-        ('menu', '0001_initial'),
+        ('inventario', '0001_initial'),
     ]
 
     operations = [
@@ -85,8 +85,8 @@ class Migration(migrations.Migration):
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('order', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='items', to='orders.order', verbose_name='Orden')),
-                ('product', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='menu.product', verbose_name='Producto')),
-                ('size', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='menu.size', verbose_name='Tamaño')),
+                ('product', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='inventario.product', verbose_name='Producto')),
+                ('size', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='inventario.size', verbose_name='Tamaño')),
             ],
             options={
                 'verbose_name': 'Item de Orden',
@@ -100,7 +100,7 @@ class Migration(migrations.Migration):
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('price', models.DecimalField(decimal_places=2, max_digits=10, validators=[django.core.validators.MinValueValidator(0)], verbose_name='Precio')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('extra', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='menu.extra', verbose_name='Extra')),
+                ('extra', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='inventario.extra', verbose_name='Extra')),
                 ('order_item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='extras', to='orders.orderitem', verbose_name='Item de Orden')),
             ],
             options={
@@ -142,3 +142,5 @@ class Migration(migrations.Migration):
             index=models.Index(fields=['order_type'], name='orders_orde_order_t_d697ad_idx'),
         ),
     ]
+
+

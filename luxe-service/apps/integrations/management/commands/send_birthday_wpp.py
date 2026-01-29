@@ -14,3 +14,4 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING('No se enviaron mensajes (no hay cumpleañeros o falta configuración).'))
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'Error ejecutando el comando: {str(e)}'))
+

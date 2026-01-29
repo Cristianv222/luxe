@@ -41,3 +41,4 @@ class UserCouponAdmin(admin.ModelAdmin):
     list_display = ('code', 'customer', 'reward_rule', 'is_used', 'expires_at')
     list_filter = ('is_used', 'created_at')
     search_fields = ('code', 'customer__first_name')
+

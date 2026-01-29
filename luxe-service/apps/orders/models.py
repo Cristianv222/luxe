@@ -331,14 +331,14 @@ class OrderItem(models.Model):
     )
     
     product = models.ForeignKey(
-        'menu.Product',
+        'inventario.Product',
         on_delete=models.PROTECT,
         verbose_name='Producto'
     )
     
     # Si seleccionó un tamaño específico
     size = models.ForeignKey(
-        'menu.Size',
+        'inventario.Size',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -436,7 +436,7 @@ class OrderItemExtra(models.Model):
     )
     
     extra = models.ForeignKey(
-        'menu.Extra',
+        'inventario.Extra',
         on_delete=models.PROTECT,
         verbose_name='Extra'
     )
@@ -595,3 +595,4 @@ class OrderStatusHistory(models.Model):
 
 # Import signals
 import apps.orders.signals
+

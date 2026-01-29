@@ -143,3 +143,5 @@ export const printOrderPDF = (order) => {
     // Save PDF
     doc.save(`Orden-${order.order_number}.pdf`);
 };
+
+

@@ -16,3 +16,4 @@ class Migration(migrations.Migration):
             field=models.CharField(blank=True, help_text='Documento de identificación único', max_length=20, null=True, unique=True, verbose_name='Cédula / RUC'),
         ),
     ]
+

@@ -120,3 +120,4 @@ class LoyaltyService:
                 logger.info(f"Awarded {points_to_earn} points to {order.customer} for order {order.order_number}")
         except Exception as e:
             logger.error(f"Error awarding loyalty points: {str(e)}")
+

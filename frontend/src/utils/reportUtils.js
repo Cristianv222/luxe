@@ -201,3 +201,5 @@ export const generateDetailedPDF = (report, reportType, dateRangeStr) => {
 
     doc.save(reportFileName);
 };
+
+

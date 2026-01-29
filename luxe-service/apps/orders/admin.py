@@ -92,3 +92,4 @@ class OrderStatusHistoryAdmin(admin.ModelAdmin):
     list_filter = ('from_status', 'to_status', 'created_at')
     search_fields = ('order__order_number', 'changed_by')
     readonly_fields = ('id', 'created_at')
+

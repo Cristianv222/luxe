@@ -26,3 +26,5 @@ class Migration(migrations.Migration):
             field=models.CharField(choices=[('pending', 'Pendiente'), ('confirmed', 'Confirmado'), ('preparing', 'En Preparación'), ('ready', 'Listo'), ('delivering', 'En Camino'), ('delivered', 'Entregado'), ('completed', 'Completado'), ('cancelled', 'Cancelado'), ('rejected', 'Rechazado')], max_length=20, verbose_name='Nuevo Estado'),
         ),
     ]
+
+

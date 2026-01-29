@@ -122,3 +122,4 @@ def check_and_send_birthday_greetings():
 
     logger.info(f"Felicitaciones enviadas hoy: {count}")
     return count
+

@@ -16,3 +16,5 @@ class Migration(migrations.Migration):
             field=models.CharField(choices=[('web', 'Web'), ('pos', 'POS / Caja')], default='pos', max_length=10, verbose_name='Origen'),
         ),
     ]
+
+

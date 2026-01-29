@@ -5,21 +5,20 @@ import Login from './modulos/login/Login';
 import Diseno from './comun/Diseno';
 import ListaUsuarios from './modulos/usuarios/ListaUsuarios';
 import ServicePlaceholder from './components/ServicePlaceholder';
-import PanelLuxe from './modulos/fast-food/PanelFastFood';
-import Inventario from './modulos/fast-food/Inventario';
-import Ordenes from './modulos/fast-food/Ordenes';
-import Clientes from './modulos/fast-food/Clientes';
-import Reportes from './modulos/fast-food/Reportes';
-import PuntosVenta from './modulos/fast-food/PuntosVenta';
-import ShiftManager from './modulos/fast-food/ShiftManager';
-import Etiquetas from './modulos/fast-food/Etiquetas';
-import SistemaMaquinas from './modulos/fast-food/SistemaMaquinas';
-import LoyaltyConfig from './modulos/fast-food/LoyaltyConfig';
-import GestionPuntos from './modulos/fast-food/GestionPuntos';
-import WhatsAppConfig from './modulos/fast-food/WhatsAppConfig';
-import DisenoLuxe from './modulos/fast-food/DisenoFastFood';
-import LandingPage from './modulos/pagina-web/LandingPage';
-import ConfiguracionSRI from './modulos/fast-food/ConfiguracionSRI';
+import PanelLuxe from './modulos/luxe/PanelLuxe';
+import Inventario from './modulos/luxe/Inventario';
+import Ordenes from './modulos/luxe/Ordenes';
+import Clientes from './modulos/luxe/Clientes';
+import Reportes from './modulos/luxe/Reportes';
+import PuntosVenta from './modulos/luxe/PuntosVenta';
+import ShiftManager from './modulos/luxe/ShiftManager';
+import Etiquetas from './modulos/luxe/Etiquetas';
+import SistemaMaquinas from './modulos/luxe/SistemaMaquinas';
+import LoyaltyConfig from './modulos/luxe/LoyaltyConfig';
+import GestionPuntos from './modulos/luxe/GestionPuntos';
+import WhatsAppConfig from './modulos/luxe/WhatsAppConfig';
+import DisenoLuxe from './modulos/luxe/DisenoLuxe';
+import ConfiguracionSRI from './modulos/luxe/ConfiguracionSRI';
 import { CartProvider } from './context/CartContext';
 import BoutiqueLanding from './modulos/pagina-web/BoutiqueLanding';
 import Registro from './modulos/pagina-web/Registro';
@@ -211,3 +210,5 @@ function App() {
 }
 
 export default App;
+
+

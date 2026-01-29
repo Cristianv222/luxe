@@ -121,3 +121,4 @@ class SRIDocument(models.Model):
 
     def __str__(self):
         return f"{self.sri_number or 'Pendiente'} - {self.get_status_display()}"
+

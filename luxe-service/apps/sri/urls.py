@@ -9,3 +9,4 @@ router.register(r'documents', SRIDocumentViewSet, basename='sridocuments')
 urlpatterns = [
     path('', include(router.urls)),
 ]
+

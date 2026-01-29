@@ -16,3 +16,4 @@ class Migration(migrations.Migration):
             field=models.CharField(choices=[('thermal', 'Térmica (Tickets)'), ('label', 'Etiquetas (TSPL)'), ('laser', 'Láser (Facturas)'), ('matrix', 'Matriz de Puntos')], default='thermal', max_length=20, verbose_name='Tipo de Impresora'),
         ),
     ]
+

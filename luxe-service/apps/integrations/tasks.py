@@ -36,3 +36,4 @@ def check_scheduled_birthdays():
         return f"Enviados: {count}"
     
     return f"No es hora todavía. Actual: {current_time}, Programado: {target_time}"
+

@@ -6,7 +6,7 @@ Incluye: Turnos, Descuentos, Mesas, Reportes
 
 Se integra con:
 - apps.customers (Customer)
-- apps.menu (Product, Category)
+- apps.inventario (Product, Category)
 - apps.orders (Order)
 - apps.payments (Payment, CashRegister)
 - apps.printing (PrintJob)
@@ -399,7 +399,7 @@ class Discount(models.Model):
     
     # ============ PRODUCTOS/CATEGORÍAS APLICABLES ============
     applicable_products = models.ManyToManyField(
-        'menu.Product',
+        'inventario.Product',
         blank=True,
         related_name='discounts',
         verbose_name='Productos Aplicables',
@@ -407,7 +407,7 @@ class Discount(models.Model):
     )
     
     applicable_categories = models.ManyToManyField(
-        'menu.Category',
+        'inventario.Category',
         blank=True,
         related_name='discounts',
         verbose_name='Categorías Aplicables',

@@ -255,3 +255,4 @@ class UserCoupon(models.Model):
 
     def __str__(self):
         return f"{self.code} ({self.user})"
+

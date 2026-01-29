@@ -101,3 +101,4 @@ class WhatsAppLog(models.Model):
 
     def __str__(self):
         return f"{self.message_type} a {self.phone_number} - {self.status}"
+

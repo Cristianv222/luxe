@@ -16,3 +16,4 @@ class Migration(migrations.Migration):
             field=models.BooleanField(default=False, help_text='Si es True, este cupón se habilita gratis el día del cumpleaños del cliente.', verbose_name='Es regalo de cumpleaños'),
         ),
     ]
+

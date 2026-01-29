@@ -64,3 +64,4 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING(f'   URL del Servidor: http://TU_IP:8002'))
         self.stdout.write(self.style.WARNING(f'   Token API:        {token.key}'))
         self.stdout.write('')
+

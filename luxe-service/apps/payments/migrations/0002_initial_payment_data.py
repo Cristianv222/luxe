@@ -82,3 +82,4 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(create_payment_setup, reverse_payment_setup),
     ]
+

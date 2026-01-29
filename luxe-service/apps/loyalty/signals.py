@@ -15,3 +15,4 @@ def award_points_on_payment(sender, instance, created, **kwargs):
         # La lógica de award_points_for_order revisa si ya se dieron puntos
         # para evitar duplicados.
         LoyaltyService.award_points_for_order(instance)
+

@@ -16,3 +16,5 @@ class Migration(migrations.Migration):
             field=models.CharField(blank=True, max_length=50, null=True, verbose_name='Código de Descuento'),
         ),
     ]
+
+

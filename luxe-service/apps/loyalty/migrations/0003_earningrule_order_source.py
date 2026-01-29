@@ -16,3 +16,4 @@ class Migration(migrations.Migration):
             field=models.CharField(choices=[('ALL', 'Todos los Canales'), ('WEB', 'Web / Delivery'), ('POS', 'Local / POS')], default='ALL', help_text='Aplica esta regla solo a órdenes de este canal.', max_length=10, verbose_name='Canal de Venta'),
         ),
     ]
+

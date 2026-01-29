@@ -1,0 +1,722 @@
+/* WhatsApp Boutique Styles - Updated to match project palette */
+:root {
+    --boutique-cinna: #CFB3A9;
+    --boutique-creme: #F5F5F0;
+    --boutique-latte: #A09086;
+    --boutique-chai: #E4D8CB;
+    --boutique-rosa: #E8C4C4;
+    --boutique-froth: #F1EEEB;
+    --boutique-dark: #2C2C2C;
+    --wpp-green: #25D366;
+    --wpp-dark: #128C7E;
+}
+
+.whatsapp-config-wrapper {
+    padding: 1rem;
+    font-family: 'Lato', sans-serif;
+    color: var(--boutique-dark);
+}
+
+/* Compact & Integrated Header */
+.compact-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 0.8rem;
+    border: 1px solid var(--boutique-chai);
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.title-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.title-group i {
+    font-size: 1.8rem;
+    color: var(--wpp-green);
+    background: var(--boutique-creme);
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.6rem;
+}
+
+.title-group h1 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: var(--boutique-dark);
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.title-group .subtitle {
+    margin: 0;
+    opacity: 0.5;
+    font-size: 0.8rem;
+    font-weight: 400;
+}
+
+.status-indicator-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1rem;
+    border-radius: 2rem;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    border: 1px solid transparent;
+}
+
+.status-indicator-pill.connected {
+    background: #f0fdf4;
+    color: #166534;
+    border-color: #bbf7d0;
+}
+
+.status-indicator-pill.disconnected {
+    background: #fef2f2;
+    color: #991b1b;
+    border-color: #fecaca;
+}
+
+.status-indicator-pill.offline {
+    background: #f9fafb;
+    color: #374151;
+    border-color: #e5e7eb;
+}
+
+.status-indicator-pill.checking {
+    background: #fffbeb;
+    color: #92400e;
+    border-color: #fef3c7;
+}
+
+.status-indicator-pill .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 5px currentColor;
+}
+
+/* Alert Styling */
+.boutique-alert {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-radius: 0.8rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    animation: slideIn 0.3s ease-out;
+}
+
+.boutique-alert.alert-error {
+    background: #fdf2f2;
+    color: #9b1c1c;
+    border: 1px solid #f8b4b4;
+}
+
+.boutique-alert.alert-success {
+    background: #f3faf7;
+    color: #03543f;
+    border: 1px solid #84e1bc;
+}
+
+.boutique-alert.alert-info {
+    background: #e1effe;
+    color: #1e429f;
+    border: 1px solid #a4cafe;
+}
+
+.boutique-alert button {
+    margin-left: auto;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.5;
+}
+
+/* Tabs System */
+.boutique-tabs-container {
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.tabs-header {
+    display: flex;
+    background: var(--boutique-creme);
+    padding: 0.5rem 0.5rem 0;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--boutique-chai);
+}
+
+.tab-item {
+    padding: 1rem 2rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--boutique-latte);
+    border-radius: 0.8rem 0.8rem 0 0;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.tab-item i {
+    font-size: 1.2rem;
+}
+
+.tab-item:hover {
+    color: var(--boutique-dark);
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.tab-item.active {
+    background: white;
+    color: var(--boutique-cinna);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.02);
+}
+
+.tab-content {
+    padding: 2rem;
+    min-height: 400px;
+}
+
+/* Tab Panes */
+.boutique-grid {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 2rem;
+}
+
+.info-card {
+    background: var(--boutique-froth);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--boutique-chai);
+}
+
+.info-card h3 {
+    margin: 0 0 1rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--boutique-latte);
+}
+
+.info-card p {
+    font-size: 0.95rem;
+    color: var(--boutique-dark);
+    opacity: 0.8;
+    line-height: 1.5;
+}
+
+.action-row {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+/* Forms */
+.test-form,
+.boutique-form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.boutique-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 2rem;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.input-group label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--boutique-latte);
+}
+
+.input-group input,
+.input-group textarea {
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--boutique-chai);
+    border-radius: 0.6rem;
+    background: white;
+    transition: border-color 0.2s;
+    font-family: inherit;
+}
+
+.input-group input:focus,
+.input-group textarea:focus {
+    outline: none;
+    border-color: var(--boutique-cinna);
+    box-shadow: 0 0 0 3px rgba(207, 179, 169, 0.1);
+}
+
+.checkbox-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.8rem;
+    background: white;
+    padding: 1rem;
+    border-radius: 0.6rem;
+    border: 1px solid var(--boutique-chai);
+}
+
+.checkbox-group input {
+    width: auto;
+}
+
+.checkbox-group label {
+    margin: 0;
+    cursor: pointer;
+}
+
+/* Buttons Boutique */
+.btn-boutique {
+    padding: 0.8rem 1.5rem;
+    border-radius: 0.6rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.btn-boutique.primary {
+    background: var(--boutique-cinna);
+    color: white;
+}
+
+.btn-boutique.primary:hover {
+    filter: brightness(0.95);
+    transform: translateY(-1px);
+}
+
+.btn-boutique.secondary {
+    background: var(--boutique-chai);
+    color: var(--boutique-latte);
+}
+
+.btn-boutique.secondary:hover {
+    background: #dccdba;
+}
+
+.btn-boutique.accent {
+    background: var(--wpp-green);
+    color: white;
+}
+
+.btn-boutique.accent:hover {
+    background: var(--wpp-dark);
+}
+
+.btn-boutique.danger {
+    background: #ff4d4f;
+    color: white;
+}
+
+.btn-boutique.wide {
+    width: 100%;
+}
+
+.btn-boutique:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Tables Boutique */
+.boutique-table-wrapper {
+    margin-top: 1rem;
+    overflow-x: auto;
+}
+
+.boutique-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.boutique-table th {
+    background: var(--boutique-froth);
+    text-align: left;
+    padding: 1rem;
+    font-weight: 700;
+    color: var(--boutique-latte);
+    border-bottom: 2px solid var(--boutique-chai);
+}
+
+.boutique-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--boutique-froth);
+    vertical-align: middle;
+}
+
+.boutique-table tr:hover {
+    background: #fafafa;
+}
+
+/* Badges & Tags */
+.type-tag {
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.type-tag.test {
+    background: #e1effe;
+    color: #1e429f;
+}
+
+.type-tag.birthday {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-tag {
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.status-tag.sent {
+    background: #def7ec;
+    color: #03543f;
+}
+
+.status-tag.failed {
+    background: #fdf2f2;
+    color: #9b1c1c;
+}
+
+/* Modals */
+.boutique-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(44, 44, 44, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.boutique-modal {
+    background: white;
+    width: 90%;
+    max-width: 450px;
+    border-radius: 1.5rem;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+}
+
+.modal-top {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--boutique-chai);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-top h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: var(--boutique-dark);
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    color: #ccc;
+}
+
+.modal-middle {
+    padding: 2.5rem;
+    text-align: center;
+}
+
+.qr-wrapper img {
+    width: 250px;
+    height: 250px;
+    padding: 1rem;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 1rem;
+}
+
+.loading-qr {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.boutique-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid var(--boutique-creme);
+    border-top: 4px solid var(--boutique-cinna);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Animations */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pop {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.animate-fade-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+.animate-pop {
+    animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+
+    .boutique-grid,
+    .boutique-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .boutique-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+}
+
+.customer-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.customer-info strong {
+    font-size: 0.95rem;
+}
+
+.customer-info span {
+    font-size: 0.8rem;
+    color: var(--boutique-latte);
+}
+
+.message-bubble-preview {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: #f1f1f1;
+    padding: 0.4rem 0.8rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    cursor: help;
+}
+
+/* Template Editor & Preview */
+.template-editor textarea {
+    width: 100%;
+    border-radius: 0.6rem 0.6rem 0 0;
+    resize: vertical;
+}
+
+.tags-helper {
+    background: var(--boutique-creme);
+    padding: 0.8rem;
+    border: 1px solid var(--boutique-chai);
+    border-top: none;
+    border-radius: 0 0 0.6rem 0.6rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.tag-pill {
+    background: white;
+    padding: 0.2rem 0.6rem;
+    border-radius: 1rem;
+    font-weight: 700;
+    font-family: monospace;
+    color: var(--boutique-cinna);
+    border: 1px solid var(--boutique-chai);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tag-pill:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.preview-box {
+    margin-top: 1rem;
+    padding: 1.5rem;
+    background: #f0f2f5;
+    /* WhatsApp chat background like */
+    border-radius: 1rem;
+}
+
+.whatsapp-bubble {
+    background: white;
+    padding: 1rem;
+    border-radius: 0 1rem 1rem 1rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    max-width: 80%;
+    margin-left: 0;
+    display: table;
+    position: relative;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.whatsapp-bubble::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -10px;
+    width: 0;
+    height: 0;
+    border: 10px solid transparent;
+    border-top-color: white;
+    border-right-color: white;
+}
+
+.whatsapp-bubble .time {
+    display: block;
+    text-align: right;
+    font-size: 0.7rem;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+}
+
+/* Modal Improvements */
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--boutique-chai);
+    background: var(--boutique-froth);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--boutique-dark);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.2rem;
+}
+
+.modal-body {
+    padding: 2rem;
+    text-align: center;
+    font-size: 1.1rem;
+    color: var(--boutique-dark);
+}
+
+.modal-actions {
+    padding: 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    background: #fafafa;
+    border-top: 1px solid #eee;
+}
+
+/* Success/Info Modal layout */
+.boutique-modal.success,
+.boutique-modal.info,
+.boutique-modal.error {
+    padding: 3rem 2rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.success-icon {
+    font-size: 4rem;
+    color: var(--wpp-green);
+    margin-bottom: 0.5rem;
+    line-height: 1;
+}
+
+.boutique-modal.error .success-icon {
+    color: #ef4444;
+    /* Red */
+}
+
+.boutique-modal.info .success-icon {
+    color: #3b82f6;
+    /* Blue */
+}
+
+.boutique-modal h2 {
+    font-size: 1.5rem;
+    margin: 0;
+    color: var(--boutique-dark);
+}

@@ -112,3 +112,4 @@ class LoyaltyAccountDetailSerializer(LoyaltyAccountSerializer):
         
         return RewardRuleSerializer(all_rewards, many=True).data
 
+

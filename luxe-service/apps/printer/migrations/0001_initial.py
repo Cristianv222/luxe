@@ -165,3 +165,4 @@ class Migration(migrations.Migration):
             index=models.Index(fields=['document_type', 'created_at'], name='printer_pri_documen_29ed34_idx'),
         ),
     ]
+

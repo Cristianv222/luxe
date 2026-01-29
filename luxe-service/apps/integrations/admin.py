@@ -11,3 +11,4 @@ class MaytapiConfigAdmin(admin.ModelAdmin):
         if self.model.objects.exists():
             return False
         return super().has_add_permission(request)
+

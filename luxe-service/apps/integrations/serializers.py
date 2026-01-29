@@ -11,3 +11,4 @@ class WhatsAppLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = WhatsAppLog
         fields = '__all__'
+

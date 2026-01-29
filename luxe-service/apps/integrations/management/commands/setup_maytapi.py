@@ -20,3 +20,4 @@ class Command(BaseCommand):
         
         action = "Creada" if created else "Actualizada"
         self.stdout.write(self.style.SUCCESS(f'Configuración {action} exitosamente.'))
+

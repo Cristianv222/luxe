@@ -16,3 +16,4 @@ class Migration(migrations.Migration):
             field=models.CharField(db_index=True, editable=False, max_length=35, unique=True, verbose_name='Número de Trabajo'),
         ),
     ]
+

@@ -21,3 +21,4 @@ class Migration(migrations.Migration):
             field=models.TimeField(default='09:00', help_text='Hora diaria para enviar felicitaciones de cumpleaños', verbose_name='Hora de Envío (Cron)'),
         ),
     ]
+

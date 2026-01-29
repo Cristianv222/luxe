@@ -68,3 +68,4 @@ def restore_stock_on_delete(sender, instance, **kwargs):
             
     except Exception as e:
         logger.error(f"Error al restaurar stock para item eliminado {instance.id}: {str(e)}")
+

@@ -29,14 +29,12 @@ INSTALLED_APPS = [
     'apps.authentication',
     'apps.users',
     'apps.roles',
-    'apps.menu',
+    'apps.inventario',  # Gestión de inventario (productos, categorías, etc.)
     'apps.pos',
     'apps.orders',
     'apps.payments',
-    'apps.kitchen',
     'apps.printer',
     'apps.customers',
-    'apps.reports',
     'apps.loyalty',
     'apps.integrations', # New light integration service
     'apps.sri', # SRI Integration

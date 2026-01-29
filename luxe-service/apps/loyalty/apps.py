@@ -10,3 +10,4 @@ class LoyaltyConfig(AppConfig):
             import apps.loyalty.signals
         except ImportError:
             pass
+

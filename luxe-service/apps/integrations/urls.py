@@ -19,3 +19,4 @@ urlpatterns = [
     # Alias por si el frontend llama a maytapi/history/ (consistencia)
     path('maytapi/history/', views.WhatsAppHistoryView.as_view(), name='maytapi-history'),
 ]
+

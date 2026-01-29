@@ -267,3 +267,5 @@ const BoutiqueLanding = () => {
 };
 
 export default BoutiqueLanding;
+
+

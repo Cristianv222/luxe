@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import '../modulos/fast-food/FastFood.css'; // Import global boutique styles
+import '../modulos/luxe/Luxe.css'; // Import global boutique styles
 
 const BarraLateral = () => {
     const location = useLocation();
@@ -86,3 +86,4 @@ const BarraLateral = () => {
 };
 
 export default BarraLateral;
+

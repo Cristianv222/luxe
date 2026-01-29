@@ -11,3 +11,4 @@ router.register(r'accounts', LoyaltyAccountViewSet)
 urlpatterns = [
     path('', include(router.urls)),
 ]
+

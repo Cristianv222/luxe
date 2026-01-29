@@ -10,3 +10,4 @@ class SRIDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = SRIDocument
         fields = '__all__'
+
