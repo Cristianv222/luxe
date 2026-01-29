@@ -696,16 +696,26 @@ class PrintReceiptView(APIView):
         if not printer_id:
             printer = Printer.get_default()
             if not printer:
+                # No hay impresora, pero la orden se procesa igual sin imprimir
+                logger.warning("No hay impresora configurada - orden procesada sin imprimir")
                 return Response({
-                    'error': 'No hay impresora configurada por defecto'
-                }, status=status.HTTP_400_BAD_REQUEST)
+                    'status': 'success',
+                    'message': 'Orden procesada correctamente (sin impresión - no hay impresora configurada)',
+                    'warning': 'No hay impresora configurada',
+                    'printed': False
+                })
         else:
             try:
                 printer = Printer.objects.get(pk=printer_id, is_active=True)
             except Printer.DoesNotExist:
+                # Impresora específica no encontrada, pero la orden se procesa igual
+                logger.warning(f"Impresora {printer_id} no encontrada - orden procesada sin imprimir")
                 return Response({
-                    'error': 'Impresora no encontrada o inactiva'
-                }, status=status.HTTP_400_BAD_REQUEST)
+                    'status': 'success',
+                    'message': 'Orden procesada correctamente (sin impresión - impresora no disponible)',
+                    'warning': 'Impresora no encontrada o inactiva',
+                    'printed': False
+                })
         
         try:
             content = self.generate_receipt_content(printer, order_data)
@@ -725,7 +735,8 @@ class PrintReceiptView(APIView):
                 'status': 'success',
                 'message': 'Ticket creado, el agente lo imprimirá',
                 'job_id': str(print_job.id),
-                'job_number': print_job.job_number
+                'job_number': print_job.job_number,
+                'printed': True
             })
                 
         except Exception as e:

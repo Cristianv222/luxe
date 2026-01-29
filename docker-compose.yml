@@ -5,84 +5,37 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_MULTIPLE_DATABASES: auth_service_db,luxe_service_db
+      POSTGRES_MULTIPLE_DATABASES: luxe_service_db
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./scripts/create-multiple-postgresql-databases.sh:/docker-entrypoint-initdb.d/create-multiple-postgresql-databases.sh
     networks:
       - luxe-network
+    ports:
+      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 512M
+    restart: "no"
+
 
   redis:
     image: redis:7-alpine
     container_name: luxe_redis
     networks:
       - luxe-network
+    ports:
+      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 128M
+    restart: "no"
 
-  auth-service:
-    build: ./auth-service
-    container_name: luxe_auth_service
-    entrypoint: /bin/sh
-    command:
-      - -c
-      - |
-        echo "🔄 Waiting for PostgreSQL..."
-        until python -c 'import socket; socket.create_connection(("postgres", 5432), timeout=1)' 2>/dev/null; do
-          sleep 1
-        done
-        echo "✅ PostgreSQL is ready!"
-        echo "🔄 Running migrations..."
-        python manage.py migrate --noinput
-        echo "🔄 Collecting static files..."
-        python manage.py collectstatic --noinput
-        echo "🚀 Starting Django (Eco Mode)..."
-        exec gunicorn auth_service.wsgi:application --bind 0.0.0.0:8000 --workers 1 --threads 4 --timeout 120
-    volumes:
-      - ./auth-service:/app
-      - auth-static:/app/staticfiles
-    environment:
-      - SECRET_KEY=luxe-production-secret-key-2025-ultra-secure-change-this
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/auth_service_db
-      - REDIS_URL=redis://redis:6379/0
-      - ALLOWED_HOSTS=luxury.fronteratech.ec,localhost
-      - CORS_ALLOWED_ORIGINS=https://luxury.fronteratech.ec,http://localhost:3000,http://localhost,http://127.0.0.1
-      - CSRF_TRUSTED_ORIGINS=https://luxury.fronteratech.ec,http://localhost,http://127.0.0.1
-      - DEBUG=False
-      - PYTHONUNBUFFERED=1
-      - TZ=America/Guayaquil
-    expose:
-      - "8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - luxe-network
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 350M
+
 
   luxe-service:
     build: ./luxe-service
@@ -96,8 +49,7 @@ services:
           sleep 1
         done
         echo "✅ PostgreSQL is ready!"
-        echo "🔄 Waiting for Auth Service..."
-        sleep 5
+
         echo "🔄 Running migrations..."
         python manage.py migrate --noinput
         echo "🔄 Collecting static files..."
@@ -105,33 +57,37 @@ services:
         echo "🚀 Starting Django (Eco Mode)..."
         exec gunicorn luxe_service.wsgi:application --bind 0.0.0.0:8000 --workers 1 --threads 4 --timeout 120
     volumes:
-      - ./luxe-service:/app
+      - ./luxe-service/apps:/app/apps
+      - ./luxe-service/core:/app/core
+      - ./luxe-service/luxe_service:/app/luxe_service
+      - ./luxe-service/manage.py:/app/manage.py
+      - ./luxe-service/media:/app/media
       - luxe-static:/app/staticfiles
-      - luxe-media:/app/media
     environment:
       - SECRET_KEY=luxe-production-secret-key-2025-ultra-secure-change-this
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/luxe_service_db
-      - AUTH_SERVICE_URL=http://auth-service:8000
+
       - ALLOWED_HOSTS=luxury.fronteratech.ec,localhost
       - CORS_ALLOWED_ORIGINS=https://luxury.fronteratech.ec,http://localhost:3000,http://localhost,http://127.0.0.1
       - CSRF_TRUSTED_ORIGINS=https://luxury.fronteratech.ec,http://localhost,http://127.0.0.1
-      - DEBUG=False
+      - DEBUG=True
       - PYTHONUNBUFFERED=1
       - TZ=America/Guayaquil
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost,http://127.0.0.1:3000
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     expose:
       - "8000"
     depends_on:
       postgres:
         condition: service_healthy
-      auth-service:
-        condition: service_started
+
     networks:
       - luxe-network
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 512M
+    restart: "no"
+
 
 
 
@@ -141,34 +97,38 @@ services:
       dockerfile: Dockerfile.prod
     container_name: luxe_frontend
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
+      - REACT_APP_API_BASE_URL=http://localhost
+      - REACT_APP_AUTH_SERVICE=http://localhost
+      - REACT_APP_LUXE_SERVICE=http://localhost/api/luxe
+      - CHOKIDAR_USEPOLLING=true
+    stdin_open: true
+    tty: true
     expose:
       - "80"
     networks:
       - luxe-network
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 128M
+    restart: "no"
+
 
   nginx:
     image: nginx:alpine
     container_name: luxe_nginx
     ports:
-      - "8018:80"
+      - "80:80"
+      - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - auth-static:/usr/share/nginx/html/static/auth:ro
+      - ./nginx-dev.conf:/etc/nginx/nginx.conf:ro
+
       - luxe-static:/usr/share/nginx/html/static/luxe:ro
       - luxe-media:/usr/share/nginx/html/media:ro
     depends_on:
-      - auth-service
+
       - luxe-service
       - frontend
     networks:
       - luxe-network
-    restart: unless-stopped
+    restart: "no"
 
 networks:
   luxe-network:
@@ -178,8 +138,7 @@ networks:
 volumes:
   postgres-data:
     name: luxe_postgres_data
-  auth-static:
-    name: luxe_auth_static
+
   luxe-static:
     name: luxe_service_static
   luxe-media:

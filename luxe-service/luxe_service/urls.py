@@ -4,6 +4,12 @@ from django.urls import path, include
 urlpatterns = [
     path('luxe/admin/', admin.site.urls),
     path('luxe/api/menu/', include('apps.menu.urls')),
+    
+    # Auth Service Endpoints (Merged)
+    path('auth/api/authentication/', include('apps.authentication.urls')),
+    path('auth/api/users/', include('apps.users.urls')),
+    path('auth/api/roles/', include('apps.roles.urls')),
+
     path('luxe/api/pos/', include('apps.pos.urls')),
     path('luxe/api/orders/', include('apps.orders.urls')),
     path('luxe/api/payments/', include('apps.payments.urls')),
