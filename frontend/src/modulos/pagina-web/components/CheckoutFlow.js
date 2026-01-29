@@ -8,7 +8,7 @@ import '../BoutiqueLanding.css'; // Reutilizar estilos
 
 const CheckoutFlow = ({ isOpen, onClose }) => {
     const { user } = useAuth();
-    const { cart, getCartTotal, clearCart } = useCart();
+    const { cart, getCartTotal, clearCart, removeFromCart } = useCart();
     const navigate = useNavigate();
 
     // Estados
@@ -193,7 +193,7 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
                 address: billingDetails.address,
                 city: billingDetails.city
             };
-            const syncRes = await api.post('api/customers/admin/sync/', syncPayload, { baseURL: '/api/luxe' });
+            const syncRes = await api.post('api/customers/sync/', syncPayload, { baseURL: '/api/luxe' });
             const customerId = syncRes.data.data.id;
 
             // Crear Orden
@@ -444,13 +444,34 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
                         <h3 className="checkout-title">Resumen del Pedido</h3>
                         <div className="order-summary-items">
                             {cart.map((item, index) => (
-                                <div key={index} className="summary-item">
-                                    <div className="summary-item-info">
+                                <div key={index} className="summary-item" style={{ position: 'relative' }}>
+                                    <div className="summary-item-info" style={{ paddingRight: '20px' }}>
                                         <span className="summary-p-name">{item.name}</span>
                                         {item.selectedSize && <small> ({item.selectedSize.name})</small>}
                                         <div className="summary-p-qty">Cant: {item.quantity}</div>
                                     </div>
-                                    <div className="summary-p-price">${((item.price) * item.quantity).toFixed(2)}</div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
+                                        <div className="summary-p-price">${((item.price) * item.quantity).toFixed(2)}</div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                removeFromCart(item.tempId);
+                                            }}
+                                            style={{
+                                                background: 'transparent',
+                                                border: 'none',
+                                                color: '#ef4444',
+                                                fontSize: '14px',
+                                                cursor: 'pointer',
+                                                padding: '2px 5px',
+                                                fontWeight: 'bold'
+                                            }}
+                                            title="Eliminar del carrito"
+                                        >
+                                            ✕ Eliminar
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>

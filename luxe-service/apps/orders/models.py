@@ -222,26 +222,37 @@ class Order(models.Model):
         return f'ORD-{timestamp}-{random_suffix}'
     
     def calculate_totals(self):
-        """Calcula los totales de la orden"""
-        # Calcular subtotal de items
-        # Usamos select_related para optimizar el acceso a producto
-        items = self.items.select_related('product').all()
+        """Calcula los totales de la orden incluyendo extras"""
+        # Usamos prefetch_related para obtener los extras de forma eficiente
+        items = self.items.select_related('product').prefetch_related('extras').all()
         
-        items_total = sum(item.line_total for item in items)
-        self.subtotal = items_total
-        
-        # Calcular impuestos sumando el IVA de cada producto individualmente
+        subtotal = Decimal('0.00')
         total_tax = Decimal('0.00')
         
         for item in items:
+            # Sumar el precio de todos los extras vinculados a este item
+            extras_total = sum(extra.price for extra in item.extras.all())
+            
+            # Actualizar line_total incluyendo extras
+            # Cada item ya tiene su unit_price (que puede venir del producto o de la talla)
+            line_total = (item.unit_price + extras_total) * item.quantity
+            
+            # Actualizar el item en la base de datos sin disparar signals de nuevo
+            from .models import OrderItem
+            OrderItem.objects.filter(id=item.id).update(line_total=line_total)
+            
+            # Acumular al subtotal de la orden
+            subtotal += line_total
+            
+            # Calcular impuestos (IVA)
             if hasattr(item.product, 'tax_rate') and item.product.tax_rate > 0:
-                # Calcula el impuesto basado en el total de la línea y la tasa del producto
-                item_tax = item.line_total * (item.product.tax_rate / Decimal('100.00'))
+                item_tax = line_total * (item.product.tax_rate / Decimal('100.00'))
                 total_tax += item_tax
-                
+        
+        self.subtotal = subtotal
         self.tax_amount = total_tax
         
-        # Calcular total
+        # Calcular total final
         self.total = (
             self.subtotal + 
             self.tax_amount + 
@@ -249,6 +260,9 @@ class Order(models.Model):
             self.tip_amount - 
             self.discount_amount
         )
+        # Asegurar que el total no sea negativo
+        if self.total < 0:
+            self.total = Decimal('0.00')
     
     def calculate_estimated_time(self):
         """Calcula el tiempo estimado basado en los items"""
