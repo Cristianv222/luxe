@@ -427,17 +427,31 @@ const PuntosVenta = () => {
 
         try {
             const res = await api.post('/api/orders/orders/', payload, { baseURL: process.env.REACT_APP_LUXE_SERVICE });
-            // Imprimir
-            await printerService.printReceipt({
-                order_number: res.data.order_number || res.data.id,
-                customer_name: selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : 'CONSUMIDOR FINAL',
-                order_type: selectedDeliveryMethod, // ENVIAR order_type para el backend nuevo
-                table_number: tableNumber, // Legacy
-                items: cart.map(i => ({ name: i.name, quantity: i.quantity, price: i.price, total: i.price * i.quantity, note: i.note })),
-                subtotal: calculateSubtotal, discount: calculateDiscountAmount, tax: calculateTax, total: calculateTotal,
-                printed_at: new Date().toISOString()
-            });
-            alert('Orden confirmada e impresa');
+
+            // Intentar imprimir, pero no fallar si no hay impresora
+            try {
+                const printResponse = await printerService.printReceipt({
+                    order_number: res.data.order_number || res.data.id,
+                    customer_name: selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : 'CONSUMIDOR FINAL',
+                    order_type: selectedDeliveryMethod,
+                    table_number: tableNumber,
+                    items: cart.map(i => ({ name: i.name, quantity: i.quantity, price: i.price, total: i.price * i.quantity, note: i.note })),
+                    subtotal: calculateSubtotal, discount: calculateDiscountAmount, tax: calculateTax, total: calculateTotal,
+                    printed_at: new Date().toISOString()
+                });
+
+                // Verificar si realmente se imprimió
+                if (printResponse.printed === false || printResponse.warning) {
+                    alert(`✅ Orden #${res.data.order_number || res.data.id} confirmada\n⚠️ ${printResponse.warning || printResponse.message || 'No se pudo imprimir'}`);
+                } else {
+                    alert(`✅ Orden #${res.data.order_number || res.data.id} confirmada e impresa`);
+                }
+            } catch (printError) {
+                // Error de impresión, pero la orden sí se creó
+                console.warn('No se pudo imprimir (pero orden fue creada):', printError);
+                alert(`✅ Orden #${res.data.order_number || res.data.id} confirmada\n⚠️ No se pudo imprimir: ${printError.response?.data?.warning || 'Impresora no disponible'}`);
+            }
+
             // Reset
             setCart([]); setAppliedDiscount(null); setDiscountCode(''); setSelectedCustomer(null); setCustomerSearch(''); setCashGiven(null); setInputCash(''); loadData();
         } catch (e) {

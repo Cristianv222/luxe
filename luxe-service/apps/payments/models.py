@@ -296,7 +296,7 @@ class Payment(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     payment_number = models.CharField(
-        max_length=20,
+        max_length=30,
         unique=True,
         verbose_name='Número de Pago'
     )

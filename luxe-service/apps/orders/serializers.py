@@ -327,6 +327,10 @@ class OrderCreateSerializer(serializers.Serializer):
             validated_data['ready_at'] = now
             validated_data['delivered_at'] = now
         
+        # Definir now si no existe (para el caso web)
+        if 'now' not in locals():
+            now = timezone.now()
+        
         # Procesar Descuento/Cupón
         discount_code = validated_data.get('discount_code')
         applied_discount_object = None
