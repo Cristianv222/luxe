@@ -135,6 +135,40 @@ const ConfiguracionSRI = () => {
                         >
                             {saving ? 'Guardando...' : 'Guardar Configuración'}
                         </button>
+
+                        {/* Opciones Avanzadas */}
+                        <div style={{ marginTop: '2rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
+                            <details>
+                                <summary style={{ cursor: 'pointer', color: '#666', fontSize: '0.9rem', userSelect: 'none' }}>⚙️ Opciones Avanzadas</summary>
+                                <div style={{ marginTop: '1rem', padding: '10px', backgroundColor: '#f9f9f9', borderRadius: '4px' }}>
+
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.85rem' }}>URL del Endpoint (API)</label>
+                                        <input
+                                            type="url"
+                                            value={config.api_url || ''}
+                                            onChange={e => setConfig({ ...config, api_url: e.target.value })}
+                                            placeholder="https://..."
+                                            style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #ccc', fontSize: '0.85rem' }}
+                                        />
+                                        <small style={{ color: '#999', fontSize: '0.75rem' }}>Solo cambiar si FronteraTech provee una URL distinta.</small>
+                                    </div>
+
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.85rem' }}>ID de Empresa (Forzar)</label>
+                                        <input
+                                            type="number"
+                                            value={config.company_id || ''}
+                                            onChange={e => setConfig({ ...config, company_id: e.target.value ? parseInt(e.target.value) : null })}
+                                            placeholder="Ej: 4"
+                                            style={{ width: '100%', padding: '0.4rem', borderRadius: '4px', border: '1px solid #ccc', fontSize: '0.85rem' }}
+                                        />
+                                        <small style={{ color: '#999', fontSize: '0.75rem' }}>Dejar vacío para usar la empresa predeterminada del Token.</small>
+                                    </div>
+
+                                </div>
+                            </details>
+                        </div>
                     </form>
                 </div>
 
@@ -182,9 +216,34 @@ const ConfiguracionSRI = () => {
                                 </div>
                             ) : (
                                 <div>
-                                    <strong>Error al Emitir</strong>
-                                    <p>{emitResult.error}</p>
-                                    {emitResult.details && <pre style={{ fontSize: '0.7em', overflowX: 'auto' }}>{JSON.stringify(emitResult.details, null, 2)}</pre>}
+                                    <strong style={{ display: 'block', marginBottom: '8px' }}>❌ Error al Emitir</strong>
+
+                                    {/* Mensaje principal */}
+                                    <p style={{ fontWeight: 'bold', marginBottom: '8px' }}>
+                                        {emitResult.details?.error_message || emitResult.error}
+                                    </p>
+
+                                    {/* Sugerencias Inteligentes */}
+                                    {JSON.stringify(emitResult.details).includes('CERTIFICATE_NOT_AVAILABLE') && (
+                                        <div style={{ backgroundColor: '#fff3cd', padding: '10px', borderRadius: '4px', marginBottom: '10px', fontSize: '0.9rem', color: '#856404', border: '1px solid #ffeeba' }}>
+                                            <strong>💡 Solución:</strong> Falta subir la <u>Firma Electrónica (.p12)</u> en el panel de FronteraTech.
+                                            <br />Luxe se conectó bien, pero la API de facturación no puede firmar sin ese archivo.
+                                        </div>
+                                    )}
+
+                                    {JSON.stringify(emitResult.details).includes('SRI_CONFIGURATION_MISSING') && (
+                                        <div style={{ backgroundColor: '#fff3cd', padding: '10px', borderRadius: '4px', marginBottom: '10px', fontSize: '0.9rem', color: '#856404', border: '1px solid #ffeeba' }}>
+                                            <strong>💡 Solución:</strong> Falta configurar el establecimiento y punto de emisión en el panel de FronteraTech.
+                                        </div>
+                                    )}
+
+                                    {/* Detalles técnicos (collapsible o pequeño) */}
+                                    <details style={{ marginTop: '10px' }}>
+                                        <summary style={{ cursor: 'pointer', fontSize: '0.8rem', color: '#666' }}>Ver detalles técnicos</summary>
+                                        <pre style={{ fontSize: '0.7em', overflowX: 'auto', marginTop: '5px', backgroundColor: 'rgba(255,255,255,0.5)', padding: '5px' }}>
+                                            {JSON.stringify(emitResult.details, null, 2)}
+                                        </pre>
+                                    </details>
                                 </div>
                             )}
                         </div>
