@@ -167,10 +167,10 @@ const Contacto = () => {
                                         color: '#666',
                                         fontSize: '0.95rem'
                                     }}>
-                                        <a href="mailto:ventas@luxuryboutique.com" style={{
+                                        <a href="mailto:luxury.cuenca@gmail.com" style={{
                                             color: '#CFB3A9',
                                             textDecoration: 'none'
-                                        }}>ventas@luxuryboutique.com</a>
+                                        }}>luxury.cuenca@gmail.com</a>
                                     </p>
                                 </div>
 
@@ -297,9 +297,8 @@ const Contacto = () => {
                                         fontSize: '0.95rem',
                                         lineHeight: '1.8'
                                     }}>
-                                        Lun - Vie: 9:00 AM - 6:45 PM<br />
-                                        Sábado: 10:00 AM - 6:45 PM<br />
-                                        Dom y Mié: CERRADO
+                                        Lun - Sáb: 9:00 AM - 7:00 PM<br />
+                                        Domingo: CERRADO
                                     </p>
                                 </div>
                             </div>

@@ -17,14 +17,15 @@ const PiePagina = () => {
                 {/* Horarios */}
                 <div className="footer-column">
                     <h4>Horario de Atención</h4>
-                    <p>Lun - Mar - Jue - Vie: 9:00 AM - 6:45 PM</p>
-                    <p>Sábado: 10:00 AM - 6:45 PM</p>
-                    <p>Miércoles y Domingo: CERRADO</p>
+                    <p>Lun - Sáb: 9:00 AM - 7:00 PM</p>
+                    <p>Domingo: CERRADO</p>
                 </div>
 
                 <div className="footer-column">
                     <h4>Contacto</h4>
-                    {/* Correo eliminado como solicitado */}
+                    <p style={{ fontSize: '0.9rem', marginBottom: '8px' }}>
+                        <a href="mailto:luxury.cuenca@gmail.com" style={{ color: '#666', textDecoration: 'none' }}>luxury.cuenca@gmail.com</a>
+                    </p>
                     <p>098 612 3920</p>
                     <p>Cuenca, Ecuador</p>
                     <div style={{ marginTop: '15px', display: 'flex', gap: '15px' }}>
