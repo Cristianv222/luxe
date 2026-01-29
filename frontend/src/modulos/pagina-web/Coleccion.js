@@ -182,7 +182,10 @@ const Coleccion = () => {
                                             </div>
                                             <div className="product-info">
                                                 <h3 className="product-name">{product.name}</h3>
-                                                <p className="product-price">${parseFloat(product.price).toFixed(2)}</p>
+                                                <p className="product-price">
+                                                    ${parseFloat(product.price).toFixed(2)}
+                                                    {product.tax_rate > 0 && <span style={{ fontSize: '0.75rem', color: '#888', marginLeft: '5px' }}>+ {product.tax_rate}% IVA</span>}
+                                                </p>
                                                 {product.track_stock && (
                                                     <p className={`product-stock ${outOfStock ? 'out-of-stock' : ''}`}>
                                                         {outOfStock ? 'Sin stock' : `Stock: ${product.stock_quantity} unidades`}
@@ -217,7 +220,10 @@ const Coleccion = () => {
                             </div>
                             <div className="modal-info-section">
                                 <h2 className="modal-product-name">{selectedProduct.name}</h2>
-                                <p className="modal-product-price">${parseFloat(selectedProduct.price).toFixed(2)}</p>
+                                <p className="modal-product-price">
+                                    ${parseFloat(selectedProduct.price).toFixed(2)}
+                                    {selectedProduct.tax_rate > 0 && <span style={{ fontSize: '0.9rem', color: '#888', marginLeft: '10px' }}>+ {selectedProduct.tax_rate}% IVA</span>}
+                                </p>
                                 <p className="modal-product-description">{selectedProduct.description || 'Producto de alta calidad seleccionado especialmente para ti.'}</p>
 
                                 {selectedProduct.track_stock && (

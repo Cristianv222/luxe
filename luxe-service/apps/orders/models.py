@@ -246,7 +246,12 @@ class Order(models.Model):
             
             # Calcular impuestos (IVA)
             if hasattr(item.product, 'tax_rate') and item.product.tax_rate > 0:
-                item_tax = line_total * (item.product.tax_rate / Decimal('100.00'))
+                # Normalizar tax_rate: si es decimal (ej: 0.15) convertirlo a porcentaje (15)
+                tax_rate = item.product.tax_rate
+                if 0 < tax_rate < 1:
+                    tax_rate = tax_rate * Decimal('100.00')
+                    
+                item_tax = line_total * (tax_rate / Decimal('100.00'))
                 total_tax += item_tax
         
         self.subtotal = subtotal

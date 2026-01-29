@@ -77,14 +77,11 @@ export const CartProvider = ({ children }) => {
     };
 
     // Calcular totales
-    const getCartTotal = () => {
+    const getCartSubtotal = () => {
         return cart.reduce((total, item) => {
             let price = parseFloat(item.price);
             if (item.selectedSize) {
-                price = parseFloat(item.selectedSize.price); // Asumiendo que replace precio base
-                // O si es adicional: price += parseFloat(item.selectedSize.additional_price)
-                // Depende de la lógica de negocio. En BoutiqueLanding parecía usar item.price
-                // Revisaremos la lógica original de BoutiqueLanding para consistencia.
+                price = parseFloat(item.selectedSize.price);
             }
 
             // Sumar extras
@@ -93,6 +90,28 @@ export const CartProvider = ({ children }) => {
 
             return total + ((price + extrasTotal) * item.quantity);
         }, 0);
+    };
+
+    const getCartTax = () => {
+        return cart.reduce((totalTax, item) => {
+            let price = parseFloat(item.price);
+            if (item.selectedSize) {
+                price = parseFloat(item.selectedSize.price);
+            }
+
+            const extrasTotal = item.selectedExtras ?
+                item.selectedExtras.reduce((sum, extra) => sum + parseFloat(extra.price), 0) : 0;
+
+            const itemTotal = (price + extrasTotal) * item.quantity;
+            const taxRateInput = parseFloat(item.tax_rate || 0);
+            const actualTaxRate = (taxRateInput > 0 && taxRateInput < 1) ? taxRateInput * 100 : taxRateInput;
+
+            return totalTax + (itemTotal * (actualTaxRate / 100));
+        }, 0);
+    };
+
+    const getCartTotal = () => {
+        return getCartSubtotal() + getCartTax();
     };
 
     const getCartCount = () => {
@@ -109,6 +128,8 @@ export const CartProvider = ({ children }) => {
             clearCart,
             toggleCart,
             setIsCartOpen,
+            getCartSubtotal,
+            getCartTax,
             getCartTotal,
             getCartCount
         }}>

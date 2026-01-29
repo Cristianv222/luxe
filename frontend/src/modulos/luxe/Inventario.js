@@ -119,7 +119,7 @@ const Inventario = () => {
             price: product.price,
             cost_price: product.cost_price || 0, // Nuevo
             last_purchase_cost: product.last_purchase_cost || 0, // Nuevo
-            tax_rate: product.tax_rate ? (product.tax_rate > 1 ? product.tax_rate : product.tax_rate * 100) : 0, // Nuevo
+            tax_rate: product.tax_rate || 0,
             unit_measure: product.unit_measure || 'Unidad', // Nuevo
             line: product.line || '', // Nuevo
             subgroup: product.subgroup || '', // Nuevo
@@ -191,7 +191,7 @@ const Inventario = () => {
         formData.append('price', newProduct.price);
         formData.append('cost_price', newProduct.cost_price);
         formData.append('last_purchase_cost', newProduct.last_purchase_cost);
-        formData.append('tax_rate', newProduct.tax_rate / 100); // Guardar como decimal (0.15)
+        formData.append('tax_rate', newProduct.tax_rate); // Guardar como porcentaje (Ej: 15)
 
         // Detalles
         formData.append('unit_measure', newProduct.unit_measure);
@@ -617,7 +617,7 @@ const Inventario = () => {
                                                     </td>
                                                     <td style={{ fontWeight: 700 }}>${Number(product.price).toFixed(2)}</td>
                                                     <td>${Number(product.cost_price || 0).toFixed(2)}</td>
-                                                    <td>{product.tax_rate ? `${Number(product.tax_rate) > 1 ? product.tax_rate : product.tax_rate * 100}%` : '0%'}</td>
+                                                    <td>{product.tax_rate ? `${parseFloat(product.tax_rate)}%` : '0%'}</td>
                                                     <td style={{ fontSize: '0.8rem' }}>{product.accounting_sales_account || '-'}</td>
                                                     <td style={{ fontSize: '0.8rem' }}>{product.accounting_cost_account || '-'}</td>
                                                     <td style={{ fontSize: '0.8rem' }}>{product.accounting_inventory_account || '-'}</td>

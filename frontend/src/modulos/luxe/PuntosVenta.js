@@ -9,9 +9,9 @@ import printerService from '../../services/printerService';
 const formatCurrency = (amount) => {
     if (amount === undefined || amount === null) return '$0.00';
     const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return new Intl.NumberFormat('es-MX', {
+    return new Intl.NumberFormat('es-EC', {
         style: 'currency',
-        currency: 'MXN',
+        currency: 'USD',
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     }).format(num || 0);
@@ -294,9 +294,10 @@ const PuntosVenta = () => {
 
     const calculateTax = useMemo(() => {
         const rawTax = cart.reduce((totalTax, item) => {
-            const itemTaxRate = item.tax_rate || 0;
+            const taxRateInput = parseFloat(item.tax_rate || 0);
+            const actualTaxRate = (taxRateInput > 0 && taxRateInput < 1) ? taxRateInput * 100 : taxRateInput;
             const itemTotal = item.price * item.quantity;
-            return totalTax + (itemTotal * (itemTaxRate / 100));
+            return totalTax + (itemTotal * (actualTaxRate / 100));
         }, 0);
         // Redondeamos el impuesto AQUÍ para que el valor mostrado (ej: 0.23) 
         // sea EXACTAMENTE el que se suma al total.
@@ -593,6 +594,11 @@ const PuntosVenta = () => {
 
                                     <div style={{ textAlign: 'right', fontWeight: '700', color: '#059669' }}>
                                         {formatCurrency(product.price)}
+                                        {product.tax_rate > 0 && (
+                                            <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 'normal' }}>
+                                                + {product.tax_rate}% IVA
+                                            </div>
+                                        )}
                                     </div>
                                     <div style={{ textAlign: 'center' }}>
                                         {product.track_stock ? (
@@ -641,6 +647,11 @@ const PuntosVenta = () => {
                                     <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
                                         {item.code && <span style={{ marginRight: '0.5rem', fontFamily: 'monospace' }}>[{item.code}]</span>}
                                         {formatCurrency(item.price)} x {item.quantity}
+                                        {item.tax_rate > 0 && (
+                                            <span style={{ marginLeft: '0.5rem', color: '#059669', fontSize: '0.75rem' }}>
+                                                (IVA {item.tax_rate}%)
+                                            </span>
+                                        )}
                                     </div>
                                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                         <button onClick={() => updateQuantity(item.product_id, -1)} style={{ width: '28px', height: '28px', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white' }}>-</button>
@@ -655,7 +666,7 @@ const PuntosVenta = () => {
 
                     <div style={{ padding: '1.5rem', borderTop: '1px solid #e2e8f0', backgroundColor: '#fff' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#64748b' }}>
-                            <span>Subtotal</span>
+                            <span>Subtotal (sin IVA)</span>
                             <span>{formatCurrency(calculateSubtotal)}</span>
                         </div>
                         {appliedDiscount && (
@@ -709,7 +720,14 @@ const PuntosVenta = () => {
                                 {cart.map((item, idx) => (
                                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
                                         <div>
-                                            <div style={{ fontWeight: '600', color: '#1e293b' }}>{item.quantity} x {item.name}</div>
+                                            <div style={{ fontWeight: '600', color: '#1e293b' }}>
+                                                {item.quantity} x {item.name}
+                                                {item.tax_rate > 0 && (
+                                                    <span style={{ marginLeft: '0.5rem', color: '#059669', fontSize: '0.75rem' }}>
+                                                        (IVA {item.tax_rate < 1 ? item.tax_rate * 100 : item.tax_rate}%)
+                                                    </span>
+                                                )}
+                                            </div>
                                             {item.note && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{item.note}</div>}
                                         </div>
                                         <div style={{ fontWeight: '600' }}>{formatCurrency(item.price * item.quantity)}</div>
@@ -718,7 +736,7 @@ const PuntosVenta = () => {
                             </div>
                             <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '1rem', marginTop: 'auto' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                    <span style={{ color: '#64748b' }}>Subtotal</span>
+                                    <span style={{ color: '#64748b' }}>Subtotal (sin IVA)</span>
                                     <span>{formatCurrency(calculateSubtotal)}</span>
                                 </div>
                                 {appliedDiscount && (
@@ -733,8 +751,8 @@ const PuntosVenta = () => {
                                         <span>{formatCurrency(calculateTax)}</span>
                                     </div>
                                 )}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>
-                                    <span>Total a Pagar</span>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.8rem', fontWeight: '900', color: '#0f172a', borderTop: '2.5px solid #0f172a', paddingTop: '1rem', marginTop: '0.5rem' }}>
+                                    <span>TOTAL</span>
                                     <span>{formatCurrency(calculateTotal)}</span>
                                 </div>
                             </div>

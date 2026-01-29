@@ -313,7 +313,7 @@ const Ordenes = () => {
                             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid var(--color-froth)', paddingTop: '1.5rem' }}>
                                 <div style={{ textAlign: 'right', minWidth: '200px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                        <span>Subtotal:</span>
+                                        <span>Subtotal (sin IVA):</span>
                                         <span>${selectedOrder.subtotal}</span>
                                     </div>
                                     {selectedOrder.tax_amount > 0 && (
@@ -323,7 +323,7 @@ const Ordenes = () => {
                                         </div>
                                     )}
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--color-dark)' }}>
-                                        <span>Total:</span>
+                                        <span>TOTAL:</span>
                                         <span>${selectedOrder.total}</span>
                                     </div>
                                 </div>

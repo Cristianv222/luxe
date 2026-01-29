@@ -8,7 +8,14 @@ import '../BoutiqueLanding.css'; // Reutilizar estilos
 
 const CheckoutFlow = ({ isOpen, onClose }) => {
     const { user } = useAuth();
-    const { cart, getCartTotal, clearCart, removeFromCart } = useCart();
+    const {
+        cart,
+        getCartSubtotal,
+        getCartTax,
+        getCartTotal,
+        clearCart,
+        removeFromCart
+    } = useCart();
     const navigate = useNavigate();
 
     // Estados
@@ -135,26 +142,12 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
     const roundCurrency = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
 
     const subtotal = React.useMemo(() => {
-        return roundCurrency(getCartTotal());
-    }, [cart, getCartTotal]);
+        return roundCurrency(getCartSubtotal());
+    }, [cart, getCartSubtotal]);
 
     const taxAmount = React.useMemo(() => {
-        const rawTax = cart.reduce((totalTax, item) => {
-            const itemTaxRate = item.tax_rate || 0;
-            // Calcular precio base del item (considerando talla si aplica, lógica similar a getCartTotal)
-            let price = parseFloat(item.price);
-            if (item.selectedSize) {
-                price = parseFloat(item.selectedSize.price);
-            }
-            // Extras
-            const extrasTotal = item.selectedExtras ?
-                item.selectedExtras.reduce((sum, extra) => sum + parseFloat(extra.price), 0) : 0;
-
-            const itemTotal = (price + extrasTotal) * item.quantity;
-            return totalTax + (itemTotal * (itemTaxRate / 100));
-        }, 0);
-        return roundCurrency(rawTax);
-    }, [cart]);
+        return roundCurrency(getCartTax());
+    }, [cart, getCartTax]);
 
     const discountAmount = React.useMemo(() => {
         return discountInfo ? roundCurrency(parseFloat(discountInfo.amount)) : 0;
@@ -509,7 +502,7 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
                         </div>
 
                         <div className="checkout-totals">
-                            <div className="total-row"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
+                            <div className="total-row"><span>Subtotal (sin IVA)</span><span>${subtotal.toFixed(2)}</span></div>
                             {taxAmount > 0 && (
                                 <div className="total-row"><span>IVA</span><span>${taxAmount.toFixed(2)}</span></div>
                             )}
@@ -518,7 +511,9 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
                                     <span>Descuento</span><span>-${discountAmount.toFixed(2)}</span>
                                 </div>
                             )}
-                            <div className="total-row final"><span>Total</span><span>${finalTotal.toFixed(2)}</span></div>
+                            <div className="total-row final" style={{ fontSize: '1.4rem', borderTop: '2px solid #2C2C2C', paddingTop: '10px', marginTop: '10px' }}>
+                                <span>TOTAL</span><span>${finalTotal.toFixed(2)}</span>
+                            </div>
                         </div>
 
                         {/* MÉTODO DE PAGO */}
