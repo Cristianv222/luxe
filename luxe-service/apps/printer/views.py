@@ -980,13 +980,11 @@ class PrintLabelView(APIView):
         Genera comandos TSPL para la impresora 3nStar LDT114
         Tamaño de etiqueta: 57mm x 27mm (aprox 456 x 216 dots a 203 DPI)
         """
-        # Configuración de etiqueta 57x27mm
-        # 1mm = 8 dots a 203 DPI
+        # Configuración de etiqueta 57x27mm (203 DPI)
+        # 1mm = 8 dots
         WIDTH_MM = 57
         HEIGHT_MM = 27
-        WIDTH_DOTS = WIDTH_MM * 8  # 456 dots
-        HEIGHT_DOTS = HEIGHT_MM * 8  # 216 dots
-        GAP_MM = 2  # Espacio entre etiquetas
+        GAP_MM = 2
         
         lines = []
         
@@ -997,31 +995,34 @@ class PrintLabelView(APIView):
         lines.append("CLS")
         
         for product in products:
-            name = product.get('name', 'Sin nombre')[:25]  # Limitar caracteres
-            code = product.get('code', '00000000')
+            name = product.get('name', 'Sin nombre')[:22]  # Limitar a ~22 chars para ancho 57mm
+            code = product.get('code', '0000')
             price = product.get('price', 0)
             
-            # Formatear precio
             price_str = f"${float(price):.2f}"
             
-            # Limpiar área
+            # Limpiar buffer de imagen para esta etiqueta
             lines.append("CLS")
             
-            # Nombre del producto (arriba, centrado)
-            # TEXTO: X, Y, fuente, rotación, x-mult, y-mult, texto
+            # 1. Nombre (Arriba). Fuente 2 (pequeña/media). 
+            # Coordenadas: x=10, y=10
             lines.append(f'TEXT 10,10,"2",0,1,1,"{name}"')
             
-            # Código de barras (centro)
-            # BARCODE: X, Y, tipo, altura, human_readable, rotación, narrow, wide, código
-            lines.append(f'BARCODE 30,40,"128",60,1,0,2,4,"{code}"')
+            # 2. Código de Barras (Centro). Tipo 128.
+            # Coordenadas: x=10, y=35, altura=50.
+            # Ancho barras: narrow=2, wide=2 (más compacto para que quepa)
+            lines.append(f'BARCODE 10,35,"128",50,1,0,2,2,"{code}"')
             
-            # Precio (abajo, grande)
-            lines.append(f'TEXT 10,180,"3",0,1,1,"{price_str}"')
+            # 3. Precio (Abajo). Fuente 3 (Grande).
+            # Coordenadas: x=10, y=100.
+            # Fuente 3 es aprox 12-14 dots de alto.
+            lines.append(f'TEXT 10,110,"3",0,1,1,"{price_str}"')
             
-            # Imprimir etiqueta
+            # Imprimir
             lines.append(f"PRINT {copies}")
         
-        return "\n".join(lines)
+        # Unir con CR+LF por seguridad
+        return "\r\n".join(lines) + "\r\n"
 
 
 def generar_comandos_tspl_hex(trabajo):

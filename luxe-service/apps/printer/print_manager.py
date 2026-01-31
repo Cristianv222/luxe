@@ -461,24 +461,41 @@ class PrinterManager:
         from .models import PrintJob
         
         try:
-            # Crear trabajo de prueba
-            test_content = f"""
-            PRUEBA DE IMPRESION
+            is_label = printer.printer_type == 'label'
             
-            Impresora: {printer.name}
-            Tipo: {printer.get_printer_type_display()}
-            Usuario: {user}
-            
-            Esta es una prueba de impresion.
-            Si puede leer esto, la impresora funciona correctamente.
-            
-            *** FIN DE PRUEBA ***
-            """
-            
+            if is_label:
+                # Comandos TSPL para etiqueta de prueba
+                # Asumimos tamaño estándar 50x25mm o ajustamos según impresora
+                test_content = (
+                    f"SIZE {printer.paper_width} mm, 25 mm\n"
+                    "GAP 2 mm, 0 mm\n"
+                    "CLS\n"
+                    'TEXT 20,20,"3",0,1,1,"PRUEBA EXITOSA"\n'
+                    f'TEXT 20,60,"2",0,1,1,"{printer.name}"\n'
+                    "PRINT 1\n"
+                )
+                job_data = {'type': 'label'}
+            else:
+                # Contenido de texto para tickets (ESC/POS)
+                test_content = f"""
+                PRUEBA DE IMPRESION
+                
+                Impresora: {printer.name}
+                Tipo: {printer.get_printer_type_display()}
+                Usuario: {user}
+                
+                Esta es una prueba de impresion.
+                Si puede leer esto, la impresora funciona correctamente.
+                
+                *** FIN DE PRUEBA ***
+                """
+                job_data = {}
+
             job = PrintJob.objects.create(
                 printer=printer,
                 document_type='other',
                 content=test_content.strip(),
+                data=job_data,
                 status='pending',
                 created_by=user
             )
