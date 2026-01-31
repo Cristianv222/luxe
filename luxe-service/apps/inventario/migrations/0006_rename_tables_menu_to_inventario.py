@@ -12,19 +12,19 @@ class Migration(migrations.Migration):
             # Renombrar las tablas de menu_ a inventario_
             sql=[
                 # Renombrar tabla Category
-                'ALTER TABLE menu_category RENAME TO inventario_category;',
+                'ALTER TABLE IF EXISTS menu_category RENAME TO inventario_category;',
                 # Renombrar tabla Product
-                'ALTER TABLE menu_product RENAME TO inventario_product;',
+                'ALTER TABLE IF EXISTS menu_product RENAME TO inventario_product;',
                 # Renombrar tabla Size
-                'ALTER TABLE menu_size RENAME TO inventario_size;',
+                'ALTER TABLE IF EXISTS menu_size RENAME TO inventario_size;',
                 # Renombrar tabla Extra
-                'ALTER TABLE menu_extra RENAME TO inventario_extra;',
+                'ALTER TABLE IF EXISTS menu_extra RENAME TO inventario_extra;',
                 # Renombrar tabla Extra_Products (many-to-many)
-                'ALTER TABLE menu_extra_products RENAME TO inventario_extra_products;',
+                'ALTER TABLE IF EXISTS menu_extra_products RENAME TO inventario_extra_products;',
                 # Renombrar tabla Combo
-                'ALTER TABLE menu_combo RENAME TO inventario_combo;',
+                'ALTER TABLE IF EXISTS menu_combo RENAME TO inventario_combo;',
                 # Renombrar tabla ComboProduct
-                'ALTER TABLE menu_comboproduct RENAME TO inventario_comboproduct;',
+                'ALTER TABLE IF EXISTS menu_comboproduct RENAME TO inventario_comboproduct;',
             ],
             reverse_sql=[
                 # Reverse para rollback

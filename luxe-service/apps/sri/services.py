@@ -76,23 +76,48 @@ class SRIIntegrationService:
             
             # Calcular precio unitario SIN IMPUESTOS para la API
             # Precio Base = Precio Con IVA / (1 + Tasa%)
-            tax_rate = product.tax_rate or 0
-            price_with_tax = item.unit_price # Asumiendo que esto es lo que pagó el cliente por unidad
+            tax_rate = float(product.tax_rate or 0)
+            price_with_tax = float(item.unit_price) # Asumiendo que esto es lo que pagó el cliente por unidad
             
             if tax_rate > 0:
-                unit_price_base = float(price_with_tax) / (1 + (float(tax_rate) / 100))
+                unit_price_base = price_with_tax / (1 + (tax_rate / 100))
             else:
-                unit_price_base = float(price_with_tax)
+                unit_price_base = price_with_tax
             
-            # Formatear a 6 decimales como pide la API
-            
+            # Determinar códigos de impuesto SRI
+            # Código 2 = IVA
+            # Porcentajes: 0=0%, 2=12%, 3=14%, 4=15%, 5=5%
+            tax_code = "2" # IVA
+            if tax_rate == 0:
+                perc_code = "0"
+            elif tax_rate == 12:
+                perc_code = "2"
+            elif tax_rate == 14:
+                perc_code = "3"
+            elif tax_rate == 15:
+                # Nuevo IVA 15% (Desde abril 2024 en Ecuador)
+                # Nota: Algunos sitemas usan código 4 para el 15%. Verificar.
+                perc_code = "4"
+            elif tax_rate == 5:
+                perc_code = "5"
+            else:
+                # Fallback, quizás enviar como exento o el más cercano
+                perc_code = "0"
+
             item_data = {
                 "main_code": product.code or f"PROD-{product.id}"[:25],
                 "auxiliary_code": f"ORD-{order.order_number}"[:25],
                 "description": product.name[:300],
-                "quantity": float(item.quantity),
-                "unit_price": unit_price_base,
-                "discount": 0.00 # Manejar decuentos por item si existieran
+                "quantity": round(float(item.quantity), 6),
+                "unit_price": round(unit_price_base, 6),
+                "discount": 0.00,
+                "taxes": [
+                    {
+                        "code": tax_code,
+                        "percentage_code": perc_code,
+                        "rate": tax_rate
+                    }
+                ]
             }
             items_payload.append(item_data)
 

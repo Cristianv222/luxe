@@ -140,9 +140,52 @@ const Etiquetas = () => {
         );
     };
 
-    const handlePrint = () => {
-        window.print();
+    const fetchAllForPrint = async () => {
+        if (!window.confirm('¿Desea cargar TODOS los productos para imprimir? Esto puede tardar unos segundos.')) return;
+
+        setLoading(true);
+        try {
+            // Fetch all products (high limit)
+            const response = await api.get('/api/menu/products/', {
+                baseURL: process.env.REACT_APP_LUXE_SERVICE,
+                params: {
+                    search: searchTerm,
+                    page_size: 1000 // Request a large number to get all
+                }
+            });
+
+            const data = response.data.results || response.data || [];
+            const validProducts = data.filter(p => p.code);
+
+            // Temporarily update state to show all products
+            setProducts(validProducts);
+
+            // Wait for render then print (increased timeout for large lists)
+            setTimeout(() => {
+                console.log("Abriendo diálogo de impresión para", validProducts.length, "items...");
+                window.print();
+                // Optional: Reload original page after print to restore pagination
+                // fetchProducts(searchTerm, pagination.page); 
+            }, 2500);
+
+        } catch (error) {
+            console.error("Error loading all products:", error);
+            alert("Error cargando productos para impresión");
+        } finally {
+            setLoading(false);
+        }
     };
+
+    const handlePrint = () => {
+        // If there are many pages, ask user if they want to print ALL or just current page
+        if (pagination.totalPages > 1) {
+            fetchAllForPrint();
+        } else {
+            window.print();
+        }
+    };
+
+    // ... (existing helper functions) ...
 
     const toggleSelectProduct = (product) => {
         setSelectedProducts(prev => {
@@ -199,10 +242,11 @@ const Etiquetas = () => {
     };
 
     if (loading) {
+        // ... (existing loading state) ...
         return (
             <div className="luxe-layout" style={{ padding: '4rem', textAlign: 'center', backgroundColor: 'var(--color-froth)', minHeight: '100vh' }}>
                 <i className="bi bi-arrow-repeat" style={{ fontSize: '2rem', color: 'var(--color-cinna)', animation: 'spin 1s linear infinite' }}></i>
-                <p style={{ color: 'var(--color-latte)', marginTop: '1rem' }}>Cargando productos para etiquetado...</p>
+                <p style={{ color: 'var(--color-latte)', marginTop: '1rem' }}>Cargando productos...</p>
             </div>
         );
     }
@@ -229,11 +273,32 @@ const Etiquetas = () => {
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                     />
-                    <button onClick={handlePrint} className="ff-button ff-button-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <i className="bi bi-printer"></i> Imprimir Página
+
+                    {/* Botón Imprimir Todo (Solo si hay más de 1 página) */}
+                    {pagination.totalPages > 1 && (
+                        <button
+                            onClick={fetchAllForPrint}
+                            className="ff-button ff-button-primary"
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}
+                            title="Carga e imprime todo el catálogo en una sola lista"
+                        >
+                            <i className="bi bi-collection-fill"></i> Todo ({pagination.totalItems})
+                        </button>
+                    )}
+
+                    {/* Botón Imprimir Página Actual */}
+                    <button
+                        onClick={() => window.print()}
+                        className="ff-button ff-button-secondary"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}
+                        title="Imprime solo los productos visibles en esta página"
+                    >
+                        <i className="bi bi-printer"></i> Página Actual
                     </button>
                 </div>
             </div>
+
+            {/* ... (Selection bar and Grid remain same structure but verify no-print classes) ... */}
 
             {/* Barra de selección y botón Bot */}
             <div className="ff-card no-print" style={{ marginBottom: '1.5rem', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -245,7 +310,7 @@ const Etiquetas = () => {
                         onClick={selectAll}
                         style={{ color: 'var(--color-cinna)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}
                     >
-                        Seleccionar Página ({products.length})
+                        Seleccionar Página
                     </button>
                     <button
                         onClick={clearSelection}
@@ -291,7 +356,7 @@ const Etiquetas = () => {
                         <div
                             key={product.id}
                             onClick={() => toggleSelectProduct(product)}
-                            className="ff-card"
+                            className="ff-card product-card-print"
                             style={{
                                 padding: '1.25rem',
                                 cursor: 'pointer',
@@ -368,7 +433,7 @@ const Etiquetas = () => {
 
             {/* Mensaje si no hay productos */}
             {products.length === 0 && (
-                <div className="ff-card" style={{ textAlign: 'center', padding: '4rem' }}>
+                <div className="ff-card no-print" style={{ textAlign: 'center', padding: '4rem' }}>
                     <div className="ff-card-icon-wrapper" style={{ margin: '0 auto 1.5rem', width: '80px', height: '80px' }}>
                         <i className="bi bi-inbox" style={{ fontSize: '2.5rem', color: 'var(--color-latte)' }}></i>
                     </div>
@@ -390,15 +455,89 @@ const Etiquetas = () => {
                     to { transform: rotate(360deg); }
                 }
                 @media print {
-                    .no-print { display: none !important; }
-                    body { background: white !important; }
-                    .ff-card { 
-                        box-shadow: none !important; 
-                        border: 1px solid #ddd !important;
-                        break-inside: avoid;
+                    /* Ocultar elementos de UI */
+                    .no-print, 
+                    .barra-lateral, 
+                    .sidebar, 
+                    .header, 
+                    .navbar,
+                    button { 
+                        display: none !important; 
                     }
+
+                    /* Configuración de la página */
+                    @page { 
+                        margin: 1cm; 
+                        size: A4;
+                    }
+
+                    /* Resetear contenedores para permitir paginación masiva */
+                    html, body {
+                        height: 100% !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        overflow: visible !important;
+                    }
+
+                    #root, .App {
+                        display: block !important;
+                        height: auto !important;
+                        min-height: auto !important;
+                        overflow: visible !important;
+                        position: static !important;
+                    }
+
+                    /* Hacer visible solo el contenedor de etiquetas y liberar restricciones */
+                    .luxe-layout {
+                        background: white !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        height: auto !important;
+                        min-height: 100% !important;
+                        overflow: visible !important;
+                        visibility: visible;
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 100%;
+                        display: block !important;
+                        z-index: 9999;
+                    }
+
                     .ff-card-grid {
-                        gap: 0.5rem !important;
+                        display: grid !important;
+                        grid-template-columns: repeat(4, 1fr) !important; /* 4 columnas para A4 */
+                        gap: 10px !important;
+                        visibility: visible;
+                        height: auto !important;
+                        overflow: visible !important;
+                    }
+
+                    .product-card-print {
+                        break-inside: avoid;
+                        page-break-inside: avoid;
+                        border: 1px solid #ccc !important;
+                        box-shadow: none !important;
+                        padding: 5px !important;
+                        margin-bottom: 5px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        background: white !important;
+                    }
+
+                    /* Ajustes de texto para impresión compacto */
+                    .product-card-print div {
+                        font-size: 9pt !important;
+                        margin-bottom: 2px !important;
+                    }
+
+                    
+                    /* Asegurar que el código de barras se vea bien */
+                    svg {
+                        max-width: 100%;
+                        height: 35px !important; /* Reducir altura para ahorrar espacio */
                     }
                 }
             `}</style>

@@ -109,7 +109,7 @@ const PuntosVenta = () => {
             if (category !== 'all') params.category = category;
 
             const productsRes = await api.get('api/menu/products/', {
-                baseURL: '/api/luxe',
+                baseURL: process.env.REACT_APP_LUXE_SERVICE || '/api/luxe',
                 params
             });
 
@@ -125,10 +125,10 @@ const PuntosVenta = () => {
             } else {
                 setProducts(data || []);
             }
-        } catch (err) { 
-            console.error('Error cargando productos:', err); 
-        } finally { 
-            setLoading(false); 
+        } catch (err) {
+            console.error('Error cargando productos:', err);
+        } finally {
+            setLoading(false);
         }
     }, []);
 
@@ -136,10 +136,10 @@ const PuntosVenta = () => {
     useEffect(() => {
         const loadCategories = async () => {
             try {
-                const categoriesRes = await api.get('api/menu/categories/', { baseURL: '/api/luxe' });
+                const categoriesRes = await api.get('api/menu/categories/', { baseURL: process.env.REACT_APP_LUXE_SERVICE || '/api/luxe' });
                 setCategories(categoriesRes.data.results || categoriesRes.data || []);
-            } catch (err) { 
-                console.error('Error cargando categorías:', err); 
+            } catch (err) {
+                console.error('Error cargando categorías:', err);
             }
         };
         loadCategories();
@@ -304,10 +304,10 @@ const PuntosVenta = () => {
         setEditingNoteForItem(productId);
         setNoteText(item?.note || '');
     };
-    
+
     const saveNote = () => {
         setCart(prev => prev.map(item => item.product_id === editingNoteForItem ? { ...item, note: noteText.trim() } : item));
-        setEditingNoteForItem(null); 
+        setEditingNoteForItem(null);
         setNoteText('');
     };
 
@@ -375,9 +375,9 @@ const PuntosVenta = () => {
     // =====================================
     const searchCustomers = async (query) => {
         setCustomerSearch(query);
-        if (query.trim().length < 2) { 
-            setCustomers([]); 
-            return; 
+        if (query.trim().length < 2) {
+            setCustomers([]);
+            return;
         }
         try {
             const res = await api.get(`/api/customers/`, {
@@ -435,12 +435,12 @@ const PuntosVenta = () => {
             alert('Error al crear cliente: ' + msg);
         }
     };
-    
+
     const handleInputChange = (e) => setNewCustomer(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
     const finalPlaceOrder = async () => {
         if (cart.length === 0) return;
-        setProcessingOrder(true); 
+        setProcessingOrder(true);
         setShowReviewModal(false);
 
         let tableNumber = selectedDeliveryMethod === 'in_store' ? 'TIENDA' : (selectedDeliveryMethod === 'pickup' ? 'RECOGIDA' : 'ENVIO');
@@ -466,9 +466,9 @@ const PuntosVenta = () => {
                     order_type: selectedDeliveryMethod,
                     table_number: tableNumber,
                     items: cart.map(i => ({ name: i.name, quantity: i.quantity, price: i.price, total: i.price * i.quantity, note: i.note })),
-                    subtotal: calculateSubtotal, 
-                    discount: calculateDiscountAmount, 
-                    tax: calculateTax, 
+                    subtotal: calculateSubtotal,
+                    discount: calculateDiscountAmount,
+                    tax: calculateTax,
                     total: calculateTotal,
                     printed_at: new Date().toISOString()
                 });
@@ -483,29 +483,29 @@ const PuntosVenta = () => {
                 alert(`✅ Orden #${res.data.order_number || res.data.id} confirmada\n⚠️ No se pudo imprimir: ${printError.response?.data?.warning || 'Impresora no disponible'}`);
             }
 
-            setCart([]); 
-            setAppliedDiscount(null); 
-            setDiscountCode(''); 
-            setSelectedCustomer(null); 
-            setCustomerSearch(''); 
-            setCashGiven(null); 
-            setInputCash(''); 
+            setCart([]);
+            setAppliedDiscount(null);
+            setDiscountCode('');
+            setSelectedCustomer(null);
+            setCustomerSearch('');
+            setCashGiven(null);
+            setInputCash('');
             loadData();
         } catch (e) {
             console.error(e);
             const msg = e.response?.data?.detail || JSON.stringify(e.response?.data) || e.message;
             alert('Error al procesar orden: ' + msg);
-        } finally { 
-            setProcessingOrder(false); 
+        } finally {
+            setProcessingOrder(false);
         }
     };
 
     const handleOpenCashDrawer = async () => {
-        try { 
-            await printerService.openCashDrawer(); 
-            alert('Caja abierta'); 
-        } catch (err) { 
-            alert('Error al abrir caja'); 
+        try {
+            await printerService.openCashDrawer();
+            alert('Caja abierta');
+        } catch (err) {
+            alert('Error al abrir caja');
         }
     };
 
@@ -558,8 +558,8 @@ const PuntosVenta = () => {
                                 border: '1px solid #e2e8f0',
                                 backgroundColor: selectedCategory === 'all' ? '#0f172a' : 'white',
                                 color: selectedCategory === 'all' ? 'white' : '#475569',
-                                cursor: 'pointer', 
-                                fontWeight: '600', 
+                                cursor: 'pointer',
+                                fontWeight: '600',
                                 whiteSpace: 'nowrap'
                             }}
                             onClick={() => setSelectedCategory('all')}
@@ -574,8 +574,8 @@ const PuntosVenta = () => {
                                     border: '1px solid #e2e8f0',
                                     backgroundColor: selectedCategory === cat.id ? '#0f172a' : 'white',
                                     color: selectedCategory === cat.id ? 'white' : '#475569',
-                                    cursor: 'pointer', 
-                                    fontWeight: '600', 
+                                    cursor: 'pointer',
+                                    fontWeight: '600',
                                     whiteSpace: 'nowrap'
                                 }}
                                 onClick={() => setSelectedCategory(cat.id)}
@@ -598,13 +598,13 @@ const PuntosVenta = () => {
                         <div style={{ flex: 1, overflowY: 'auto' }}>
                             {filteredProducts.map(product => (
                                 <div key={product.id} style={{
-                                    display: 'grid', 
+                                    display: 'grid',
                                     gridTemplateColumns: '80px 100px 2fr 1fr 1fr 80px',
-                                    padding: '0.75rem 1rem', 
-                                    borderBottom: '1px solid #f8fafc', 
+                                    padding: '0.75rem 1rem',
+                                    borderBottom: '1px solid #f8fafc',
                                     alignItems: 'center',
-                                    transition: 'background 0.2s', 
-                                    cursor: 'pointer', 
+                                    transition: 'background 0.2s',
+                                    cursor: 'pointer',
                                     gap: '10px',
                                     ':hover': { backgroundColor: '#f8fafc' }
                                 }} onClick={() => addToCart(product)}>
@@ -644,9 +644,9 @@ const PuntosVenta = () => {
                                     <div style={{ textAlign: 'center' }}>
                                         {product.track_stock ? (
                                             <span style={{
-                                                padding: '0.25rem 0.6rem', 
-                                                borderRadius: '12px', 
-                                                fontSize: '0.75rem', 
+                                                padding: '0.25rem 0.6rem',
+                                                borderRadius: '12px',
+                                                fontSize: '0.75rem',
                                                 fontWeight: '700',
                                                 backgroundColor: product.stock_quantity < 5 ? '#fecaca' : '#dcfce7',
                                                 color: product.stock_quantity < 5 ? '#dc2626' : '#166534'
@@ -657,16 +657,16 @@ const PuntosVenta = () => {
                                     </div>
                                     <div style={{ textAlign: 'center' }}>
                                         <button style={{
-                                            backgroundColor: '#3b82f6', 
-                                            color: 'white', 
-                                            border: 'none', 
+                                            backgroundColor: '#3b82f6',
+                                            color: 'white',
+                                            border: 'none',
                                             borderRadius: '6px',
-                                            width: '32px', 
-                                            height: '32px', 
-                                            cursor: 'pointer', 
-                                            fontSize: '1.2rem', 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
+                                            width: '32px',
+                                            height: '32px',
+                                            cursor: 'pointer',
+                                            fontSize: '1.2rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
                                             justifyContent: 'center'
                                         }}>
                                             +
