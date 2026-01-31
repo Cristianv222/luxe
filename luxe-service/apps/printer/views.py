@@ -912,25 +912,26 @@ class PrintLabelView(APIView):
         
         # Obtener impresora
         if not printer_id:
-            # 1. Intentar buscar una impresora marcada específicamente como de ETIQUETAS
-            # Asumimos que el modelo Printer tiene un campo 'printer_type' o similar, 
-            # o buscamos por nombre 'etiqueta'/'label' si no hay tipo estructurado.
-            
-            # Opción A: Buscar por tipo (si existe el campo y valor 'label')
-            label_printer = Printer.objects.filter(printer_type='label', is_active=True).first()
-            
-            # Opción B: Si no hay tipo 'label', buscar por nombre
-            if not label_printer:
-                 label_printer = Printer.objects.filter(name__icontains='etiqueta', is_active=True).first()
-            
-            if not label_printer:
-                 label_printer = Printer.objects.filter(name__icontains='label', is_active=True).first()
+            try:
+                # 1. Intentar buscar una impresora marcada específicamente como de ETIQUETAS
+                # Opción A: Buscar por tipo (si existe el campo y valor 'label')
+                label_printer = Printer.objects.filter(printer_type='label', is_active=True).first()
+                
+                # Opción B: Si no hay tipo 'label', buscar por nombre
+                if not label_printer:
+                     label_printer = Printer.objects.filter(name__icontains='etiqueta', is_active=True).first()
+                
+                if not label_printer:
+                     label_printer = Printer.objects.filter(name__icontains='label', is_active=True).first()
 
-            # Si encontramos una específica, la usamos
-            if label_printer:
-                printer = label_printer
-            else:
-                # Si no, caemos en la por defecto (peligroso, pero es el último recurso)
+                # Si encontramos una específica, la usamos
+                if label_printer:
+                    printer = label_printer
+                else:
+                    # Si no, caemos en la por defecto
+                    printer = Printer.get_default()
+            except Exception as e:
+                logger.error(f"Error buscando impresora de etiquetas: {e}")
                 printer = Printer.get_default()
             
             if not printer:
