@@ -1,3 +1,4 @@
+from django.contrib import admin
 
 # Admin Site Configuration
 admin.site.site_header = "Luxe Service Administration"
