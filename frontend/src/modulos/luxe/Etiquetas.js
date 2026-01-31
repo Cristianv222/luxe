@@ -12,26 +12,133 @@ const Etiquetas = () => {
     const [copies, setCopies] = useState(1);
     const [printing, setPrinting] = useState(false);
 
-    useEffect(() => {
-        const fetchProducts = async () => {
-            try {
-                const response = await api.get('/api/menu/products/', { baseURL: process.env.REACT_APP_LUXE_SERVICE });
-                const data = response.data.results || response.data || [];
-                // Only products with code
-                setProducts(data.filter(p => p.code));
-            } catch (error) {
-                console.error("Error loading products:", error);
-            } finally {
-                setLoading(false);
+    const [pagination, setPagination] = useState({
+        page: 1,
+        totalPages: 1,
+        totalItems: 0,
+        pageSize: 20
+    });
+
+    const fetchProducts = async (query = '', page = 1) => {
+        setLoading(true);
+        try {
+            const params = { page };
+            if (query) params.search = query;
+
+            const response = await api.get('/api/menu/products/', {
+                baseURL: process.env.REACT_APP_LUXE_SERVICE,
+                params
+            });
+
+            const data = response.data.results || response.data || [];
+            // Filter products with code/barcode only if backend doesn't filter perfectly
+            const validProducts = data.filter(p => p.code);
+
+            setProducts(validProducts);
+
+            if (response.data.results) {
+                setPagination({
+                    page: page,
+                    totalItems: response.data.count,
+                    totalPages: Math.ceil(response.data.count / 20), // Asumiendo page_size 20 del backend
+                    pageSize: 20
+                });
+            } else {
+                setPagination({
+                    page: 1,
+                    totalItems: validProducts.length,
+                    totalPages: 1,
+                    pageSize: validProducts.length
+                });
             }
-        };
+
+        } catch (error) {
+            console.error("Error loading products:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchProducts();
     }, []);
 
-    const filteredProducts = products.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.code.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Debounce search
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            fetchProducts(searchTerm, 1);
+        }, 500);
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
+
+    const handlePageChange = (newPage) => {
+        if (newPage < 1 || newPage > pagination.totalPages) return;
+        fetchProducts(searchTerm, newPage);
+    };
+
+    const renderPagination = () => {
+        const { page, totalPages } = pagination;
+        if (totalPages <= 1) return null;
+
+        let pages = [];
+        pages.push(1);
+        let start = Math.max(2, page - 2);
+        let end = Math.min(totalPages - 1, page + 2);
+
+        if (start > 2) pages.push('...');
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+        if (end < totalPages - 1) pages.push('...');
+        if (totalPages > 1) pages.push(totalPages);
+
+        return (
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', marginTop: '2rem', paddingBottom: '2rem' }}>
+                <button
+                    disabled={page === 1}
+                    onClick={() => handlePageChange(page - 1)}
+                    className="ff-button ff-button-secondary"
+                    style={{ padding: '0.4rem 0.8rem' }}
+                >
+                    <i className="bi bi-chevron-left"></i>
+                </button>
+
+                {pages.map((p, idx) => (
+                    p === '...' ? (
+                        <span key={`dots-${idx}`} style={{ padding: '0 0.5rem', color: '#A09086' }}>...</span>
+                    ) : (
+                        <button
+                            key={p}
+                            onClick={() => handlePageChange(p)}
+                            className={`ff-button ${p === page ? 'ff-button-primary' : 'ff-button-secondary'}`}
+                            style={{
+                                padding: '0.4rem 0.8rem',
+                                minWidth: '35px',
+                                background: p === page ? 'var(--color-cinna)' : 'transparent',
+                                color: p === page ? 'white' : 'var(--color-cinna)',
+                                borderColor: 'var(--color-cinna)'
+                            }}
+                        >
+                            {p}
+                        </button>
+                    )
+                ))}
+
+                <button
+                    disabled={page === totalPages}
+                    onClick={() => handlePageChange(page + 1)}
+                    className="ff-button ff-button-secondary"
+                    style={{ padding: '0.4rem 0.8rem' }}
+                >
+                    <i className="bi bi-chevron-right"></i>
+                </button>
+
+                <div style={{ marginLeft: '1rem', color: '#666', fontSize: '0.9rem' }}>
+                    Página {page} de {totalPages}
+                </div>
+            </div>
+        );
+    };
 
     const handlePrint = () => {
         window.print();
@@ -49,7 +156,8 @@ const Etiquetas = () => {
     };
 
     const selectAll = () => {
-        setSelectedProducts([...filteredProducts]);
+        // Select all currently visible products
+        setSelectedProducts([...products]);
     };
 
     const clearSelection = () => {
@@ -137,7 +245,7 @@ const Etiquetas = () => {
                         onClick={selectAll}
                         style={{ color: 'var(--color-cinna)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}
                     >
-                        Seleccionar Todos ({filteredProducts.length})
+                        Seleccionar Página ({products.length})
                     </button>
                     <button
                         onClick={clearSelection}
@@ -177,7 +285,7 @@ const Etiquetas = () => {
 
             {/* Grid de productos */}
             <div className="ff-card-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
-                {filteredProducts.map(product => {
+                {products.map(product => {
                     const isSelected = selectedProducts.find(p => p.id === product.id);
                     return (
                         <div
@@ -259,7 +367,7 @@ const Etiquetas = () => {
             </div>
 
             {/* Mensaje si no hay productos */}
-            {filteredProducts.length === 0 && (
+            {products.length === 0 && (
                 <div className="ff-card" style={{ textAlign: 'center', padding: '4rem' }}>
                     <div className="ff-card-icon-wrapper" style={{ margin: '0 auto 1.5rem', width: '80px', height: '80px' }}>
                         <i className="bi bi-inbox" style={{ fontSize: '2.5rem', color: 'var(--color-latte)' }}></i>
@@ -272,6 +380,9 @@ const Etiquetas = () => {
                     </p>
                 </div>
             )}
+
+            {/* Pagination Controls */}
+            {renderPagination()}
 
             <style>{`
                 @keyframes spin {
