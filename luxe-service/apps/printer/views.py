@@ -912,10 +912,30 @@ class PrintLabelView(APIView):
         
         # Obtener impresora
         if not printer_id:
-            printer = Printer.get_default()
+            # 1. Intentar buscar una impresora marcada específicamente como de ETIQUETAS
+            # Asumimos que el modelo Printer tiene un campo 'printer_type' o similar, 
+            # o buscamos por nombre 'etiqueta'/'label' si no hay tipo estructurado.
+            
+            # Opción A: Buscar por tipo (si existe el campo y valor 'label')
+            label_printer = Printer.objects.filter(printer_type='label', is_active=True).first()
+            
+            # Opción B: Si no hay tipo 'label', buscar por nombre
+            if not label_printer:
+                 label_printer = Printer.objects.filter(name__icontains='etiqueta', is_active=True).first()
+            
+            if not label_printer:
+                 label_printer = Printer.objects.filter(name__icontains='label', is_active=True).first()
+
+            # Si encontramos una específica, la usamos
+            if label_printer:
+                printer = label_printer
+            else:
+                # Si no, caemos en la por defecto (peligroso, pero es el último recurso)
+                printer = Printer.get_default()
+            
             if not printer:
                 return Response({
-                    'error': 'No hay impresora de etiquetas configurada'
+                    'error': 'No se encontró ninguna impresora de etiquetas activa'
                 }, status=status.HTTP_400_BAD_REQUEST)
         else:
             try:
