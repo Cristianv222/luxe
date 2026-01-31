@@ -5,10 +5,9 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_secure_2025}
-      POSTGRES_MULTIPLE_DATABASES: luxe_service_db
+      POSTGRES_DB: luxe_service_db
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./scripts/create-multiple-postgresql-databases.sh:/docker-entrypoint-initdb.d/create-multiple-postgresql-databases.sh
     networks:
       - luxe-network
     healthcheck:
@@ -40,17 +39,17 @@ services:
     command:
       - -c
       - |
-        echo " Waiting for PostgreSQL..."
+        echo "Waiting for PostgreSQL..."
         until python -c 'import socket; socket.create_connection(("postgres", 5432), timeout=1)' 2>/dev/null; do
           sleep 1
         done
-        echo " PostgreSQL is ready!"
+        echo "PostgreSQL is ready"
         
-        echo " Running migrations..."
+        echo "Running migrations..."
         python manage.py migrate --noinput
-        echo " Collecting static files..."
+        echo "Collecting static files..."
         python manage.py collectstatic --noinput --clear
-        echo " Starting Gunicorn..."
+        echo "Starting Gunicorn..."
         exec gunicorn luxe_service.wsgi:application \
           --bind 0.0.0.0:8000 \
           --workers 3 \
@@ -82,7 +81,7 @@ services:
         condition: service_healthy
     networks:
       - luxe-network
-      - npm-network
+      - proxy-network
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -104,7 +103,7 @@ services:
       - "80"
     networks:
       - luxe-network
-      - npm-network
+      - proxy-network
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -116,9 +115,9 @@ networks:
   luxe-network:
     driver: bridge
     name: luxe_network
-  npm-network:
+  proxy-network:
     external: true
-    name: npm_network
+    name: proxy-network
 
 volumes:
   postgres-data:
