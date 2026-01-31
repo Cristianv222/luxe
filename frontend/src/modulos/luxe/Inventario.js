@@ -16,6 +16,14 @@ const Inventario = () => {
     const [error, setError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
 
+    // Estado para Paginación
+    const [pagination, setPagination] = useState({
+        page: 1,
+        totalPages: 1,
+        totalItems: 0,
+        pageSize: 20 // Default backend PAGE_SIZE
+    });
+
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Estado del formulario de producto
@@ -51,17 +59,36 @@ const Inventario = () => {
         inventory_account: ''
     });
 
-    const fetchProducts = async (query = '', showLoading = true) => {
+    const fetchProducts = async (query = '', page = 1, showLoading = true) => {
         if (showLoading) setLoading(true);
         try {
-            const params = {};
+            const params = { page };
             if (query) params.search = query;
 
             const response = await api.get('/api/menu/products/', {
                 baseURL: process.env.REACT_APP_LUXE_SERVICE,
                 params
             });
-            setProducts(response.data.results || response.data || []);
+
+            // Verificar si es respuesta paginada (DRF)
+            if (response.data.results) {
+                setProducts(response.data.results);
+                setPagination({
+                    page: page,
+                    totalItems: response.data.count,
+                    totalPages: Math.ceil(response.data.count / 20),
+                    pageSize: 20
+                });
+            } else {
+                // Fallback respuesta plana
+                setProducts(response.data || []);
+                setPagination({
+                    page: 1,
+                    totalItems: (response.data || []).length,
+                    totalPages: 1,
+                    pageSize: (response.data || []).length
+                });
+            }
         } catch (err) {
             console.error('Error fetching products:', err);
             setError('Error al cargar el inventario');
@@ -83,7 +110,7 @@ const Inventario = () => {
 
     useEffect(() => {
         if (activeTab === 'products') {
-            fetchProducts(searchQuery);
+            fetchProducts(searchQuery, 1);
             fetchCategories();
         }
     }, [activeTab]);
@@ -92,7 +119,7 @@ const Inventario = () => {
     useEffect(() => {
         if (activeTab === 'products') {
             const delayDebounceFn = setTimeout(() => {
-                fetchProducts(searchQuery);
+                fetchProducts(searchQuery, 1);
             }, 500);
             return () => clearTimeout(delayDebounceFn);
         }
@@ -145,7 +172,7 @@ const Inventario = () => {
                 baseURL: process.env.REACT_APP_LUXE_SERVICE,
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
-            fetchProducts(searchQuery, false);
+            fetchProducts(searchQuery, pagination.page, false);
         } catch (err) {
             console.error(err);
             alert('Error al actualizar destacado');
@@ -169,7 +196,7 @@ const Inventario = () => {
                 baseURL: process.env.REACT_APP_LUXE_SERVICE,
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
-            fetchProducts(searchQuery, false);
+            fetchProducts(searchQuery, pagination.page, false);
         } catch (err) {
             console.error('Error toggling active:', err);
             alert('Error al actualizar estado');
@@ -237,7 +264,7 @@ const Inventario = () => {
             }
             setIsModalOpen(false);
             setEditingProduct(null);
-            fetchProducts(searchQuery);
+            fetchProducts(searchQuery, editingProduct ? pagination.page : 1); // Si edita, mantiene página. Si crea, va a la 1 (o podría ir a la última...)
         } catch (err) {
             console.error('Error saving product:', err);
             // Mejorar mensaje de error
@@ -267,13 +294,84 @@ const Inventario = () => {
                 baseURL: process.env.REACT_APP_LUXE_SERVICE
             });
             alert('Configuración aplicada exitosamente a todos los productos.');
-            fetchProducts(searchQuery); // Refrescar tabla
+            fetchProducts(searchQuery, 1); // Refrescar tabla
             // Limpiar o redirigir
             setConfigAccounts({ sales_account: '', cost_account: '', inventory_account: '' });
         } catch (err) {
             console.error(err);
             alert('Error al aplicar configuración');
         }
+    };
+
+    const handlePageChange = (newPage) => {
+        if (newPage < 1 || newPage > pagination.totalPages) return;
+        fetchProducts(searchQuery, newPage);
+    };
+
+    const renderPagination = () => {
+        const { page, totalPages } = pagination;
+        if (totalPages <= 1) return null;
+
+        let pages = [];
+        pages.push(1);
+
+        // Rango dinámico
+        let start = Math.max(2, page - 2);
+        let end = Math.min(totalPages - 1, page + 2);
+
+        if (start > 2) pages.push('...');
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+        if (end < totalPages - 1) pages.push('...');
+        if (totalPages > 1) pages.push(totalPages);
+
+        return (
+            <div className="pagination-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', marginTop: '2rem' }}>
+                <button
+                    className="btn-boutique outline"
+                    disabled={page === 1}
+                    onClick={() => handlePageChange(page - 1)}
+                    style={{ padding: '0.4rem 0.8rem' }}
+                >
+                    <i className="bi bi-chevron-left"></i>
+                </button>
+
+                {pages.map((p, idx) => (
+                    p === '...' ? (
+                        <span key={`dots-${idx}`} style={{ padding: '0 0.5rem', color: '#A09086' }}>...</span>
+                    ) : (
+                        <button
+                            key={p}
+                            className={`btn-boutique ${p === page ? 'primary' : 'outline'}`}
+                            onClick={() => handlePageChange(p)}
+                            style={{
+                                padding: '0.4rem 0.8rem',
+                                minWidth: '35px',
+                                background: p === page ? '#8B7E74' : 'transparent',
+                                color: p === page ? 'white' : '#8B7E74',
+                                borderColor: '#8B7E74'
+                            }}
+                        >
+                            {p}
+                        </button>
+                    )
+                ))}
+
+                <button
+                    className="btn-boutique outline"
+                    disabled={page === totalPages}
+                    onClick={() => handlePageChange(page + 1)}
+                    style={{ padding: '0.4rem 0.8rem' }}
+                >
+                    <i className="bi bi-chevron-right"></i>
+                </button>
+
+                <div style={{ marginLeft: '1rem', color: '#666', fontSize: '0.9rem' }}>
+                    Página {page} de {totalPages} ({pagination.totalItems} items)
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -359,7 +457,7 @@ const Inventario = () => {
                                     msg += '\n\nErrores detectados:\n' + res.data.errors.join('\n');
                                 }
                                 alert(msg);
-                                fetchProducts(searchQuery);
+                                fetchProducts(searchQuery, 1);
                             } catch (err) {
                                 alert('Error importando: ' + (err.response?.data?.error || err.message));
                             }
@@ -453,7 +551,7 @@ const Inventario = () => {
                                             baseURL: process.env.REACT_APP_LUXE_SERVICE
                                         });
                                         alert(res.data.message);
-                                        fetchProducts(searchQuery);
+                                        fetchProducts(searchQuery, 1);
                                     } catch (err) {
                                         console.error(err);
                                         alert('Error al vaciar inventario.');
@@ -639,6 +737,9 @@ const Inventario = () => {
                         </div>
                     )}
 
+                    {/* Pagination */}
+                    {activeTab === 'products' && !loading && !error && renderPagination()}
+
                     <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingProduct ? "Editar Producto" : "Nuevo Producto"}>
                         <form onSubmit={handleSubmit} className="boutique-form">
                             {/* Información Básica */}
@@ -813,7 +914,7 @@ const Inventario = () => {
                     </Modal>
                 </>
             )}
-        </div>
+        </div >
     );
 };
 
