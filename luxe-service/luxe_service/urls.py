@@ -1,10 +1,11 @@
 from django.contrib import admin
 from django.urls import path, include
+from . import admin_config  # Apply admin custom settings
 
 urlpatterns = [
     path('luxe/admin/', admin.site.urls),
     path('luxe/api/menu/', include('apps.inventario.urls')),  # Inventario (productos, categorías)
-    
+
     # Auth Service Endpoints (Merged)
     path('auth/api/authentication/', include('apps.authentication.urls')),
     path('auth/api/users/', include('apps.users.urls')),

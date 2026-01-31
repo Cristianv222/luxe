@@ -17,5 +17,8 @@ COPY . .
 # Exponer puerto
 EXPOSE 8000
 
-# Comando por defecto - CORREGIDO: usa guión bajo en lugar de guión
-CMD ["gunicorn", "fast_food_service.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+# Recolectar estáticos para WhiteNoise
+RUN python manage.py collectstatic --noinput
+
+# Comando por defecto
+CMD ["gunicorn", "luxe_service.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
