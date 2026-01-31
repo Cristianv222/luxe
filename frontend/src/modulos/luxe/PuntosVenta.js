@@ -34,6 +34,14 @@ const PuntosVenta = () => {
     const [editingNoteForItem, setEditingNoteForItem] = useState(null);
     const [noteText, setNoteText] = useState('');
 
+    // Pagination State
+    const [pagination, setPagination] = useState({
+        page: 1,
+        totalPages: 1,
+        totalItems: 0,
+        pageSize: 20
+    });
+
     // 2. ESTADO DEL PUNTO DE VENTA
     const [cart, setCart] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('all');
@@ -93,21 +101,57 @@ const PuntosVenta = () => {
         return () => document.head.removeChild(style);
     }, []);
 
-    const loadData = useCallback(async () => {
+    const loadData = useCallback(async (page = 1, search = '', category = 'all') => {
+        setLoading(true);
         try {
-            const productsRes = await api.get('api/menu/products/', { baseURL: '/api/luxe' });
-            setProducts(productsRes.data.results || productsRes.data || []);
+            const params = { page };
+            if (search) params.search = search;
+            if (category !== 'all') params.category = category;
+
+            const productsRes = await api.get('api/menu/products/', {
+                baseURL: '/api/luxe',
+                params
+            });
+
+            const data = productsRes.data;
+            if (data.results) {
+                setProducts(data.results);
+                setPagination({
+                    page: page,
+                    totalItems: data.count,
+                    totalPages: Math.ceil(data.count / (params.page_size || 20)), // Backend default is usually 20
+                    pageSize: 20
+                });
+            } else {
+                setProducts(data || []);
+            }
         } catch (err) { console.error('Error cargando productos:', err); }
-
-        try {
-            const categoriesRes = await api.get('api/menu/categories/', { baseURL: '/api/luxe' });
-            setCategories(categoriesRes.data.results || categoriesRes.data || []);
-        } catch (err) { console.error('Error cargando categorías:', err); }
-
-        setLoading(false);
+        finally { setLoading(false); }
     }, []);
 
-    useEffect(() => { loadData(); }, [loadData]);
+    // Initial load - categories only once
+    useEffect(() => {
+        const loadCategories = async () => {
+            try {
+                const categoriesRes = await api.get('api/menu/categories/', { baseURL: '/api/luxe' });
+                setCategories(categoriesRes.data.results || categoriesRes.data || []);
+            } catch (err) { console.error('Error cargando categorías:', err); }
+        };
+        loadCategories();
+    }, []);
+
+    // Effect for Products Pagination/Search/Filter change
+    useEffect(() => {
+        // Debounce search slightly to avoid too many requests
+        const timer = setTimeout(() => {
+            loadData(1, searchTerm, selectedCategory);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm, selectedCategory, loadData]);
+
+    const handlePageChange = (newPage) => {
+        loadData(newPage, searchTerm, selectedCategory);
+    };
 
     useEffect(() => {
         const handleResize = () => setScreenWidth(window.innerWidth);
@@ -471,18 +515,7 @@ const PuntosVenta = () => {
     // 8. RENDERIZADO
     // =====================================
 
-    const filteredProducts = useMemo(() => {
-        return products.filter(product => {
-            const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-            const term = searchTerm.toLowerCase();
-            const matchesSearch = product.name.toLowerCase().includes(term) ||
-                (product.code && product.code.toLowerCase().includes(term));
-
-            const isAvailable = product.is_active && product.is_available;
-            const hasStock = !product.track_stock || product.stock_quantity > 0;
-            return matchesCategory && matchesSearch && isAvailable && hasStock;
-        });
-    }, [products, selectedCategory, searchTerm]);
+    const filteredProducts = products; // Products are already filtered by backend via loadData
 
     const renderDesktopView = () => (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#f8fafc' }}>
@@ -623,406 +656,431 @@ const PuntosVenta = () => {
                             ))}
                         </div>
                     </div>
+                    {/* Pagination Controls */}
+                    <div style={{ padding: '1rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px' }}>
+                        <button
+                            disabled={pagination.page === 1}
+                            onClick={() => handlePageChange(pagination.page - 1)}
+                            className="ff-button ff-button-secondary"
+                            style={{ padding: '0.4rem 0.8rem', cursor: 'pointer', border: '1px solid #e2e8f0', borderRadius: '4px', background: pagination.page === 1 ? '#f1f5f9' : 'white' }}
+                        >
+                            <i className="bi bi-chevron-left"></i>
+                        </button>
+
+                        <span style={{ margin: '0 1rem', color: '#64748b', fontSize: '0.9rem' }}>
+                            Página {pagination.page} de {pagination.totalPages || 1}
+                        </span>
+
+                        <button
+                            disabled={pagination.page >= pagination.totalPages}
+                            onClick={() => handlePageChange(pagination.page + 1)}
+                            className="ff-button ff-button-secondary"
+                            style={{ padding: '0.4rem 0.8rem', cursor: 'pointer', border: '1px solid #e2e8f0', borderRadius: '4px', background: pagination.page >= pagination.totalPages ? '#f1f5f9' : 'white' }}
+                        >
+                            <i className="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* DERECHA: Carrito y Totales */}
+            <div style={{ flex: '0 0 400px', backgroundColor: 'white', borderLeft: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '1.5rem', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.1rem', color: '#334155' }}>Resumen de Venta</h2>
                 </div>
 
-                {/* DERECHA: Carrito y Totales */}
-                <div style={{ flex: '0 0 400px', backgroundColor: 'white', borderLeft: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ padding: '1.5rem', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
-                        <h2 style={{ margin: 0, fontSize: '1.1rem', color: '#334155' }}>Resumen de Venta</h2>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {cart.length === 0 ? (
+                        <div style={{ textAlign: 'center', color: '#94a3b8', marginTop: '3rem' }}>
+                            <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}><i className="bi bi-cart-x"></i></div>
+                            <p>Carrito vacío</p>
+                        </div>
+                    ) : cart.map((item, idx) => (
+                        <div key={idx} style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '8px', backgroundColor: 'white' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                <div style={{ fontWeight: '600', color: '#1e293b' }}>{item.name}</div>
+                                <div style={{ fontWeight: '700' }}>{formatCurrency(item.price * item.quantity)}</div>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                    {item.code && <span style={{ marginRight: '0.5rem', fontFamily: 'monospace' }}>[{item.code}]</span>}
+                                    {formatCurrency(item.price)} x {item.quantity}
+                                    {item.tax_rate > 0 && (
+                                        <span style={{ marginLeft: '0.5rem', color: '#059669', fontSize: '0.75rem' }}>
+                                            (IVA {item.tax_rate}%)
+                                        </span>
+                                    )}
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <button onClick={() => updateQuantity(item.product_id, -1)} style={{ width: '28px', height: '28px', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white' }}>-</button>
+                                    <span style={{ fontWeight: '600' }}>{item.quantity}</span>
+                                    <button onClick={() => updateQuantity(item.product_id, 1)} style={{ width: '28px', height: '28px', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white' }}>+</button>
+                                    <button onClick={() => removeFromCart(item.product_id)} style={{ marginLeft: '0.5rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div style={{ padding: '1.5rem', borderTop: '1px solid #e2e8f0', backgroundColor: '#fff' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#64748b' }}>
+                        <span>Subtotal (sin IVA)</span>
+                        <span>{formatCurrency(calculateSubtotal)}</span>
+                    </div>
+                    {appliedDiscount && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#10b981' }}>
+                            <span>Descuento</span>
+                            <span>- {formatCurrency(calculateDiscountAmount)}</span>
+                        </div>
+                    )}
+                    {calculateTax > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#64748b' }}>
+                            <span>IVA</span>
+                            <span>{formatCurrency(calculateTax)}</span>
+                        </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>
+                        <span>Total</span>
+                        <span>{formatCurrency(calculateTotal)}</span>
                     </div>
 
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        {cart.length === 0 ? (
-                            <div style={{ textAlign: 'center', color: '#94a3b8', marginTop: '3rem' }}>
-                                <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}><i className="bi bi-cart-x"></i></div>
-                                <p>Carrito vacío</p>
-                            </div>
-                        ) : cart.map((item, idx) => (
-                            <div key={idx} style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '8px', backgroundColor: 'white' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                    <div style={{ fontWeight: '600', color: '#1e293b' }}>{item.name}</div>
-                                    <div style={{ fontWeight: '700' }}>{formatCurrency(item.price * item.quantity)}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <button onClick={() => setShowReviewModal(true)} disabled={cart.length === 0} style={{ padding: '1rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white', fontWeight: '600', cursor: 'pointer' }}>
+                            Opciones
+                        </button>
+                        <button onClick={() => setShowReviewModal(true)} disabled={cart.length === 0 || processingOrder} style={{ padding: '1rem', borderRadius: '8px', border: 'none', background: '#0f172a', color: 'white', fontWeight: '700', cursor: 'pointer' }}>
+                            COBRAR
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div >
+    );
+
+const renderCompactView = () => renderDesktopView(); // Por ahora usaremos la misma vista pero responsive por CSS flex
+
+if (loading) return <div>Cargando...</div>;
+
+return (
+    <>
+        {screenWidth <= 1024 ? renderCompactView() : renderDesktopView()}
+
+        {/* Modal Confirmación y Pago */}
+        {showReviewModal && (
+            <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+                <div style={{ backgroundColor: '#ffffff', width: '900px', maxWidth: '95%', borderRadius: '16px', overflow: 'hidden', display: 'flex', height: '600px', maxHeight: '90vh', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+
+                    {/* LEFT: Resumen de Orden */}
+                    <div style={{ width: '40%', backgroundColor: '#f8fafc', padding: '2rem', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
+                        <h3 style={{ margin: '0 0 1.5rem 0', color: '#334155' }}>Resumen del Pedido</h3>
+                        <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
+                            {cart.map((item, idx) => (
+                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+                                    <div>
+                                        <div style={{ fontWeight: '600', color: '#1e293b' }}>
+                                            {item.quantity} x {item.name}
+                                            {item.tax_rate > 0 && (
+                                                <span style={{ marginLeft: '0.5rem', color: '#059669', fontSize: '0.75rem' }}>
+                                                    (IVA {item.tax_rate < 1 ? item.tax_rate * 100 : item.tax_rate}%)
+                                                </span>
+                                            )}
+                                        </div>
+                                        {item.note && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{item.note}</div>}
+                                    </div>
+                                    <div style={{ fontWeight: '600' }}>{formatCurrency(item.price * item.quantity)}</div>
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                                        {item.code && <span style={{ marginRight: '0.5rem', fontFamily: 'monospace' }}>[{item.code}]</span>}
-                                        {formatCurrency(item.price)} x {item.quantity}
-                                        {item.tax_rate > 0 && (
-                                            <span style={{ marginLeft: '0.5rem', color: '#059669', fontSize: '0.75rem' }}>
-                                                (IVA {item.tax_rate}%)
-                                            </span>
+                            ))}
+                        </div>
+                        <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '1rem', marginTop: 'auto' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                <span style={{ color: '#64748b' }}>Subtotal (sin IVA)</span>
+                                <span>{formatCurrency(calculateSubtotal)}</span>
+                            </div>
+                            {appliedDiscount && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#10b981' }}>
+                                    <span>Descuento</span>
+                                    <span>- {formatCurrency(calculateDiscountAmount)}</span>
+                                </div>
+                            )}
+                            {calculateTax > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#64748b' }}>
+                                    <span>IVA</span>
+                                    <span>{formatCurrency(calculateTax)}</span>
+                                </div>
+                            )}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.8rem', fontWeight: '900', color: '#0f172a', borderTop: '2.5px solid #0f172a', paddingTop: '1rem', marginTop: '0.5rem' }}>
+                                <span>TOTAL</span>
+                                <span>{formatCurrency(calculateTotal)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* RIGHT: Métodos de Pago y Datos */}
+                    <div style={{ width: '60%', padding: '2rem', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ marginBottom: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>Cliente</label>
+
+                                {selectedCustomer ? (
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        padding: '0.75rem',
+                                        backgroundColor: '#f0fdf4',
+                                        border: '1px solid #bbf7d0',
+                                        borderRadius: '8px',
+                                        marginBottom: '0.5rem'
+                                    }}>
+                                        <div>
+                                            <div style={{ fontWeight: '700', color: '#166534' }}>
+                                                {selectedCustomer.first_name} {selectedCustomer.last_name}
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: '#15803d' }}>
+                                                {selectedCustomer.email}
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => setSelectedCustomer(null)}
+                                            style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer' }}
+                                        >
+                                            Desvincular
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div style={{ position: 'relative' }}>
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar cliente..."
+                                            value={customerSearch}
+                                            onChange={e => searchCustomers(e.target.value)}
+                                            style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px' }}
+                                        />
+                                        {customers.length > 0 && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                left: 0,
+                                                backgroundColor: 'white',
+                                                border: '1px solid #e2e8f0',
+                                                borderRadius: '8px',
+                                                width: '100%',
+                                                zIndex: 1000,
+                                                boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2)',
+                                                maxHeight: '200px',
+                                                overflowY: 'auto'
+                                            }}>
+                                                {customers.map(u => (
+                                                    <div
+                                                        key={u.id}
+                                                        onClick={() => selectCustomer(u)}
+                                                        style={{
+                                                            padding: '0.75rem',
+                                                            cursor: 'pointer',
+                                                            borderBottom: '1px solid #f1f5f9',
+                                                            hover: { backgroundColor: '#f8fafc' }
+                                                        }}
+                                                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f8fafc'}
+                                                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                                                    >
+                                                        <div style={{ fontWeight: '600', color: '#1e293b' }}>
+                                                            {u.first_name} {u.last_name}
+                                                        </div>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b' }}>
+                                                            <span>ID: {u.cedula || 'N/A'}</span>
+                                                            <span>Tel: {u.phone || 'N/A'}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         )}
                                     </div>
-                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                        <button onClick={() => updateQuantity(item.product_id, -1)} style={{ width: '28px', height: '28px', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white' }}>-</button>
-                                        <span style={{ fontWeight: '600' }}>{item.quantity}</span>
-                                        <button onClick={() => updateQuantity(item.product_id, 1)} style={{ width: '28px', height: '28px', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white' }}>+</button>
-                                        <button onClick={() => removeFromCart(item.product_id)} style={{ marginLeft: '0.5rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+                                )}
+                                <button onClick={() => setShowCustomerModal(true)} style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>+ Nuevo Cliente</button>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>Entrega</label>
+                                <select value={selectedDeliveryMethod} onChange={e => setSelectedDeliveryMethod(e.target.value)} style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px' }}>
+                                    <option value="in_store">En Tienda</option>
+                                    <option value="pickup">Para Llevar/Recogida</option>
+                                    <option value="delivery">Envío a Domicilio</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* CÓDIGO DE DESCUENTO */}
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>
+                                Cupón de Descuento
+                            </label>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <input
+                                    type="text"
+                                    placeholder="Código LUXE-XXXX"
+                                    value={discountCode}
+                                    onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                                    disabled={!!appliedDiscount}
+                                    style={{
+                                        flex: 1,
+                                        padding: '0.75rem',
+                                        border: '1px solid #cbd5e1',
+                                        borderRadius: '8px',
+                                        backgroundColor: appliedDiscount ? '#f1f5f9' : 'white',
+                                        textTransform: 'uppercase',
+                                        fontFamily: 'monospace',
+                                        fontWeight: 'bold'
+                                    }}
+                                />
+                                {appliedDiscount ? (
+                                    <button
+                                        onClick={() => { setAppliedDiscount(null); setDiscountCode(''); }}
+                                        style={{ padding: '0 1.5rem', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                                    >
+                                        Quitar
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleApplyDiscount}
+                                        style={{ padding: '0 1.5rem', backgroundColor: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                                    >
+                                        Aplicar
+                                    </button>
+                                )}
+                            </div>
+                            {appliedDiscount && (
+                                <div style={{ fontSize: '0.85rem', color: '#059669', marginTop: '0.4rem', fontWeight: '600' }}>
+                                    ✓ {appliedDiscount.name} aplicado (-{formatCurrency(calculateDiscountAmount)})
+                                </div>
+                            )}
+                        </div>
+
+                        <div style={{ backgroundColor: '#f0f9ff', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem' }}>
+                            <h4 style={{ margin: '0 0 1rem 0', color: '#0369a1' }}><i className="bi bi-cash-coin" style={{ marginRight: '8px' }}></i>Calculadora de Vuelto</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#0369a1' }}>Efectivo Recibido</label>
+                                    <input
+                                        type="number"
+                                        value={inputCash}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setInputCash(val);
+                                            setCashGiven(parseFloat(val));
+                                        }}
+                                        style={{ width: '100%', padding: '0.75rem', fontSize: '1.2rem', border: '2px solid #bae6fd', borderRadius: '8px', color: '#0c4a6e', fontWeight: 'bold' }}
+                                        placeholder="0.00"
+                                    />
+                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                        {[5, 10, 20, 50].map(amt => (
+                                            <button key={amt} onClick={() => { setInputCash(amt.toString()); setCashGiven(amt); }} style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', backgroundColor: 'white', border: '1px solid #bae6fd', borderRadius: '4px', cursor: 'pointer', color: '#0ea5e9' }}>
+                                                ${amt}
+                                            </button>
+                                        ))}
+                                        <button onClick={() => { setInputCash(calculateTotal.toFixed(2)); setCashGiven(calculateTotal); }} style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', backgroundColor: '#e0f2fe', border: '1px solid #bae6fd', borderRadius: '4px', cursor: 'pointer', color: '#0369a1', fontWeight: 'bold' }}>Exacto</button>
                                     </div>
                                 </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#0369a1' }}>Su Cambio</label>
+                                    <div style={{
+                                        fontSize: '2rem',
+                                        fontWeight: '800',
+                                        color: (cashGiven && cashGiven >= calculateTotal) ? '#16a34a' : '#64748b'
+                                    }}>
+                                        {formatCurrency((cashGiven || 0) - calculateTotal > 0 ? (cashGiven || 0) - calculateTotal : 0)}
+                                    </div>
+                                    {(cashGiven && cashGiven < calculateTotal) && (
+                                        <div style={{ color: '#ef4444', fontSize: '0.9rem', fontWeight: 'bold' }}>Faltan {formatCurrency(calculateTotal - cashGiven)}</div>
+                                    )}
+                                </div>
                             </div>
-                        ))}
-                    </div>
-
-                    <div style={{ padding: '1.5rem', borderTop: '1px solid #e2e8f0', backgroundColor: '#fff' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#64748b' }}>
-                            <span>Subtotal (sin IVA)</span>
-                            <span>{formatCurrency(calculateSubtotal)}</span>
-                        </div>
-                        {appliedDiscount && (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#10b981' }}>
-                                <span>Descuento</span>
-                                <span>- {formatCurrency(calculateDiscountAmount)}</span>
-                            </div>
-                        )}
-                        {calculateTax > 0 && (
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#64748b' }}>
-                                <span>IVA</span>
-                                <span>{formatCurrency(calculateTax)}</span>
-                            </div>
-                        )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>
-                            <span>Total</span>
-                            <span>{formatCurrency(calculateTotal)}</span>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <button onClick={() => setShowReviewModal(true)} disabled={cart.length === 0} style={{ padding: '1rem', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white', fontWeight: '600', cursor: 'pointer' }}>
-                                Opciones
+                        <div style={{ marginTop: 'auto', display: 'flex', gap: '1rem' }}>
+                            <button onClick={() => setShowReviewModal(false)} style={{ flex: 1, padding: '1rem', border: '1px solid #cbd5e1', background: 'white', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', color: '#475569', cursor: 'pointer' }}>
+                                Seguir Comprando
                             </button>
-                            <button onClick={() => setShowReviewModal(true)} disabled={cart.length === 0 || processingOrder} style={{ padding: '1rem', borderRadius: '8px', border: 'none', background: '#0f172a', color: 'white', fontWeight: '700', cursor: 'pointer' }}>
-                                COBRAR
+                            <button
+                                onClick={finalPlaceOrder}
+                                disabled={processingOrder}
+                                style={{
+                                    flex: 2,
+                                    padding: '1rem',
+                                    border: 'none',
+                                    background: 'linear-gradient(to right, #0f172a, #334155)',
+                                    color: 'white',
+                                    borderRadius: '8px',
+                                    fontSize: '1.2rem',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+                                }}
+                            >
+                                {processingOrder ? 'Procesando...' : 'CONFIRMAR PAGO'}
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    );
+        )}
 
-    const renderCompactView = () => renderDesktopView(); // Por ahora usaremos la misma vista pero responsive por CSS flex
-
-    if (loading) return <div>Cargando...</div>;
-
-    return (
-        <>
-            {screenWidth <= 1024 ? renderCompactView() : renderDesktopView()}
-
-            {/* Modal Confirmación y Pago */}
-            {showReviewModal && (
-                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-                    <div style={{ backgroundColor: '#ffffff', width: '900px', maxWidth: '95%', borderRadius: '16px', overflow: 'hidden', display: 'flex', height: '600px', maxHeight: '90vh', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
-
-                        {/* LEFT: Resumen de Orden */}
-                        <div style={{ width: '40%', backgroundColor: '#f8fafc', padding: '2rem', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
-                            <h3 style={{ margin: '0 0 1.5rem 0', color: '#334155' }}>Resumen del Pedido</h3>
-                            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
-                                {cart.map((item, idx) => (
-                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
-                                        <div>
-                                            <div style={{ fontWeight: '600', color: '#1e293b' }}>
-                                                {item.quantity} x {item.name}
-                                                {item.tax_rate > 0 && (
-                                                    <span style={{ marginLeft: '0.5rem', color: '#059669', fontSize: '0.75rem' }}>
-                                                        (IVA {item.tax_rate < 1 ? item.tax_rate * 100 : item.tax_rate}%)
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {item.note && <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{item.note}</div>}
-                                        </div>
-                                        <div style={{ fontWeight: '600' }}>{formatCurrency(item.price * item.quantity)}</div>
-                                    </div>
-                                ))}
-                            </div>
-                            <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '1rem', marginTop: 'auto' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                    <span style={{ color: '#64748b' }}>Subtotal (sin IVA)</span>
-                                    <span>{formatCurrency(calculateSubtotal)}</span>
-                                </div>
-                                {appliedDiscount && (
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#10b981' }}>
-                                        <span>Descuento</span>
-                                        <span>- {formatCurrency(calculateDiscountAmount)}</span>
-                                    </div>
-                                )}
-                                {calculateTax > 0 && (
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#64748b' }}>
-                                        <span>IVA</span>
-                                        <span>{formatCurrency(calculateTax)}</span>
-                                    </div>
-                                )}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.8rem', fontWeight: '900', color: '#0f172a', borderTop: '2.5px solid #0f172a', paddingTop: '1rem', marginTop: '0.5rem' }}>
-                                    <span>TOTAL</span>
-                                    <span>{formatCurrency(calculateTotal)}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* RIGHT: Métodos de Pago y Datos */}
-                        <div style={{ width: '60%', padding: '2rem', display: 'flex', flexDirection: 'column' }}>
-                            <div style={{ marginBottom: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>Cliente</label>
-
-                                    {selectedCustomer ? (
-                                        <div style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            padding: '0.75rem',
-                                            backgroundColor: '#f0fdf4',
-                                            border: '1px solid #bbf7d0',
-                                            borderRadius: '8px',
-                                            marginBottom: '0.5rem'
-                                        }}>
-                                            <div>
-                                                <div style={{ fontWeight: '700', color: '#166534' }}>
-                                                    {selectedCustomer.first_name} {selectedCustomer.last_name}
-                                                </div>
-                                                <div style={{ fontSize: '0.75rem', color: '#15803d' }}>
-                                                    {selectedCustomer.email}
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => setSelectedCustomer(null)}
-                                                style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer' }}
-                                            >
-                                                Desvincular
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div style={{ position: 'relative' }}>
-                                            <input
-                                                type="text"
-                                                placeholder="Buscar cliente..."
-                                                value={customerSearch}
-                                                onChange={e => searchCustomers(e.target.value)}
-                                                style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px' }}
-                                            />
-                                            {customers.length > 0 && (
-                                                <div style={{
-                                                    position: 'absolute',
-                                                    top: '100%',
-                                                    left: 0,
-                                                    backgroundColor: 'white',
-                                                    border: '1px solid #e2e8f0',
-                                                    borderRadius: '8px',
-                                                    width: '100%',
-                                                    zIndex: 1000,
-                                                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2)',
-                                                    maxHeight: '200px',
-                                                    overflowY: 'auto'
-                                                }}>
-                                                    {customers.map(u => (
-                                                        <div
-                                                            key={u.id}
-                                                            onClick={() => selectCustomer(u)}
-                                                            style={{
-                                                                padding: '0.75rem',
-                                                                cursor: 'pointer',
-                                                                borderBottom: '1px solid #f1f5f9',
-                                                                hover: { backgroundColor: '#f8fafc' }
-                                                            }}
-                                                            onMouseEnter={(e) => e.target.style.backgroundColor = '#f8fafc'}
-                                                            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                                                        >
-                                                            <div style={{ fontWeight: '600', color: '#1e293b' }}>
-                                                                {u.first_name} {u.last_name}
-                                                            </div>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b' }}>
-                                                                <span>ID: {u.cedula || 'N/A'}</span>
-                                                                <span>Tel: {u.phone || 'N/A'}</span>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                    <button onClick={() => setShowCustomerModal(true)} style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#3b82f6', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>+ Nuevo Cliente</button>
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>Entrega</label>
-                                    <select value={selectedDeliveryMethod} onChange={e => setSelectedDeliveryMethod(e.target.value)} style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px' }}>
-                                        <option value="in_store">En Tienda</option>
-                                        <option value="pickup">Para Llevar/Recogida</option>
-                                        <option value="delivery">Envío a Domicilio</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            {/* CÓDIGO DE DESCUENTO */}
-                            <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>
-                                    Cupón de Descuento
-                                </label>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <input
-                                        type="text"
-                                        placeholder="Código LUXE-XXXX"
-                                        value={discountCode}
-                                        onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                                        disabled={!!appliedDiscount}
-                                        style={{
-                                            flex: 1,
-                                            padding: '0.75rem',
-                                            border: '1px solid #cbd5e1',
-                                            borderRadius: '8px',
-                                            backgroundColor: appliedDiscount ? '#f1f5f9' : 'white',
-                                            textTransform: 'uppercase',
-                                            fontFamily: 'monospace',
-                                            fontWeight: 'bold'
-                                        }}
-                                    />
-                                    {appliedDiscount ? (
-                                        <button
-                                            onClick={() => { setAppliedDiscount(null); setDiscountCode(''); }}
-                                            style={{ padding: '0 1.5rem', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-                                        >
-                                            Quitar
-                                        </button>
-                                    ) : (
-                                        <button
-                                            onClick={handleApplyDiscount}
-                                            style={{ padding: '0 1.5rem', backgroundColor: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-                                        >
-                                            Aplicar
-                                        </button>
-                                    )}
-                                </div>
-                                {appliedDiscount && (
-                                    <div style={{ fontSize: '0.85rem', color: '#059669', marginTop: '0.4rem', fontWeight: '600' }}>
-                                        ✓ {appliedDiscount.name} aplicado (-{formatCurrency(calculateDiscountAmount)})
-                                    </div>
-                                )}
-                            </div>
-
-                            <div style={{ backgroundColor: '#f0f9ff', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem' }}>
-                                <h4 style={{ margin: '0 0 1rem 0', color: '#0369a1' }}><i className="bi bi-cash-coin" style={{ marginRight: '8px' }}></i>Calculadora de Vuelto</h4>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#0369a1' }}>Efectivo Recibido</label>
-                                        <input
-                                            type="number"
-                                            value={inputCash}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                setInputCash(val);
-                                                setCashGiven(parseFloat(val));
-                                            }}
-                                            style={{ width: '100%', padding: '0.75rem', fontSize: '1.2rem', border: '2px solid #bae6fd', borderRadius: '8px', color: '#0c4a6e', fontWeight: 'bold' }}
-                                            placeholder="0.00"
-                                        />
-                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                                            {[5, 10, 20, 50].map(amt => (
-                                                <button key={amt} onClick={() => { setInputCash(amt.toString()); setCashGiven(amt); }} style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', backgroundColor: 'white', border: '1px solid #bae6fd', borderRadius: '4px', cursor: 'pointer', color: '#0ea5e9' }}>
-                                                    ${amt}
-                                                </button>
-                                            ))}
-                                            <button onClick={() => { setInputCash(calculateTotal.toFixed(2)); setCashGiven(calculateTotal); }} style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', backgroundColor: '#e0f2fe', border: '1px solid #bae6fd', borderRadius: '4px', cursor: 'pointer', color: '#0369a1', fontWeight: 'bold' }}>Exacto</button>
-                                        </div>
-                                    </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#0369a1' }}>Su Cambio</label>
-                                        <div style={{
-                                            fontSize: '2rem',
-                                            fontWeight: '800',
-                                            color: (cashGiven && cashGiven >= calculateTotal) ? '#16a34a' : '#64748b'
-                                        }}>
-                                            {formatCurrency((cashGiven || 0) - calculateTotal > 0 ? (cashGiven || 0) - calculateTotal : 0)}
-                                        </div>
-                                        {(cashGiven && cashGiven < calculateTotal) && (
-                                            <div style={{ color: '#ef4444', fontSize: '0.9rem', fontWeight: 'bold' }}>Faltan {formatCurrency(calculateTotal - cashGiven)}</div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style={{ marginTop: 'auto', display: 'flex', gap: '1rem' }}>
-                                <button onClick={() => setShowReviewModal(false)} style={{ flex: 1, padding: '1rem', border: '1px solid #cbd5e1', background: 'white', borderRadius: '8px', fontSize: '1rem', fontWeight: '600', color: '#475569', cursor: 'pointer' }}>
-                                    Seguir Comprando
-                                </button>
-                                <button
-                                    onClick={finalPlaceOrder}
-                                    disabled={processingOrder}
-                                    style={{
-                                        flex: 2,
-                                        padding: '1rem',
-                                        border: 'none',
-                                        background: 'linear-gradient(to right, #0f172a, #334155)',
-                                        color: 'white',
-                                        borderRadius: '8px',
-                                        fontSize: '1.2rem',
-                                        fontWeight: '700',
-                                        cursor: 'pointer',
-                                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
-                                    }}
-                                >
-                                    {processingOrder ? 'Procesando...' : 'CONFIRMAR PAGO'}
-                                </button>
-                            </div>
-                        </div>
+        {/* Modal Cliente y Notas (Mejorado) */}
+        {showCustomerModal && (
+            <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ background: 'white', padding: '0', borderRadius: '12px', width: '600px', maxWidth: '90%', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+                    <div style={{ padding: '1.5rem', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h3 style={{ margin: 0, color: '#111827', fontSize: '1.25rem' }}>Nuevo Cliente</h3>
+                        <button onClick={() => setShowCustomerModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>×</button>
                     </div>
-                </div>
-            )}
 
-            {/* Modal Cliente y Notas (Mejorado) */}
-            {showCustomerModal && (
-                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ background: 'white', padding: '0', borderRadius: '12px', width: '600px', maxWidth: '90%', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' }}>
-                        <div style={{ padding: '1.5rem', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ margin: 0, color: '#111827', fontSize: '1.25rem' }}>Nuevo Cliente</h3>
-                            <button onClick={() => setShowCustomerModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>×</button>
+                    <form onSubmit={handleCreateCustomer} style={{ padding: '1.5rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Nombre *</label>
+                                <input name="first_name" placeholder="Ej. Juan" value={newCustomer.first_name} onChange={handleInputChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Apellido *</label>
+                                <input name="last_name" placeholder="Ej. Pérez" value={newCustomer.last_name} onChange={handleInputChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                            </div>
                         </div>
 
-                        <form onSubmit={handleCreateCustomer} style={{ padding: '1.5rem' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Nombre *</label>
-                                    <input name="first_name" placeholder="Ej. Juan" value={newCustomer.first_name} onChange={handleInputChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Apellido *</label>
-                                    <input name="last_name" placeholder="Ej. Pérez" value={newCustomer.last_name} onChange={handleInputChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
-                                </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Cédula / RUC</label>
+                                <input name="identification_number" placeholder="Cédula o RUC" value={newCustomer.identification_number} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
                             </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Fecha Nacimiento</label>
+                                <input type="date" name="date_of_birth" value={newCustomer.date_of_birth} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                            </div>
+                        </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Cédula / RUC</label>
-                                    <input name="identification_number" placeholder="Cédula o RUC" value={newCustomer.identification_number} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Fecha Nacimiento</label>
-                                    <input type="date" name="date_of_birth" value={newCustomer.date_of_birth} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
-                                </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Email (Opcional)</label>
+                                <input type="email" name="email" placeholder="cliente@email.com" value={newCustomer.email} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
                             </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Teléfono *</label>
+                                <input name="phone" placeholder="099..." value={newCustomer.phone} onChange={handleInputChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                            </div>
+                        </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Email (Opcional)</label>
-                                    <input type="email" name="email" placeholder="cliente@email.com" value={newCustomer.email} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Teléfono *</label>
-                                    <input name="phone" placeholder="099..." value={newCustomer.phone} onChange={handleInputChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
-                                <button type="button" onClick={() => setShowCustomerModal(false)} style={{ padding: '0.75rem 1.5rem', border: '1px solid #d1d5db', background: 'white', color: '#374151', borderRadius: '6px', fontWeight: '500', cursor: 'pointer' }}>
-                                    Cancelar
-                                </button>
-                                <button type="submit" style={{ padding: '0.75rem 1.5rem', border: 'none', background: '#2563eb', color: 'white', borderRadius: '6px', fontWeight: '500', cursor: 'pointer' }}>
-                                    Crear Cliente
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+                            <button type="button" onClick={() => setShowCustomerModal(false)} style={{ padding: '0.75rem 1.5rem', border: '1px solid #d1d5db', background: 'white', color: '#374151', borderRadius: '6px', fontWeight: '500', cursor: 'pointer' }}>
+                                Cancelar
+                            </button>
+                            <button type="submit" style={{ padding: '0.75rem 1.5rem', border: 'none', background: '#2563eb', color: 'white', borderRadius: '6px', fontWeight: '500', cursor: 'pointer' }}>
+                                Crear Cliente
+                            </button>
+                        </div>
+                    </form>
                 </div>
-            )}
-        </>
-    );
+            </div>
+        )}
+    </>
+);
 };
 
 export default PuntosVenta;
