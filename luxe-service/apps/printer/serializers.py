@@ -20,7 +20,7 @@ class PrinterSerializer(serializers.ModelSerializer):
             'id', 'name', 'printer_type', 'printer_type_display',
             'connection_type', 'connection_type_display',
             'connection_string', 'port', 'paper_width',
-            'characters_per_line', 'has_cash_drawer',
+            'characters_per_line', 'label_height', 'label_gap', 'has_cash_drawer',
             'cash_drawer_pin', 'cash_drawer_on_time',
             'cash_drawer_off_time', 'is_active', 'is_default',
             'config', 'created_at', 'updated_at'

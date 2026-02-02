@@ -26,7 +26,7 @@ class PrinterAdmin(admin.ModelAdmin):
             'fields': ('connection_type', 'connection_string', 'port')
         }),
         ('Configuración de Impresión', {
-            'fields': ('paper_width', 'characters_per_line')
+            'fields': ('paper_width', 'characters_per_line', 'label_height', 'label_gap')
         }),
         ('Caja Registradora', {
             'fields': (

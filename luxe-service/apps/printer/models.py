@@ -65,6 +65,20 @@ class Printer(models.Model):
         verbose_name='Caracteres por Línea'
     )
     
+    label_height = models.IntegerField(
+        default=27,
+        validators=[MinValueValidator(10), MaxValueValidator(150)],
+        verbose_name='Alto Etiqueta (mm)',
+        help_text='Solo para etiquetas (default 27)'
+    )
+    
+    label_gap = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(20)],
+        verbose_name='Separación/Gap (mm)',
+        help_text='Espacio entre etiquetas (usualmente 2mm, o 0mm para continuo)'
+    )
+    
     # Control de caja registradora
     has_cash_drawer = models.BooleanField(
         default=True,

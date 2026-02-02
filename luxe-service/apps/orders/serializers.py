@@ -237,6 +237,7 @@ class OrderCreateSerializer(serializers.Serializer):
     )
     delivery_info = DeliveryInfoSerializer(required=False, allow_null=True)
     source = serializers.CharField(required=False, default='pos')
+    payment_method_name = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     
     def validate_customer_id(self, value):
         """Valida que el cliente exista"""
@@ -281,6 +282,7 @@ class OrderCreateSerializer(serializers.Serializer):
         items_data = validated_data.pop('items')
         delivery_info_data = validated_data.pop('delivery_info', None)
         customer_email = validated_data.pop('customer_email', None)
+        payment_method_name = validated_data.pop('payment_method_name', None)
         
         # 1. Lógica de Cliente y SNAPSHOT (Inmortal)
         customer = None
@@ -456,22 +458,28 @@ class OrderCreateSerializer(serializers.Serializer):
         from apps.payments.models import Payment, PaymentMethod, Currency
         
         try:
-            # Obtener el método de pago por defecto (efectivo)
-            cash_method = PaymentMethod.objects.filter(
-                method_type='cash',
-                is_active=True
-            ).first()
+            # Obtener el método de pago seleccionado o por defecto (efectivo)
+            payment_method = None
+            if payment_method_name:
+                # Buscar por nombre (incensitivo)
+                payment_method = PaymentMethod.objects.filter(name__iexact=payment_method_name, is_active=True).first()
+            
+            if not payment_method:
+                payment_method = PaymentMethod.objects.filter(
+                    method_type='cash',
+                    is_active=True
+                ).first()
             
             # Obtener la moneda por defecto
             default_currency = Currency.objects.filter(is_default=True).first()
             
-            if cash_method and default_currency:
+            if payment_method and default_currency:
                 # Crear el registro de pago
                 # IMPORTANTE: No usar .create() sino crear instancia y .save()
                 # para que se ejecute el método save() del modelo que genera payment_number
                 payment = Payment(
                     order=order,
-                    payment_method=cash_method,
+                    payment_method=payment_method,
                     currency=default_currency,
                     amount=order.total,
                     original_amount=order.total,

@@ -70,6 +70,9 @@ const PuntosVenta = () => {
         email: ''
     });
 
+    const [paymentMethods, setPaymentMethods] = useState([]);
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
+
     // =====================================
     // 4. EFECTOS - CARGA INICIAL Y ESCÁNER
     // =====================================
@@ -107,6 +110,7 @@ const PuntosVenta = () => {
             const params = { page };
             if (search) params.search = search;
             if (category !== 'all') params.category = category;
+            params.in_stock = 'true'; // Siempre filtrar stock > 0 para POS
 
             const productsRes = await api.get('api/menu/products/', {
                 baseURL: process.env.REACT_APP_LUXE_SERVICE || '/api/luxe',
@@ -132,7 +136,6 @@ const PuntosVenta = () => {
         }
     }, []);
 
-    // Initial load - categories only once
     useEffect(() => {
         const loadCategories = async () => {
             try {
@@ -142,7 +145,21 @@ const PuntosVenta = () => {
                 console.error('Error cargando categorías:', err);
             }
         };
+        const loadPaymentMethods = async () => {
+            try {
+                const res = await api.get('api/payments/methods/', { baseURL: process.env.REACT_APP_LUXE_SERVICE || '/api/luxe' });
+                const methods = res.data.results || res.data || [];
+                setPaymentMethods(methods);
+                // Pre-seleccionar efectivo o el primero
+                const cash = methods.find(m => m.method_type === 'cash');
+                if (cash) setSelectedPaymentMethod(cash.name);
+                else if (methods.length > 0) setSelectedPaymentMethod(methods[0].name);
+            } catch (err) {
+                console.error('Error cargando métodos de pago:', err);
+            }
+        };
         loadCategories();
+        loadPaymentMethods();
     }, []);
 
     // Effect for Products Pagination/Search/Filter change
@@ -453,7 +470,8 @@ const PuntosVenta = () => {
             items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity, notes: i.note || '' })),
             discount_code: appliedDiscount?.code || null,
             customer_id: (selectedCustomer && !selectedCustomer.is_external_only) ? selectedCustomer.id : null,
-            customer_email: selectedCustomer?.email || null
+            customer_email: selectedCustomer?.email || null,
+            payment_method_name: selectedPaymentMethod || null
         };
 
         try {
@@ -924,6 +942,22 @@ const PuntosVenta = () => {
                                         <option value="pickup">Para Llevar/Recogida</option>
                                         <option value="delivery">Envío a Domicilio</option>
                                     </select>
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>Método de Pago</label>
+                                    <input
+                                        type="text"
+                                        list="paymentMethodsList"
+                                        value={selectedPaymentMethod}
+                                        onChange={e => setSelectedPaymentMethod(e.target.value)}
+                                        placeholder="Escriba método (Efectivo, Tarjeta...)"
+                                        style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px' }}
+                                    />
+                                    <datalist id="paymentMethodsList">
+                                        {paymentMethods.map(pm => (
+                                            <option key={pm.id} value={pm.name} />
+                                        ))}
+                                    </datalist>
                                 </div>
                             </div>
 

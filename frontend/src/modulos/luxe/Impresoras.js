@@ -22,7 +22,8 @@ const Impresoras = () => {
         characters_per_line: 42,
         has_cash_drawer: true,
         is_active: true,
-        is_default: false
+        is_default: false,
+        config: {} // JSON field for extra config
     });
 
     const PRINTER_TYPES = [
@@ -124,7 +125,8 @@ const Impresoras = () => {
                 characters_per_line: printer.characters_per_line,
                 has_cash_drawer: printer.has_cash_drawer,
                 is_active: printer.is_active,
-                is_default: printer.is_default
+                is_default: printer.is_default,
+                config: printer.config || {}
             });
         } else {
             setEditingPrinter(null);
@@ -138,7 +140,8 @@ const Impresoras = () => {
                 characters_per_line: 42,
                 has_cash_drawer: true,
                 is_active: true,
-                is_default: false
+                is_default: false,
+                config: {}
             });
         }
         setShowModal(true);
@@ -327,8 +330,8 @@ const Impresoras = () => {
                                             type="button"
                                             onClick={() => setFormData({ ...formData, printer_type: type.value })}
                                             className={`p-3 rounded-lg border-2 flex items-center gap-2 ${formData.printer_type === type.value
-                                                    ? 'border-blue-500 bg-blue-50'
-                                                    : 'border-gray-200 hover:border-gray-300'
+                                                ? 'border-blue-500 bg-blue-50'
+                                                : 'border-gray-200 hover:border-gray-300'
                                                 }`}
                                         >
                                             <i className={`bi ${type.icon}`}></i>
@@ -381,33 +384,83 @@ const Impresoras = () => {
                                 </div>
                             )}
 
-                            {/* Thermal-specific options */}
-                            {formData.printer_type === 'thermal' && (
-                                <>
-                                    <div className="grid grid-cols-2 gap-4">
+                            {/* Printer Settings based on type */}
+                            <div className="space-y-4 border-t pt-4">
+                                <h3 className="font-medium text-gray-900">Configuración de Impresión</h3>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    {/* Paper Width - Available for both Thermal and Label */}
+                                    {(formData.printer_type === 'thermal' || formData.printer_type === 'label') && (
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Ancho Papel (mm)</label>
-                                            <select
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Ancho Papel (mm) <span className="text-gray-400 text-xs font-normal">(Ej: 80, 104)</span>
+                                            </label>
+                                            <input
+                                                type="number"
                                                 value={formData.paper_width}
-                                                onChange={e => setFormData({ ...formData, paper_width: parseInt(e.target.value) })}
-                                                className="w-full px-4 py-2 border rounded-lg"
-                                            >
-                                                <option value={58}>58mm</option>
-                                                <option value={80}>80mm</option>
-                                            </select>
+                                                onChange={e => setFormData({ ...formData, paper_width: parseInt(e.target.value) || 0 })}
+                                                placeholder={formData.printer_type === 'label' ? "104" : "80"}
+                                                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                            />
                                         </div>
+                                    )}
+
+                                    {/* Label Specific Settings - Height & Gap */}
+                                    {formData.printer_type === 'label' && (
+                                        <>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Alto Etiqueta (mm)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={formData.config?.label_height || ''}
+                                                    onChange={e => setFormData({
+                                                        ...formData,
+                                                        config: { ...formData.config, label_height: e.target.value }
+                                                    })}
+                                                    placeholder="27"
+                                                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Salto/Gap (mm)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={formData.config?.label_gap || ''}
+                                                    onChange={e => setFormData({
+                                                        ...formData,
+                                                        config: { ...formData.config, label_gap: e.target.value }
+                                                    })}
+                                                    placeholder="0"
+                                                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {/* Characters per Line - Available for both Thermal and Label */}
+                                    {(formData.printer_type === 'thermal' || formData.printer_type === 'label') && (
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Caracteres/Línea</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Caracteres/Línea <span className="text-gray-400 text-xs font-normal">(Tickets: 42-48, Etiquetas: ~60)</span>
+                                            </label>
                                             <input
                                                 type="number"
                                                 value={formData.characters_per_line}
                                                 onChange={e => setFormData({ ...formData, characters_per_line: parseInt(e.target.value) || 42 })}
-                                                className="w-full px-4 py-2 border rounded-lg"
+                                                placeholder="42"
+                                                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                                             />
                                         </div>
-                                    </div>
+                                    )}
+                                </div>
 
-                                    <div className="flex items-center gap-3">
+                                {/* Cash Drawer - Only for Thermal */}
+                                {formData.printer_type === 'thermal' && (
+                                    <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border">
                                         <input
                                             type="checkbox"
                                             id="hasCashDrawer"
@@ -415,12 +468,12 @@ const Impresoras = () => {
                                             onChange={e => setFormData({ ...formData, has_cash_drawer: e.target.checked })}
                                             className="w-5 h-5 text-blue-600 rounded"
                                         />
-                                        <label htmlFor="hasCashDrawer" className="text-sm text-gray-700">
+                                        <label htmlFor="hasCashDrawer" className="text-sm text-gray-700 cursor-pointer select-none">
                                             Tiene caja registradora conectada
                                         </label>
                                     </div>
-                                </>
-                            )}
+                                )}
+                            </div>
 
                             {/* Status */}
                             <div className="flex items-center gap-6">

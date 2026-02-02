@@ -160,6 +160,11 @@ class ProductViewSet(viewsets.ModelViewSet):
         if max_price:
             queryset = queryset.filter(price__lte=max_price)
         
+        # Filtro de stock para POS
+        in_stock = self.request.query_params.get('in_stock')
+        if in_stock == 'true':
+            queryset = queryset.filter(Q(track_stock=False) | Q(stock_quantity__gt=0))
+        
         return queryset
     
     def get_serializer_class(self):

@@ -948,7 +948,8 @@ class PrintLabelView(APIView):
         
         try:
             # Generar contenido TSPL para todas las etiquetas
-            tspl_content = self.generate_tspl_labels(products, copies)
+            # Pasa el objeto printer para usar su configuración
+            tspl_content = self.generate_tspl_labels(products, printer, copies)
             
             username = request.user.username if request.user.is_authenticated else 'system'
             print_job = PrintJob.objects.create(
@@ -975,16 +976,25 @@ class PrintLabelView(APIView):
                 'message': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    def generate_tspl_labels(self, products, copies=1):
+    def generate_tspl_labels(self, products, printer, copies=1):
         """
-        Genera comandos TSPL para la impresora 3nStar LDT114
-        Tamaño de etiqueta: 57mm x 27mm (aprox 456 x 216 dots a 203 DPI)
+        Genera comandos TSPL dinámicos basados en la configuración de la impresora
         """
-        # Configuración de etiqueta 57x27mm (203 DPI)
-        # 1mm = 8 dots
-        WIDTH_MM = 57
-        HEIGHT_MM = 27
-        GAP_MM = 2
+        # Configuración dinámica desde la impresora
+        WIDTH_MM = printer.paper_width if printer and printer.paper_width else 57
+        
+        # Obtener configuración extendida (height, gap) del campo JSON 'config'
+        printer_config = printer.config if printer and hasattr(printer, 'config') and printer.config else {}
+        
+        # Default de altura 27mm, pero configurable
+        HEIGHT_MM = float(printer_config.get('label_height', 27))
+        
+        # Default de Gap 0mm, pero configurable
+        GAP_MM = float(printer_config.get('label_gap', 0))
+        
+        # Límite de caracteres para el nombre
+        # Default 22 para 57mm. Para 104mm (4") podría ser ~40-50
+        NAME_LIMIT = printer.characters_per_line if printer and printer.characters_per_line else 22
         
         lines = []
         
@@ -995,7 +1005,7 @@ class PrintLabelView(APIView):
         lines.append("CLS")
         
         for product in products:
-            name = product.get('name', 'Sin nombre')[:22]  # Limitar a ~22 chars para ancho 57mm
+            name = product.get('name', 'Sin nombre')[:NAME_LIMIT]
             code = product.get('code', '0000')
             price = product.get('price', 0)
             
@@ -1010,12 +1020,10 @@ class PrintLabelView(APIView):
             
             # 2. Código de Barras (Centro). Tipo 128.
             # Coordenadas: x=10, y=35, altura=50.
-            # Ancho barras: narrow=2, wide=2 (más compacto para que quepa)
             lines.append(f'BARCODE 10,35,"128",50,1,0,2,2,"{code}"')
             
             # 3. Precio (Abajo). Fuente 3 (Grande).
             # Coordenadas: x=10, y=100.
-            # Fuente 3 es aprox 12-14 dots de alto.
             lines.append(f'TEXT 10,110,"3",0,1,1,"{price_str}"')
             
             # Imprimir

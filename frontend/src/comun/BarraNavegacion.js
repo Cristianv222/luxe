@@ -180,7 +180,7 @@ const BarraNavegacion = () => {
                                 color: '#2C2C2C',
                                 letterSpacing: '1px'
                             }}>
-                                Club Luxe
+                                Luxury Club
                             </h2>
                             <p style={{ color: '#888', marginTop: '10px', fontSize: '15px' }}>
                                 Programa de Fidelidad Exclusivo

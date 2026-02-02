@@ -304,7 +304,7 @@ class Payment(models.Model):
     # Relación con la orden
     order = models.ForeignKey(
         'orders.Order',
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name='payments',
         verbose_name='Orden'
     )
