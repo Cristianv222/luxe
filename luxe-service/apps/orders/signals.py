@@ -1,4 +1,4 @@
-from django.db.models.signals import post_delete, post_save
+from django.db.models.signals import post_delete, post_save, pre_delete
 from django.dispatch import receiver
 from django.db import models
 from .models import Order, OrderItem
@@ -68,4 +68,18 @@ def restore_stock_on_delete(sender, instance, **kwargs):
             
     except Exception as e:
         logger.error(f"Error al restaurar stock para item eliminado {instance.id}: {str(e)}")
+
+
+@receiver(pre_delete, sender=Order)
+def delete_related_payments(sender, instance, **kwargs):
+    """
+    Eliminar pagos antes de borrar la orden para evitar ProtectedError
+    ya que la relación es PROTECT en la base de datos.
+    """
+    try:
+        if hasattr(instance, 'payments'):
+             instance.payments.all().delete()
+             logger.info(f"Pagos eliminados para orden {instance.id} antes de borrado.")
+    except Exception as e:
+        logger.error(f"Error borrando pagos de orden {instance.id}: {e}")
 

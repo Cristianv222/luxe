@@ -338,6 +338,14 @@ class Order(models.Model):
         """Verifica si la orden puede ser cancelada"""
         return self.status in ['pending', 'confirmed', 'preparing']
 
+    def delete(self, *args, **kwargs):
+        """Sobrescribe delete para eliminar pagos protegidos antes"""
+        # Eliminar pagos asociados primero para evitar ProtectedError
+        # ya que la relación en BD es PROTECT
+        if hasattr(self, 'payments'):
+             self.payments.all().delete()
+        return super().delete(*args, **kwargs)
+
 
 class OrderItem(models.Model):
     """Items de la orden"""
