@@ -260,6 +260,14 @@ class PaymentMethod(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    # Códigos SRI (Servicio de Rentas Internas)
+    sri_code = models.CharField(
+        max_length=10,
+        default='01',
+        verbose_name='Código SRI',
+        help_text='01=Efectivo, 19=Tarjeta Crédito, 20=Otros con SF, 07=Consumidor Final'
+    )
+
     class Meta:
         verbose_name = 'Método de Pago'
         verbose_name_plural = 'Métodos de Pago'

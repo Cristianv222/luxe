@@ -62,27 +62,19 @@ class SRIIntegrationService:
             address = "S/D"
 
         # 2. Preparar Items
-        # La API espera precios unitarios SIN IMPUESTOS (normalmente), pero la doc dice:
-        # "Impuesto por item: subtotal x 15%".
-        # Asumiremos que debemos enviar el precio base (Subtotal / Cantidad).
-        # Como nuestro modelo OrderItem ya tiene unit_price (que suele incluir IVA en retail), debemos desglosarlo.
-        # O si unit_price es base, lo enviamos directo.
-        # Asumiremos que Product.price es con IVA incluido (común en B2C).
-        # Tax Rate viene en el producto.
+        # La API espera precios unitarios.
+        # SEGUN USUARIO: "no dividas, porque ya estoy enviando yo ya con impuestos"
+        # Interpretación: unit_price en BD ya es la BASE IMPONIBLE.
         
         items_payload = []
         for item in order.items.all():
             product = item.product
             
-            # Calcular precio unitario SIN IMPUESTOS para la API
-            # Precio Base = Precio Con IVA / (1 + Tasa%)
+            # Obtener tasa de impuesto (convertir a float/decimal)
             tax_rate = float(product.tax_rate or 0)
-            price_with_tax = float(item.unit_price) # Asumiendo que esto es lo que pagó el cliente por unidad
             
-            if tax_rate > 0:
-                unit_price_base = price_with_tax / (1 + (tax_rate / 100))
-            else:
-                unit_price_base = price_with_tax
+            # Precio Unitario Base (Directo de la BD según instrucción)
+            unit_price_base = float(item.unit_price)
             
             # Determinar códigos de impuesto SRI
             # Código 2 = IVA
@@ -95,13 +87,10 @@ class SRIIntegrationService:
             elif tax_rate == 14:
                 perc_code = "3"
             elif tax_rate == 15:
-                # Nuevo IVA 15% (Desde abril 2024 en Ecuador)
-                # Nota: Algunos sitemas usan código 4 para el 15%. Verificar.
                 perc_code = "4"
             elif tax_rate == 5:
                 perc_code = "5"
             else:
-                # Fallback, quizás enviar como exento o el más cercano
                 perc_code = "0"
 
             item_data = {
@@ -121,23 +110,40 @@ class SRIIntegrationService:
             }
             items_payload.append(item_data)
 
-        # Manejar descuentos globales de la orden distribuyéndolos o agregando item negativo (si la API lo permite)
-        # La API tiene campo 'discount' por item. Lo ideal es prorratear el descuento global.
+        # Manejar descuentos globales
         if order.discount_amount > 0:
             total_subtotal = sum(i['unit_price'] * i['quantity'] for i in items_payload)
             if total_subtotal > 0:
-                for i in items_payload:
-                    item_subtotal = i['unit_price'] * i['quantity']
-                    # Prorrateo del descuento base (sin iva)
-                    # Descuento Order es total (con iva). Debemos desglosar descuento base.
-                    # Simplificación: Asumimos descuento proporcional
-                    ratio = item_subtotal / total_subtotal
-                    # Descuento por item = (DescuentoTotal / 1.IVA) * ratio
-                    # Mejor enviamos descuento al item si podemos.
-                    # Por ahora dejaremos descuento en 0 para simplificar primera versión.
-                    pass
+                # Distribuir descuento proporcionalmente en el payload si es necesario, 
+                # o enviarlo como descuento global si la API lo soporta.
+                # Como la API pide 'discount' por item, podemos dejarlo en 0 por ahora 
+                # o implementar prorrateo complejo.
+                # Mantendremos 0 por seguridad salvo que se requiera strict match.
+                pass
 
-        # 3. Construir Payload Completo
+        # 3. Preparar Pagos
+        payments_payload = []
+        # Buscar pagos completados de la orden
+        order_payments = order.payments.filter(status='completed')
+        
+        if order_payments.exists():
+            for p in order_payments:
+                payments_payload.append({
+                    "payment_method_code": p.payment_method.sri_code,
+                    "amount": float(p.amount),
+                    "time_unit": "days",
+                    "term": 0
+                })
+        else:
+            # Si no hay pagos registrados (ej: crédito o falló registro), defecto a Otros (20) o Efectivo (01)
+            payments_payload.append({
+                "payment_method_code": "20", # Otros con utilización del sistema financiero
+                "amount": float(order.total),
+                "time_unit": "days",
+                "term": 0
+            })
+
+        # 4. Construir Payload Completo
         payload = {
             "issue_date": order.created_at.strftime('%Y-%m-%d'),
             "customer_identification_type": ident_type,
@@ -147,7 +153,8 @@ class SRIIntegrationService:
             "customer_email": email,
             "customer_phone": phone,
             "send_email": True,
-            "items": items_payload
+            "items": items_payload,
+            "payments": payments_payload # Agregamos pagos al JSON
         }
         
         # Si no es token VSR, agregar company

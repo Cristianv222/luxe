@@ -149,6 +149,7 @@ class OrderListSerializer(serializers.ModelSerializer):
         read_only=True
     )
     items_count = serializers.SerializerMethodField()
+    payment_method_display = serializers.SerializerMethodField()
     
     class Meta:
         model = Order
@@ -156,12 +157,20 @@ class OrderListSerializer(serializers.ModelSerializer):
             'id', 'order_number', 'customer', 'customer_name',
             'order_type', 'order_type_display', 'status', 'status_display',
             'payment_status', 'payment_status_display', 'total', 'tax_amount',
-            'items_count', 'table_number', 'created_at', 'updated_at'
+            'items_count', 'table_number', 'created_at', 'updated_at',
+            'payment_method_display'
         ]
         read_only_fields = ['id', 'order_number', 'created_at', 'updated_at']
     
     def get_items_count(self, obj):
         return obj.items.count()
+
+    def get_payment_method_display(self, obj):
+        """Obtiene el nombre del método de pago asociado"""
+        payment = obj.payments.filter(status='completed').first() or obj.payments.first()
+        if payment and payment.payment_method:
+            return payment.payment_method.name
+        return None
 
 
 class OrderDetailSerializer(serializers.ModelSerializer):
@@ -186,6 +195,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     
     can_be_cancelled = serializers.SerializerMethodField()
     can_be_modified = serializers.SerializerMethodField()
+    payment_method_display = serializers.SerializerMethodField()
     
     class Meta:
         model = Order
@@ -198,7 +208,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             'table_number', 'estimated_prep_time', 'items', 'delivery_info',
             'status_history', 'can_be_cancelled', 'can_be_modified',
             'created_at', 'updated_at', 'confirmed_at', 'ready_at',
-            'delivered_at', 'cancelled_at'
+            'delivered_at', 'cancelled_at', 'payment_method_display'
         ]
         read_only_fields = [
             'id', 'order_number', 'subtotal', 'tax_amount', 'total',
@@ -211,6 +221,13 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     
     def get_can_be_modified(self, obj):
         return obj.can_be_modified()
+
+    def get_payment_method_display(self, obj):
+        """Obtiene el nombre del método de pago asociado"""
+        payment = obj.payments.filter(status='completed').first() or obj.payments.first()
+        if payment and payment.payment_method:
+            return payment.payment_method.name
+        return None
 
 
 class OrderCreateSerializer(serializers.Serializer):

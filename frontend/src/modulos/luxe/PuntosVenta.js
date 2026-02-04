@@ -147,7 +147,7 @@ const PuntosVenta = () => {
         };
         const loadPaymentMethods = async () => {
             try {
-                const res = await api.get('api/payments/methods/', { baseURL: process.env.REACT_APP_LUXE_SERVICE || '/api/luxe' });
+                const res = await api.get('api/payments/payment-methods/', { baseURL: process.env.REACT_APP_LUXE_SERVICE || '/api/luxe' });
                 const methods = res.data.results || res.data || [];
                 setPaymentMethods(methods);
                 // Pre-seleccionar efectivo o el primero
@@ -807,7 +807,7 @@ const PuntosVenta = () => {
             {/* Modal Confirmación y Pago */}
             {showReviewModal && (
                 <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-                    <div style={{ backgroundColor: '#ffffff', width: '900px', maxWidth: '95%', borderRadius: '16px', overflow: 'hidden', display: 'flex', height: '600px', maxHeight: '90vh', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+                    <div style={{ backgroundColor: '#ffffff', width: '900px', maxWidth: '95%', borderRadius: '16px', overflow: 'hidden', display: 'flex', height: '650px', maxHeight: '90vh', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
 
                         {/* LEFT: Resumen de Orden */}
                         <div style={{ width: '40%', backgroundColor: '#f8fafc', padding: '2rem', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
@@ -945,19 +945,18 @@ const PuntosVenta = () => {
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#475569' }}>Método de Pago</label>
-                                    <input
-                                        type="text"
-                                        list="paymentMethodsList"
+                                    <select
                                         value={selectedPaymentMethod}
                                         onChange={e => setSelectedPaymentMethod(e.target.value)}
-                                        placeholder="Escriba método (Efectivo, Tarjeta...)"
-                                        style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px' }}
-                                    />
-                                    <datalist id="paymentMethodsList">
+                                        style={{ width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '8px', backgroundColor: 'white' }}
+                                    >
+                                        <option value="">Seleccione...</option>
                                         {paymentMethods.map(pm => (
-                                            <option key={pm.id} value={pm.name} />
+                                            <option key={pm.id} value={pm.name}>
+                                                {pm.name}
+                                            </option>
                                         ))}
-                                    </datalist>
+                                    </select>
                                 </div>
                             </div>
 

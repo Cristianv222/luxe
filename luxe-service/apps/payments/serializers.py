@@ -124,7 +124,7 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
             'id', 'name', 'method_type', 'method_type_display',
             'is_active', 'requires_authorization', 'gateway_name',
             'gateway_config', 'minimum_amount', 'maximum_amount',
-            'display_order', 'created_at', 'updated_at'
+            'sri_code', 'display_order', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 

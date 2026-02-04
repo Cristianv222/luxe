@@ -201,6 +201,7 @@ const Ordenes = () => {
                             <th>Cliente</th>
                             <th>Tipo</th>
                             <th>Total</th>
+                            <th>Método Pago</th>
                             <th>Estado</th>
                             <th>Fecha</th>
                         </tr>
@@ -208,7 +209,7 @@ const Ordenes = () => {
                     <tbody>
                         {sortedAndFilteredOrders.length === 0 ? (
                             <tr>
-                                <td colSpan="6" style={{ textAlign: 'center', padding: '3rem' }}>
+                                <td colSpan="7" style={{ textAlign: 'center', padding: '3rem' }}>
                                     No se encontraron órdenes
                                 </td>
                             </tr>
@@ -221,6 +222,11 @@ const Ordenes = () => {
                                     <td>{(order.customer_name === 'Cliente Casual' || !order.customer_name) ? 'Consumidor Final' : order.customer_name}</td>
                                     <td>{order.order_type_display}</td>
                                     <td><strong>${order.total}</strong></td>
+                                    <td>
+                                        <span style={{ fontSize: '0.9rem', color: '#64748b' }}>
+                                            {order.payment_method_display || '-'}
+                                        </span>
+                                    </td>
                                     <td>
                                         <div
                                             className={getStatusClass(order.status_display)}
@@ -273,7 +279,10 @@ const Ordenes = () => {
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
                                 <div>
                                     <h4 style={{ fontFamily: 'var(--font-serif)', marginBottom: '0.5rem' }}>Cliente</h4>
-                                    <p style={{ fontSize: '1.1rem' }}>{(selectedOrder.customer_name === 'Cliente Casual' || !selectedOrder.customer_name) ? 'Consumidor Final' : selectedOrder.customer_name}</p>
+                                    <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>{(selectedOrder.customer_name === 'Cliente Casual' || !selectedOrder.customer_name) ? 'Consumidor Final' : selectedOrder.customer_name}</p>
+
+                                    <h4 style={{ fontFamily: 'var(--font-serif)', marginBottom: '0.5rem', marginTop: '1rem' }}>Método de Pago</h4>
+                                    <p style={{ fontSize: '1rem', color: 'var(--color-latte)' }}>{selectedOrder.payment_method_display || 'Desconocido'}</p>
                                 </div>
                                 <div>
                                     <button onClick={handlePrintTicket} className="ff-button ff-button-primary">
