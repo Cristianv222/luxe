@@ -116,8 +116,16 @@ class SRIIntegrationService:
             items.append(item_data)
 
         # 3. Construir Payload JSON según documentación
+        from django.utils import timezone
+        import pytz
+        
+        # Convertir fecha a hora Ecuador para evitar "Fecha Futura" (UTC vs Local)
+        # Si son las 20:00 en Ecuador, es mañana en UTC. SRI rechaza fechas futuras.
+        ec_tz = pytz.timezone('America/Guayaquil')
+        local_created_at = order.created_at.astimezone(ec_tz)
+        
         payload = {
-            "issue_date": order.created_at.strftime('%Y-%m-%d'),  # Formato YYYY-MM-DD
+            "issue_date": local_created_at.strftime('%Y-%m-%d'),  # Formato YYYY-MM-DD
             "customer_identification_type": ident_type,
             "customer_identification": ident_number,
             "customer_name": name[:300],  # Máximo 300 caracteres

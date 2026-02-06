@@ -364,11 +364,28 @@ class Order(models.Model):
         return self.status in ['pending', 'confirmed', 'preparing']
 
     def delete(self, *args, **kwargs):
-        """Sobrescribe delete para eliminar pagos protegidos antes"""
-        # Eliminar pagos asociados primero para evitar ProtectedError
-        # ya que la relación en BD es PROTECT
-        if hasattr(self, 'payments'):
-             self.payments.all().delete()
+        """Sobrescribe delete para eliminar dependencias protegidas antes"""
+        try:
+            # 1. Eliminar pagos y sus dependencias (Refunds protegen a Pagos)
+            if hasattr(self, 'payments'):
+                payments = self.payments.all()
+                for payment in payments:
+                    # Eliminar reembolsos asociados al pago (PROTECT)
+                    if hasattr(payment, 'refunds'):
+                         payment.refunds.all().delete()
+                    # Eliminar splits si existen
+                    if hasattr(payment, 'splits'):
+                         payment.splits.all().delete()
+                # Eliminar pagos
+                payments.delete()
+
+            # 2. Eliminar Documento SRI (PROTECT)
+            if hasattr(self, 'sri_document'):
+                self.sri_document.delete()
+                
+        except Exception as e:
+            print(f"Error limpiando dependencias de orden {self.id}: {e}")
+
         return super().delete(*args, **kwargs)
 
 

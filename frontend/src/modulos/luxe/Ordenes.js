@@ -10,6 +10,7 @@ const Ordenes = () => {
     const [updatingStatus, setUpdatingStatus] = useState({});
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [showModal, setShowModal] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -100,18 +101,20 @@ const Ordenes = () => {
 
     const handleDeleteOrder = async () => {
         if (!selectedOrder) return;
-        if (!window.confirm(`¿Estás seguro de que quieres eliminar la Orden ${selectedOrder.order_number}?`)) {
-            return;
-        }
+
+        // La confirmación ya fue hecha por el modal personalizado
 
         try {
             await api.delete(`/api/orders/orders/${selectedOrder.order_number}/`, {
                 baseURL: process.env.REACT_APP_LUXE_SERVICE
             });
             setOrders(prev => prev.filter(o => o.id !== selectedOrder.id));
-            closeModal();
+            setShowDeleteConfirm(false); // Cierra confirmación
+            closeModal(); // Cierra detalle
+            alert('Orden eliminada y proceso de anulación iniciado.');
         } catch (err) {
             console.error('Error deleting order:', err);
+            setShowDeleteConfirm(false);
             alert('Error al eliminar la orden');
         }
     };
@@ -345,13 +348,46 @@ const Ordenes = () => {
                             )}
 
                             <div style={{ marginTop: '3rem', display: 'flex', gap: '1rem', justifyContent: 'flex-start' }}>
-                                <button onClick={handleDeleteOrder} className="ff-button ff-button-danger">
+                                <button onClick={() => setShowDeleteConfirm(true)} className="ff-button ff-button-danger">
                                     Eliminar Orden
                                 </button>
                                 <button onClick={closeModal} className="ff-button ff-button-secondary" style={{ marginLeft: 'auto' }}>
                                     Cerrar
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Custom Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="ff-modal-overlay" style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: 'rgba(0,0,0,0.6)'
+                }}>
+                    <div className="ff-modal-content" style={{ maxWidth: '500px', padding: '2rem', textAlign: 'center' }}>
+                        <div style={{ fontSize: '3rem', color: '#e74c3c', marginBottom: '1rem' }}>
+                            <i className="bi bi-exclamation-triangle"></i>
+                        </div>
+                        <h3 className="ff-modal-title" style={{ color: '#c0392b', marginBottom: '1rem' }}>
+                            ¡Atención! Proceso SRI
+                        </h3>
+                        <p style={{ fontSize: '1.1rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                            Estás a punto de eliminar la orden <strong>#{selectedOrder?.order_number}</strong>.
+                        </p>
+                        <div style={{ backgroundColor: '#fff3cd', border: '1px solid #ffeeba', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', color: '#856404' }}>
+                            <strong>⚠️ Confirmar:</strong><br />
+                            Esta acción eliminará la orden permanentemente, restaurará el stock y ajustará el saldo del cliente.
+                        </div>
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                            <button onClick={handleDeleteOrder} className="ff-button ff-button-danger">
+                                Sí, Eliminar todo
+                            </button>
+                            <button onClick={() => setShowDeleteConfirm(false)} className="ff-button ff-button-secondary">
+                                Cancelar
+                            </button>
                         </div>
                     </div>
                 </div>
