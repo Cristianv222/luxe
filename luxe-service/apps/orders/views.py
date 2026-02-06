@@ -503,6 +503,107 @@ class OrderViewSet(viewsets.ModelViewSet):
             receipt_data['items'].append(item_data)
         
         return Response(receipt_data)
+    
+    @action(detail=True, methods=['post'])
+    def reprint(self, request, order_number=None):
+        """
+        Reimprime el ticket de una orden existente
+        POST /api/orders/{order_number}/reprint/
+        
+        IMPORTANTE: Esta acción NO:
+        - Descuenta stock
+        - Emite nueva factura al SRI
+        - Crea nuevo registro de pago
+        
+        Solo reenvía los datos de la orden a la impresora
+        """
+        import requests
+        import logging
+        from django.conf import settings
+        
+        logger = logging.getLogger(__name__)
+        order = self.get_object()
+        
+        try:
+            # Preparar items
+            items = []
+            for item in order.items.all():
+                items.append({
+                    'name': item.product.name,
+                    'quantity': item.quantity,
+                    'price': float(item.unit_price),
+                    'total': float(item.line_total),
+                    'note': item.notes or ''
+                })
+            
+            # Preparar datos de la orden
+            order_data = {
+                'order_number': order.order_number,
+                'customer_name': order.customer_name or 'CONSUMIDOR FINAL',
+                'order_type': order.order_type,
+                'items': items,
+                'subtotal': float(order.subtotal),
+                'tax': float(order.tax_amount),
+                'discount': float(order.discount_amount),
+                'total': float(order.total)
+            }
+            
+            # Agregar información del SRI si está disponible
+            try:
+                if hasattr(order, 'sri_document'):
+                    sri_doc = order.sri_document
+                    order_data['sri_info'] = {
+                        'sri_number': sri_doc.sri_number or '',
+                        'access_key': sri_doc.access_key or '',
+                        'customer_name': order.customer_name or 'CONSUMIDOR FINAL',
+                        'customer_identification': order.customer_identification or '9999999999999',
+                        'authorization_date': sri_doc.authorization_date.strftime('%d/%m/%Y %H:%M') if sri_doc.authorization_date else None,
+                        'status': sri_doc.status
+                    }
+                    logger.info(f'ℹ️ Datos SRI incluidos en reimpresión de orden {order.order_number}')
+            except Exception as e:
+                logger.warning(f'⚠️ No se pudo incluir datos SRI en reimpresión: {str(e)}')
+            
+            # Enviar a la impresora
+            printer_url = 'http://127.0.0.1:8000/luxe/api/hardware/print/receipt/'
+            payload = {'order': order_data}
+            headers = {
+                'Authorization': f'Bearer {settings.HARDWARE_SERVICE_TOKEN}',
+                'Content-Type': 'application/json'
+            }
+            
+            response = requests.post(printer_url, json=payload, headers=headers, timeout=5)
+            
+            if response.status_code in [200, 201]:
+                return Response({
+                    'status': 'success',
+                    'message': f'Ticket de orden {order.order_number} enviado a imprimir',
+                    'job_id': response.json().get('job_id'),
+                    'job_number': response.json().get('job_number')
+                })
+            else:
+                return Response({
+                    'status': 'warning',
+                    'message': f'Advertencia al reimprimir: HTTP {response.status_code}',
+                    'details': response.text
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+        except requests.Timeout:
+            return Response({
+                'status': 'error',
+                'message': 'Timeout al conectar con el servicio de impresión'
+            }, status=status.HTTP_504_GATEWAY_TIMEOUT)
+        except requests.ConnectionError:
+            return Response({
+                'status': 'error',
+                'message': 'No se pudo conectar al servicio de impresión'
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        except Exception as e:
+            logger.error(f'Error al reimprimir orden {order.order_number}: {str(e)}')
+            return Response({
+                'status': 'error',
+                'message': f'Error inesperado: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class DeliveryInfoViewSet(viewsets.ModelViewSet):

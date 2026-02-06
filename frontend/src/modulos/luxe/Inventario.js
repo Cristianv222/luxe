@@ -161,6 +161,8 @@ const Inventario = () => {
             stock_quantity: product.stock_quantity || 0,
             min_stock_alert: product.min_stock_alert || 5
         });
+        // Asegurar que las categorías estén cargadas
+        fetchCategories();
         setIsModalOpen(true);
     };
 
@@ -579,6 +581,8 @@ const Inventario = () => {
                                 track_stock: false, stock_quantity: 0, min_stock_alert: 5,
                                 unit_measure: 'Unidad', accounting_sales_account: '', accounting_cost_account: '', accounting_inventory_account: ''
                             });
+                            // Asegurar que las categorías estén cargadas
+                            fetchCategories();
                             setIsModalOpen(true);
                         }}>
                             <i className="bi bi-plus-circle"></i> Nuevo Producto

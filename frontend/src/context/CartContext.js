@@ -77,6 +77,8 @@ export const CartProvider = ({ children }) => {
     };
 
     // Calcular totales
+    // IMPORTANTE: Los precios YA INCLUYEN IVA del 15%
+    // Desglosamos el subtotal sin IVA (base imponible)
     const getCartSubtotal = () => {
         return cart.reduce((total, item) => {
             let price = parseFloat(item.price);
@@ -88,10 +90,24 @@ export const CartProvider = ({ children }) => {
             const extrasTotal = item.selectedExtras ?
                 item.selectedExtras.reduce((sum, extra) => sum + parseFloat(extra.price), 0) : 0;
 
-            return total + ((price + extrasTotal) * item.quantity);
+            const itemTotalWithTax = (price + extrasTotal) * item.quantity; // Precio CON IVA
+
+            const taxRateInput = parseFloat(item.tax_rate || 0);
+            const actualTaxRate = (taxRateInput > 0 && taxRateInput < 1) ? taxRateInput * 100 : taxRateInput;
+
+            if (actualTaxRate > 0) {
+                // Desglosar IVA: dividir por (1 + tasa)
+                const divisor = 1 + (actualTaxRate / 100);
+                const itemSubtotalWithoutTax = itemTotalWithTax / divisor;
+                return total + itemSubtotalWithoutTax;
+            } else {
+                // Sin IVA, el total es el subtotal
+                return total + itemTotalWithTax;
+            }
         }, 0);
     };
 
+    // Calcular IVA desglosado
     const getCartTax = () => {
         return cart.reduce((totalTax, item) => {
             let price = parseFloat(item.price);
@@ -102,11 +118,18 @@ export const CartProvider = ({ children }) => {
             const extrasTotal = item.selectedExtras ?
                 item.selectedExtras.reduce((sum, extra) => sum + parseFloat(extra.price), 0) : 0;
 
-            const itemTotal = (price + extrasTotal) * item.quantity;
+            const itemTotalWithTax = (price + extrasTotal) * item.quantity; // Precio CON IVA
             const taxRateInput = parseFloat(item.tax_rate || 0);
             const actualTaxRate = (taxRateInput > 0 && taxRateInput < 1) ? taxRateInput * 100 : taxRateInput;
 
-            return totalTax + (itemTotal * (actualTaxRate / 100));
+            if (actualTaxRate > 0) {
+                // Desglosar IVA del precio
+                const divisor = 1 + (actualTaxRate / 100);
+                const itemSubtotalWithoutTax = itemTotalWithTax / divisor;
+                const itemTax = itemTotalWithTax - itemSubtotalWithoutTax;
+                return totalTax + itemTax;
+            }
+            return totalTax;
         }, 0);
     };
 

@@ -517,6 +517,22 @@ class OrderCreateSerializer(serializers.Serializer):
         # ========================================
         self._send_to_printer(order)
         
+        # ========================================
+        # EMITIR FACTURA AL SRI EN SEGUNDO PLANO
+        # ========================================
+        # Solo si la orden es de POS (completed y paid)
+        # Se ejecuta en segundo plano para NO bloquear la respuesta al usuario
+        if order.payment_status == 'paid' and order.status == 'completed':
+            import threading
+            # Ejecutar en thread separado para no bloquear
+            thread = threading.Thread(
+                target=self._emit_invoice_to_sri_async,
+                args=(order.id,),
+                daemon=True
+            )
+            thread.start()
+            logger.info(f'📄 Emisión de factura SRI iniciada en segundo plano para orden {order.order_number}')
+        
         return order
     
     def _send_to_printer(self, order):
@@ -550,6 +566,22 @@ class OrderCreateSerializer(serializers.Serializer):
                 'total': float(order.total)
             }
             
+            # Agregar información del SRI si está disponible
+            try:
+                if hasattr(order, 'sri_document'):
+                    sri_doc = order.sri_document
+                    order_data['sri_info'] = {
+                        'sri_number': sri_doc.sri_number or '',
+                        'access_key': sri_doc.access_key or '',
+                        'customer_name': order.customer_name or 'CONSUMIDOR FINAL',
+                        'customer_identification': order.customer_identification or '9999999999999',
+                        'authorization_date': sri_doc.authorization_date.strftime('%d/%m/%Y %H:%M') if sri_doc.authorization_date else None,
+                        'status': sri_doc.status
+                    }
+                    logger.info(f'ℹ️ Datos SRI agregados al ticket de orden {order.order_number}')
+            except Exception as e:
+                logger.warning(f'⚠️ No se pudo agregar datos SRI al ticket: {str(e)}')
+            
             # Payload completo
             payload = {
                 'order': order_data
@@ -582,6 +614,66 @@ class OrderCreateSerializer(serializers.Serializer):
             logger.error(f'❌ No se pudo conectar al servicio de impresión para orden {order.order_number}')
         except Exception as e:
             logger.error(f'❌ Error inesperado al imprimir orden {order.order_number}: {str(e)}')
+            import traceback
+            logger.error(traceback.format_exc())
+    
+    def _emit_invoice_to_sri_async(self, order_id):
+        """
+        Versión asíncrona de _emit_invoice_to_sri.
+        Se ejecuta en un thread separado para no bloquear la respuesta.
+        Recarga la orden desde la BD para evitar problemas de threading.
+        """
+        try:
+            # Importar django y configurar para threading
+            import django
+            django.setup()
+            
+            # Recargar la orden desde la base de datos
+            from apps.orders.models import Order
+            order = Order.objects.get(id=order_id)
+            
+            # Llamar al método original
+            self._emit_invoice_to_sri(order)
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'❌ Error en thread de emisión SRI: {str(e)}')
+            import traceback
+            logger.error(traceback.format_exc())
+    
+    def _emit_invoice_to_sri(self, order):
+        """
+        Emite la factura electrónica al SRI automáticamente.
+        NO bloquea la creación de la orden si falla.
+        """
+        try:
+            from apps.sri.services import SRIIntegrationService
+            from apps.sri.models import SRIConfiguration
+            
+            # Verificar si la integración SRI está activa
+            config = SRIConfiguration.get_settings()
+            if not config.is_active:
+                logger.info(f'ℹ️ SRI no activo - orden {order.order_number} sin factura electrónica')
+                return
+            
+            # Emitir la factura
+            logger.info(f'📄 Iniciando emisión de factura SRI para orden {order.order_number}')
+            sri_document = SRIIntegrationService.emit_invoice(order)
+            
+            if sri_document.status in ['AUTHORIZED', 'SENT']:
+                logger.info(f'✅ Factura SRI emitida exitosamente para orden {order.order_number}')
+                logger.info(f'   Número SRI: {sri_document.sri_number}')
+                if sri_document.access_key:
+                    logger.info(f'   Clave de Acceso: {sri_document.access_key}')
+            else:
+                logger.warning(f'⚠️ Factura SRI creada con errores para orden {order.order_number}')
+                logger.warning(f'   Estado: {sri_document.status}')
+                logger.warning(f'   Error: {sri_document.error_message}')
+        
+        except Exception as e:
+            # NO lanzar el error, solo registrarlo
+            logger.error(f'❌ Error al emitir factura SRI para orden {order.order_number}: {str(e)}')
             import traceback
             logger.error(traceback.format_exc())
 

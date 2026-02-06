@@ -222,42 +222,66 @@ class Order(models.Model):
         return f'ORD-{timestamp}-{random_suffix}'
     
     def calculate_totals(self):
-        """Calcula los totales de la orden incluyendo extras"""
+        """
+        Calcula los totales de la orden incluyendo extras.
+        
+        IMPORTANTE: Los precios ingresados en el inventario YA INCLUYEN IVA.
+        Por lo tanto, se debe DESGLOSAR el IVA, no sumarlo.
+        
+        Ejemplo: Si el precio es $15.00 (incluye IVA 15%):
+        - Subtotal sin IVA = $15.00 / 1.15 = $13.04
+        - IVA = $13.04 * 0.15 = $1.96
+        - Total = $15.00 (precio original)
+        """
         # Usamos prefetch_related para obtener los extras de forma eficiente
         items = self.items.select_related('product').prefetch_related('extras').all()
         
-        subtotal = Decimal('0.00')
+        # Estos totales serán SIN IVA (base imponible)
+        subtotal_without_tax = Decimal('0.00')
         total_tax = Decimal('0.00')
         
         for item in items:
             # Sumar el precio de todos los extras vinculados a este item
             extras_total = sum(extra.price for extra in item.extras.all())
             
-            # Actualizar line_total incluyendo extras
-            # Cada item ya tiene su unit_price (que puede venir del producto o de la talla)
-            line_total = (item.unit_price + extras_total) * item.quantity
+            # El line_total_with_tax es el precio CON IVA incluido
+            # (unit_price y extras_total ya vienen con IVA incluido)
+            line_total_with_tax = (item.unit_price + extras_total) * item.quantity
             
-            # Actualizar el item en la base de datos sin disparar signals de nuevo
+            # Actualizar el item en la base de datos
+            # line_total representa el precio CON IVA
             from .models import OrderItem
-            OrderItem.objects.filter(id=item.id).update(line_total=line_total)
+            OrderItem.objects.filter(id=item.id).update(line_total=line_total_with_tax)
             
-            # Acumular al subtotal de la orden
-            subtotal += line_total
-            
-            # Calcular impuestos (IVA)
+            # Calcular impuestos (IVA) - DESGLOSAR del precio
             if hasattr(item.product, 'tax_rate') and item.product.tax_rate > 0:
                 # Normalizar tax_rate: si es decimal (ej: 0.15) convertirlo a porcentaje (15)
                 tax_rate = item.product.tax_rate
                 if 0 < tax_rate < 1:
                     tax_rate = tax_rate * Decimal('100.00')
-                    
-                item_tax = line_total * (tax_rate / Decimal('100.00'))
+                
+                # Fórmula para DESGLOSAR IVA incluido:
+                # Si tax_rate = 15%:
+                # - Base (sin IVA) = Precio con IVA / 1.15
+                # - IVA = Base * 0.15
+                # - Total = Base + IVA = Precio original
+                
+                divisor = Decimal('1.00') + (tax_rate / Decimal('100.00'))
+                line_subtotal_without_tax = line_total_with_tax / divisor
+                item_tax = line_total_with_tax - line_subtotal_without_tax
+                
+                subtotal_without_tax += line_subtotal_without_tax
                 total_tax += item_tax
+            else:
+                # Si no tiene IVA, el line_total es directamente el subtotal
+                subtotal_without_tax += line_total_with_tax
         
-        self.subtotal = subtotal
-        self.tax_amount = total_tax
+        # Asignar valores calculados
+        self.subtotal = subtotal_without_tax  # Base imponible (sin IVA)
+        self.tax_amount = total_tax  # IVA desglosado
         
         # Calcular total final
+        # subtotal (sin IVA) + tax_amount (IVA desglosado) + delivery_fee + tip - discount
         self.total = (
             self.subtotal + 
             self.tax_amount + 
@@ -265,6 +289,7 @@ class Order(models.Model):
             self.tip_amount - 
             self.discount_amount
         )
+        
         # Asegurar que el total no sea negativo
         if self.total < 0:
             self.total = Decimal('0.00')

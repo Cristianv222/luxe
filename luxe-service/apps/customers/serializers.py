@@ -70,12 +70,16 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = [
-            'email', 'phone', 'cedula', 'first_name', 'last_name', 'birth_date', 'gender', # <-- CEDULA AÑADIDA
+            'email', 'phone', 'cedula', 'first_name', 'last_name', 'birth_date', 'gender',
+            'address', 'city', 'state', 'zip_code', 'country',  # <-- Added address fields
             'password', 'password_confirmation', 'newsletter_subscribed',
             'marketing_emails', 'marketing_sms'
         ]
         extra_kwargs = {
-            'password': {'write_only': True}
+            'password': {'write_only': True},
+            'email': {'required': True},
+            'first_name': {'required': True},
+            'last_name': {'required': True}
         }
     
     def validate(self, data):
@@ -97,6 +101,13 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
              raise serializers.ValidationError({'cedula': 'Esta cédula/RUC ya está registrado'})
              
         return data
+
+    def to_internal_value(self, data):
+        # Convertir string vacío a None para evitar error de unicidad
+        if 'cedula' in data and data['cedula'] == '':
+            data = data.copy()
+            data['cedula'] = None
+        return super().to_internal_value(data)
     
     def create(self, validated_data):
         password = validated_data.pop('password', None)
@@ -123,18 +134,18 @@ class POSCustomerSerializer(serializers.ModelSerializer):
             'email', 'gender', 'address', 'city'
         ]
         extra_kwargs = {
-            'email': {'required': False}, # Optional in input, generated if missing
-            'phone': {'required': False}  # Optional in input? User said "phone too".
+            'email': {'required': True},
+            'phone': {'required': False}
         }
 
+    def to_internal_value(self, data):
+        # Convertir string vacío a None para evitar error de unicidad
+        if 'cedula' in data and data['cedula'] == '':
+            data = data.copy()
+            data['cedula'] = None
+        return super().to_internal_value(data)
+
     def create(self, validated_data):
-        # Auto-generate email if missing
-        if 'email' not in validated_data or not validated_data['email']:
-            import uuid
-            cedula = validated_data.get('cedula', 'NoID')
-            random_suffix = uuid.uuid4().hex[:6]
-            validated_data['email'] = f"{cedula}_{random_suffix}@dummy.local"
-        
         # Auto-generate dummy password
         validated_data['password'] = 'POS_Generated_123!'
         

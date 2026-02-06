@@ -67,7 +67,9 @@ const PuntosVenta = () => {
         phone: '',
         identification_number: '', // Usado como Cédula/RUC
         date_of_birth: '',
-        email: ''
+        email: '',
+        address: '',
+        city: ''
     });
 
     const [paymentMethods, setPaymentMethods] = useState([]);
@@ -335,19 +337,54 @@ const PuntosVenta = () => {
     // Función auxiliar para redondear a 2 decimales y evitar problemas de punto flotante
     const roundCurrency = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
 
-    const calculateSubtotal = useMemo(() => {
-        const sub = cart.reduce((t, i) => t + (i.price * i.quantity), 0);
-        return roundCurrency(sub);
-    }, [cart]);
+    /**
+     * IMPORTANTE: Los precios YA INCLUYEN IVA del 15%
+     * Por lo tanto, calculamos el SUBTOTAL SIN IVA (base imponible)
+     * 
+     * Ejemplo: Si el precio es $15.00 (con IVA incluido)
+     * - Subtotal sin IVA = $15.00 / 1.15 = $13.04
+     * - IVA = $15.00 - $13.04 = $1.96
+     * - Total = $15.00 (precio original)
+     */
 
-    const calculateTax = useMemo(() => {
-        const rawTax = cart.reduce((totalTax, item) => {
+    // Calculamos el subtotal SIN IVA (base imponible)
+    const calculateSubtotal = useMemo(() => {
+        const subtotalWithoutTax = cart.reduce((total, item) => {
+            const itemTotalWithTax = item.price * item.quantity; // Precio CON IVA
             const taxRateInput = parseFloat(item.tax_rate || 0);
             const actualTaxRate = (taxRateInput > 0 && taxRateInput < 1) ? taxRateInput * 100 : taxRateInput;
-            const itemTotal = item.price * item.quantity;
-            return totalTax + (itemTotal * (actualTaxRate / 100));
+
+            if (actualTaxRate > 0) {
+                // Desglosar IVA: dividir por (1 + tasa de IVA)
+                // Si IVA es 15%, divisor = 1.15
+                const divisor = 1 + (actualTaxRate / 100);
+                const itemSubtotalWithoutTax = itemTotalWithTax / divisor;
+                return total + itemSubtotalWithoutTax;
+            } else {
+                // Si no tiene IVA, el total es el subtotal
+                return total + itemTotalWithTax;
+            }
         }, 0);
-        return roundCurrency(rawTax);
+        return roundCurrency(subtotalWithoutTax);
+    }, [cart]);
+
+    // Calculamos el IVA desglosado
+    const calculateTax = useMemo(() => {
+        const totalTax = cart.reduce((taxTotal, item) => {
+            const itemTotalWithTax = item.price * item.quantity; // Precio CON IVA
+            const taxRateInput = parseFloat(item.tax_rate || 0);
+            const actualTaxRate = (taxRateInput > 0 && taxRateInput < 1) ? taxRateInput * 100 : taxRateInput;
+
+            if (actualTaxRate > 0) {
+                // Desglosar IVA del precio
+                const divisor = 1 + (actualTaxRate / 100);
+                const itemSubtotalWithoutTax = itemTotalWithTax / divisor;
+                const itemTax = itemTotalWithTax - itemSubtotalWithoutTax;
+                return taxTotal + itemTax;
+            }
+            return taxTotal;
+        }, 0);
+        return roundCurrency(totalTax);
     }, [cart]);
 
     const calculateDiscountAmount = useMemo(() => {
@@ -425,7 +462,9 @@ const PuntosVenta = () => {
                 cedula: newCustomer.identification_number,
                 phone: newCustomer.phone,
                 birth_date: newCustomer.date_of_birth || null,
-                email: newCustomer.email
+                email: newCustomer.email,
+                address: newCustomer.address,
+                city: newCustomer.city
             };
 
             const res = await api.post('/api/customers/pos_register/', payload, { baseURL: '/api/luxe' });
@@ -441,7 +480,9 @@ const PuntosVenta = () => {
                 phone: '',
                 identification_number: '',
                 date_of_birth: '',
-                email: ''
+                email: '',
+                address: '',
+                city: ''
             });
 
         } catch (err) {
@@ -1109,12 +1150,23 @@ const PuntosVenta = () => {
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Email (Opcional)</label>
-                                    <input type="email" name="email" placeholder="cliente@email.com" value={newCustomer.email} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Email *</label>
+                                    <input type="email" name="email" placeholder="cliente@email.com" value={newCustomer.email} onChange={handleInputChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Teléfono *</label>
                                     <input name="phone" placeholder="099..." value={newCustomer.phone} onChange={handleInputChange} required style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Dirección</label>
+                                    <input name="address" placeholder="Dirección completa" value={newCustomer.address} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '0.4rem', color: '#374151', fontWeight: '500', fontSize: '0.9rem' }}>Ciudad</label>
+                                    <input name="city" placeholder="Ciudad" value={newCustomer.city} onChange={handleInputChange} style={{ width: '100%', padding: '0.6rem', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '0.95rem' }} />
                                 </div>
                             </div>
 

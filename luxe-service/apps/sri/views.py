@@ -53,3 +53,31 @@ class SRIDocumentViewSet(viewsets.ReadOnlyModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=True, methods=['post'], url_path='refresh-details')
+    def refresh_details(self, request, pk=None):
+        """
+        Endpoint para consultar y actualizar los detalles completos de un documento SRI,
+        incluyendo la clave de acceso.
+        POST /api/sri/documents/{id}/refresh-details/
+        """
+        try:
+            document = self.get_object()
+            
+            if not document.external_id:
+                return Response(
+                    {'error': 'Este documento no tiene ID externo. No se puede consultar.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Consultar detalles actualizados
+            updated_doc = SRIIntegrationService.fetch_document_details(document)
+            serializer = SRIDocumentSerializer(updated_doc)
+            
+            return Response({
+                'message': 'Detalles actualizados correctamente',
+                'document': serializer.data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

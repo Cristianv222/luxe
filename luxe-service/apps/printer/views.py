@@ -753,16 +753,25 @@ class PrintReceiptView(APIView):
     
         lines = []
     
-    # Encabezado de la empresa
+# Encabezado de la empresa
         lines.append(settings.get_company_name().center(chars_per_line))
         lines.append(settings.get_company_address().center(chars_per_line))
         lines.append(f"RUC: {settings.get_tax_id()}".center(chars_per_line))
         lines.append("=" * chars_per_line)
     
-    # Información del ticket
-        lines.append("TICKET DE VENTA".center(chars_per_line))
+# Información del ticket
+        # Verificar si hay información de factura electrónica SRI
+        sri_info = order_data.get('sri_info', {})
+        
+        if sri_info and sri_info.get('sri_number'):
+            # Titulo de Factura Electronica
+            lines.append("**FACTURA ELECTRONICA**".center(chars_per_line))
+            lines.append(f"No. {sri_info.get('sri_number', 'N/A')}")
+        else:
+            # Ticket normal
+            lines.append("TICKET DE VENTA".center(chars_per_line))
     
-    # Usar hora del cliente si existe, sino hora local del servidor
+# Usar hora del cliente si existe, sino hora local del servidor
         printed_at_str = order_data.get('printed_at')
         current_time = None
         
@@ -778,7 +787,15 @@ class PrintReceiptView(APIView):
         lines.append(f"Fecha: {current_time.strftime('%d/%m/%Y')}  Hora: {current_time.strftime('%H:%M')}")
         
         lines.append(f"Ticket #: {order_data.get('order_number', 'N/A')}")
-        lines.append(f"Cliente: {order_data.get('customer_name', 'CONSUMIDOR FINAL')}")
+        
+        # Cliente - usar datos del SRI si están disponibles
+        customer_name = sri_info.get('customer_name') or order_data.get('customer_name', 'CONSUMIDOR FINAL')
+        lines.append(f"Cliente: {customer_name}")
+        
+        # Identificación - mostrar si está disponible
+        customer_identification = sri_info.get('customer_identification')
+        if customer_identification and customer_identification != '9999999999999':
+            lines.append(f"CI/RUC: {customer_identification}")
         
         # Mapeo de tipos de orden
         order_type_map = {
@@ -795,7 +812,7 @@ class PrintReceiptView(APIView):
         lines.append(f"TipoOrden: {order_type_display}")
         lines.append("-" * chars_per_line)
 
-    # Encabezado de productos
+# Encabezado de productos
         lines.append(f"{'PRODUCTO':<20}{'CANT':>4}{'PRECIO':>8}{'TOTAL':>10}")
         lines.append("-" * chars_per_line)
     
@@ -862,12 +879,32 @@ class PrintReceiptView(APIView):
     
         lines.append(f"{'Subtotal:':<30} ${subtotal:>10.2f}")
         if tax > 0:
-            lines.append(f"{'IVA:':<30} ${tax:>10.2f}")
+            lines.append(f"{'IVA (15%):':<30} ${tax:>10.2f}")
         if discount > 0:
             lines.append(f"{'Descuento:':<30} -${discount:>10.2f}")
         lines.append("=" * chars_per_line)
         lines.append(f"{'TOTAL:':<30} ${total:>10.2f}")
         lines.append("=" * chars_per_line)
+        
+        # INFORMACIÓN FISCAL SRI - Mostrar si está disponible
+        if sri_info and sri_info.get('access_key'):
+            lines.append("")
+            lines.append("INFORMACION FISCAL".center(chars_per_line))
+            lines.append("-" * chars_per_line)
+            access_key = sri_info.get('access_key', '')
+            # Dividir clave de acceso en 3 líneas para mejor lectura
+            if len(access_key) == 49:  # Clave de acceso estándar del SRI
+                lines.append(f"CLAVE DE ACCESO:")
+                lines.append(access_key[:17])
+                lines.append(access_key[17:34])
+                lines.append(access_key[34:49])
+            else:
+                lines.append(f"Clave: {access_key}")
+            
+            # Mostrar estado de autorización
+            if sri_info.get('authorization_date'):
+                lines.append(f"Aut: {sri_info.get('authorization_date')}")
+            lines.append("-" * chars_per_line)
     
         lines.append("¡GRACIAS POR SU COMPRA!".center(chars_per_line))
         lines.append("*** VUELVA PRONTO ***".center(chars_per_line))
