@@ -1,4 +1,4 @@
-from django.db.models.signals import post_delete, post_save, pre_delete
+from django.db.models.signals import post_delete, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.db import models
 from .models import Order, OrderItem
@@ -111,4 +111,71 @@ def delete_related_payments(sender, instance, **kwargs):
 
     except Exception as e:
         logger.error(f"Error preparando borrado de orden {instance.id}: {e}")
+
+
+@receiver(pre_save, sender=Order)
+def check_status_change_pre_save(sender, instance, **kwargs):
+    """Captura el estado anterior de la orden"""
+    if instance.pk:
+        try:
+            old_instance = Order.objects.get(pk=instance.pk)
+            instance._old_status = old_instance.status
+        except Order.DoesNotExist:
+            instance._old_status = None
+    else:
+        instance._old_status = None
+
+@receiver(post_save, sender=Order)
+def emit_invoice_on_complete_post_save(sender, instance, created, **kwargs):
+    """Emite factura electrónica cuando la orden pasa a estado 'completed'"""
+    
+    # 1. Verificar criterios de activación: Debe ser completed y paid
+    if instance.status != 'completed':
+        return
+        
+    if instance.payment_status != 'paid':
+        return
+
+    # 2. Verificar si es un cambio REAL a completed (o creación directa como completed)
+    was_completed = getattr(instance, '_old_status', None) == 'completed'
+    
+    # Si YA estaba completed y NO es creación, no hacemos nada (evitar duplicados en updates irrelevantes)
+    if not created and was_completed:
+        return 
+
+    # 3. Ejecutar emisión en segundo plano
+    try:
+        import threading
+        
+        def run_emission():
+            try:
+                # Importar aquí para evitar referencias circulares
+                from apps.sri.services import SRIIntegrationService
+                from apps.orders.models import Order
+                import time
+                
+                # Pausa breve para asegurar que el commit de transacción DB haya ocurrido
+                time.sleep(1)
+                
+                # Recargar orden fresca
+                try:
+                    order_fresh = Order.objects.get(id=instance.id)
+                except Order.DoesNotExist:
+                    return
+
+                # Verificar si YA tiene documento SRI para no duplicar
+                if hasattr(order_fresh, 'sri_document'):
+                     return
+
+                logger.info(f"🚀 Iniciando emisión SRI por cambio de estado a COMPLETED: {order_fresh.order_number}")
+                SRIIntegrationService.emit_invoice(order_fresh)
+            except Exception as e:
+                logger.error(f"Error en emisión automática SRI (Signal): {e}")
+
+        # Iniciar thread
+        t = threading.Thread(target=run_emission, daemon=True)
+        t.start()
+        
+    except Exception as e:
+        logger.error(f"Error iniciando thread SRI: {e}")
 

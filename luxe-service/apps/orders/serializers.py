@@ -520,18 +520,18 @@ class OrderCreateSerializer(serializers.Serializer):
         # ========================================
         # EMITIR FACTURA AL SRI EN SEGUNDO PLANO
         # ========================================
-        # Solo si la orden es de POS (completed y paid)
-        # Se ejecuta en segundo plano para NO bloquear la respuesta al usuario
-        if order.payment_status == 'paid' and order.status == 'completed':
-            import threading
-            # Ejecutar en thread separado para no bloquear
-            thread = threading.Thread(
-                target=self._emit_invoice_to_sri_async,
-                args=(order.id,),
-                daemon=True
-            )
-            thread.start()
-            logger.info(f'📄 Emisión de factura SRI iniciada en segundo plano para orden {order.order_number}')
+        # COMENTADO: El usuario solicitó que NO se emita automáticamente al crear.
+        # Se moverá a una señal post_save cuando el estado cambie a "completed".
+        # 
+        # if order.payment_status == 'paid' and order.status == 'completed':
+        #     import threading
+        #     thread = threading.Thread(
+        #         target=self._emit_invoice_to_sri_async,
+        #         args=(order.id,),
+        #         daemon=True
+        #     )
+        #     thread.start()
+        #     logger.info(f'📄 Emisión de factura SRI iniciada en segundo plano para orden {order.order_number}')
         
         return order
     

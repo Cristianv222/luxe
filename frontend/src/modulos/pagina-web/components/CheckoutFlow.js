@@ -199,7 +199,7 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
                     extra_ids: item.selectedExtras?.map(e => e.id)
                 })),
                 order_type: 'delivery',
-                payment_method: 'transfer',
+                payment_method: paymentMethod === 'transferencia' ? 'transfer' : 'cash',
                 source: 'web',
                 discount_code: discountInfo ? discountInfo.code : null,
                 delivery_info: {
@@ -519,12 +519,56 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
                         {/* MÉTODO DE PAGO */}
                         <div style={{ marginTop: '30px' }}>
                             <h4 style={{ marginBottom: '15px', fontSize: '16px' }}>Método de Pago</h4>
-                            <div style={{ padding: '15px', border: '1px solid #cbd5e1', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#f8fafc' }}>
-                                <input type="radio" checked readOnly style={{ accentColor: '#2C2C2C' }} />
-                                <div>
-                                    <strong>Transferencia Bancaria</strong>
-                                    <p style={{ fontSize: '12px', color: '#666', margin: 0 }}>* Único método disponible para compras web</p>
-                                </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {/* Opción 1: Transferencia */}
+                                <label style={{
+                                    padding: '15px',
+                                    border: `1px solid ${paymentMethod === 'transferencia' ? '#2C2C2C' : '#cbd5e1'}`,
+                                    borderRadius: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    backgroundColor: paymentMethod === 'transferencia' ? '#f0f9ff' : 'white',
+                                    cursor: 'pointer'
+                                }}>
+                                    <input
+                                        type="radio"
+                                        name="paymentMethod"
+                                        value="transferencia"
+                                        checked={paymentMethod === 'transferencia'}
+                                        onChange={(e) => setPaymentMethod(e.target.value)}
+                                        style={{ accentColor: '#2C2C2C' }}
+                                    />
+                                    <div>
+                                        <strong>Transferencia Bancaria</strong>
+                                        <p style={{ fontSize: '12px', color: '#666', margin: 0 }}>Debes enviar el comprobante por WhatsApp</p>
+                                    </div>
+                                </label>
+
+                                {/* Opción 2: Efectivo */}
+                                <label style={{
+                                    padding: '15px',
+                                    border: `1px solid ${paymentMethod === 'efectivo' ? '#2C2C2C' : '#cbd5e1'}`,
+                                    borderRadius: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    backgroundColor: paymentMethod === 'efectivo' ? '#f0f9ff' : 'white',
+                                    cursor: 'pointer'
+                                }}>
+                                    <input
+                                        type="radio"
+                                        name="paymentMethod"
+                                        value="efectivo"
+                                        checked={paymentMethod === 'efectivo'}
+                                        onChange={(e) => setPaymentMethod(e.target.value)}
+                                        style={{ accentColor: '#2C2C2C' }}
+                                    />
+                                    <div>
+                                        <strong>Efectivo</strong>
+                                        <p style={{ fontSize: '12px', color: '#666', margin: 0 }}>Pago contra entrega</p>
+                                    </div>
+                                </label>
                             </div>
                         </div>
 
