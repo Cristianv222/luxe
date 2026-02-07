@@ -20,6 +20,13 @@ const Coleccion = () => {
     const [subCategories, setSubCategories] = useState([]);
     const [activeSubCategory, setActiveSubCategory] = useState(null);
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 20;
+
+    // Search State
+    const [searchQuery, setSearchQuery] = useState('');
+
     // Alert Modal State
     const [alertModal, setAlertModal] = useState({
         show: false,
@@ -38,6 +45,19 @@ const Coleccion = () => {
 
     // Product detail modal
     const [selectedProduct, setSelectedProduct] = useState(null);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    const handleNextImage = () => {
+        if (!selectedProduct) return;
+        const images = [selectedProduct.image, ...(selectedProduct.images ? selectedProduct.images.map(img => img.image) : [])].filter(Boolean);
+        setCurrentImageIndex((prev) => (prev + 1) % images.length);
+    };
+
+    const handlePrevImage = () => {
+        if (!selectedProduct) return;
+        const images = [selectedProduct.image, ...(selectedProduct.images ? selectedProduct.images.map(img => img.image) : [])].filter(Boolean);
+        setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -64,11 +84,45 @@ const Coleccion = () => {
     // Handle category change
     const handleCategoryChange = (catId) => {
         setActiveCategory(catId);
+        setSearchQuery(''); // Clear search when changing category
         const category = categoriesData.find(c => c.id === catId);
         if (category) {
             setProducts(category.products || []);
             setSubCategories(category.subcategories || []);
             setActiveSubCategory(null); // Reset subcategory filter
+            setCurrentPage(1); // Reset pagination
+        }
+    };
+
+    // Handle Search
+    const handleSearch = (e) => {
+        const query = e.target.value.toLowerCase();
+        setSearchQuery(query);
+        setCurrentPage(1); // Reset pagination
+
+        if (query.trim() === '') {
+            // Restore current category items
+            if (activeCategory) {
+                const category = categoriesData.find(c => c.id === activeCategory);
+                if (category) {
+                    setProducts(category.products || []);
+                }
+            }
+        } else {
+            // Flatten all products from all categories for global search
+            const allProducts = categoriesData.flatMap(c => c.products || []);
+            // Filter unique products by ID to avoid duplicates if any
+            const uniqueProducts = Array.from(new Map(allProducts.map(item => [item.id, item])).values());
+
+            const filtered = uniqueProducts.filter(p =>
+                p.name.toLowerCase().includes(query) ||
+                (p.description && p.description.toLowerCase().includes(query))
+            );
+            setProducts(filtered);
+            // Optionally, we could unset activeCategory to indicate global result, 
+            // but keeping it active might be less confusing visually unless we want to dim tabs.
+            // Let's reset activeSubCategory since it might not apply to global results
+            setActiveSubCategory(null);
         }
     };
 
@@ -80,7 +134,10 @@ const Coleccion = () => {
         showAlert('success', 'Producto agregado', `${product.name} se agregó a tu carrito.`);
     };
 
-    const openProductDetail = (product) => setSelectedProduct(product);
+    const openProductDetail = (product) => {
+        setSelectedProduct(product);
+        setCurrentImageIndex(0);
+    };
     const closeProductDetail = () => setSelectedProduct(null);
 
     const isOutOfStock = (product) => product.track_stock && product.stock_quantity <= 0;
@@ -146,25 +203,57 @@ const Coleccion = () => {
                     <div className="section-header">
                         <h2 className="section-title">Nuestra Colección</h2>
                         <div className="divider-line"></div>
-                    </div>
 
-                    {/* TABS DE CATEGORÍAS */}
-                    <div className="tabs-container">
-                        <div className="tabs-scroll">
-                            {categoriesData.map(cat => (
-                                <button
-                                    key={cat.id}
-                                    className={`tab-btn ${activeCategory === cat.id ? 'active' : ''}`}
-                                    onClick={() => handleCategoryChange(cat.id)}
-                                >
-                                    {cat.name}
-                                </button>
-                            ))}
+                        {/* Search Bar */}
+                        <div style={{ maxWidth: '400px', margin: '20px auto 10px', position: 'relative' }}>
+                            <input
+                                type="text"
+                                placeholder="Buscar productos..."
+                                value={searchQuery}
+                                onChange={handleSearch}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 20px',
+                                    paddingRight: '40px',
+                                    borderRadius: '30px',
+                                    border: '1px solid #E4D8CB',
+                                    fontSize: '16px',
+                                    outline: 'none',
+                                    backgroundColor: '#fff',
+                                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                                    transition: 'all 0.3s'
+                                }}
+                            />
+                            <div style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', color: '#999' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M11 19C15.4183 19 19 15.4183 19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M21 21L16.65 16.65" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            </div>
                         </div>
                     </div>
 
+                    {/* TABS DE CATEGORÍAS */}
+                    {/* TABS DE CATEGORÍAS - Hide if searching? Maybe just keep them but disable active state visual if searching globally */}
+                    {!searchQuery && (
+                        <div className="tabs-container">
+                            <div className="tabs-scroll">
+                                {categoriesData.map(cat => (
+                                    <button
+                                        key={cat.id}
+                                        className={`tab-btn ${activeCategory === cat.id ? 'active' : ''}`}
+                                        onClick={() => handleCategoryChange(cat.id)}
+                                    >
+                                        {cat.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* TABS DE SUBCATEGORÍAS - ESTILO PILL */}
-                    {subCategories.length > 0 && (
+                    {/* TABS DE SUBCATEGORÍAS - Hide if searching */}
+                    {!searchQuery && subCategories.length > 0 && (
                         <div className="subtabs-container" style={{
                             display: 'flex',
                             justifyContent: 'center',
@@ -174,7 +263,7 @@ const Coleccion = () => {
                         }}>
                             <button
                                 className={`subtab-btn ${activeSubCategory === null ? 'active' : ''}`}
-                                onClick={() => setActiveSubCategory(null)}
+                                onClick={() => { setActiveSubCategory(null); setCurrentPage(1); }}
                                 style={{
                                     padding: '8px 16px',
                                     borderRadius: '20px',
@@ -191,7 +280,7 @@ const Coleccion = () => {
                             {subCategories.map(sub => (
                                 <button
                                     key={sub.id}
-                                    onClick={() => setActiveSubCategory(sub.id)}
+                                    onClick={() => { setActiveSubCategory(sub.id); setCurrentPage(1); }}
                                     style={{
                                         padding: '8px 16px',
                                         borderRadius: '20px',
@@ -214,6 +303,8 @@ const Coleccion = () => {
                         {products.length > 0 ? (
                             (() => {
                                 const filtered = products.filter(p => {
+                                    if (searchQuery) return true; // Already filtered by handleSearch logic
+
                                     // Products are already filtered by Category (via hierarchy)
                                     // Just need to filter by SubCategory if active
 
@@ -226,44 +317,115 @@ const Coleccion = () => {
                                 if (filtered.length === 0) {
                                     return (
                                         <div className="no-products">
-                                            No hay productos disponibles en esta categoría actualmente.
+                                            {searchQuery
+                                                ? `No se encontraron productos para "${searchQuery}"`
+                                                : "No hay productos disponibles en esta categoría actualmente."
+                                            }
                                         </div>
                                     );
                                 }
 
-                                return filtered.map(product => {
-                                    const outOfStock = isOutOfStock(product);
+                                // Pagination Logic
+                                const indexOfLastItem = currentPage * itemsPerPage;
+                                const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+                                const currentItems = filtered.slice(indexOfFirstItem, indexOfLastItem);
+                                const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
-                                    return (
-                                        <div key={product.id} className="product-card">
-                                            {outOfStock && (
-                                                <div className="ribbon-badge">AGOTADO</div>
-                                            )}
-                                            <div className="product-image-container" onClick={() => openProductDetail(product)} style={{ cursor: 'pointer' }}>
-                                                {product.image ? (
-                                                    <img src={product.image} alt={product.name} className="product-image" />
-                                                ) : (
-                                                    <div className="placeholder-image">{product.name.charAt(0)}</div>
-                                                )}
-                                                {!outOfStock && (
-                                                    <div className="quick-add-btn" onClick={(e) => { e.stopPropagation(); addToCart(product); }}>+</div>
-                                                )}
+                                return (
+                                    <>
+                                        {currentItems.map(product => {
+                                            const outOfStock = isOutOfStock(product);
+                                            return (
+                                                <div key={product.id} className="product-card">
+                                                    {outOfStock && (
+                                                        <div className="ribbon-badge">AGOTADO</div>
+                                                    )}
+                                                    <div className="product-image-container" onClick={() => openProductDetail(product)} style={{ cursor: 'pointer' }}>
+                                                        {product.image ? (
+                                                            <img src={product.image} alt={product.name} className="product-image" />
+                                                        ) : (
+                                                            <div className="placeholder-image">{product.name.charAt(0)}</div>
+                                                        )}
+                                                        {!outOfStock && (
+                                                            <div className="quick-add-btn" onClick={(e) => { e.stopPropagation(); addToCart(product); }}>+</div>
+                                                        )}
+                                                    </div>
+                                                    <div className="product-info">
+                                                        <h3 className="product-name">{product.name}</h3>
+                                                        <p className="product-price">
+                                                            ${parseFloat(product.price).toFixed(2)}
+                                                            {product.tax_rate > 0 && <span style={{ fontSize: '0.75rem', color: '#888', marginLeft: '5px' }}>+ {product.tax_rate}% IVA</span>}
+                                                        </p>
+                                                        {product.track_stock && (
+                                                            <p className={`product-stock ${outOfStock ? 'out-of-stock' : ''}`}>
+                                                                {outOfStock ? 'Sin stock' : `Stock: ${product.stock_quantity} unidades`}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+
+                                        {/* Pagination Controls */}
+                                        {totalPages > 1 && (
+                                            <div style={{
+                                                gridColumn: '1 / -1',
+                                                display: 'flex',
+                                                justifyContent: 'center',
+                                                gap: '10px',
+                                                marginTop: '40px'
+                                            }}>
+                                                <button
+                                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                                    disabled={currentPage === 1}
+                                                    style={{
+                                                        padding: '10px 20px',
+                                                        border: '1px solid #E4D8CB',
+                                                        background: currentPage === 1 ? '#f5f5f5' : 'white',
+                                                        color: currentPage === 1 ? '#ccc' : '#2C2C2C',
+                                                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                                                        borderRadius: '8px'
+                                                    }}
+                                                >
+                                                    &laquo; Anterior
+                                                </button>
+
+                                                {[...Array(totalPages)].map((_, i) => (
+                                                    <button
+                                                        key={i + 1}
+                                                        onClick={() => setCurrentPage(i + 1)}
+                                                        style={{
+                                                            width: '40px',
+                                                            height: '40px',
+                                                            border: '1px solid #E4D8CB',
+                                                            background: currentPage === i + 1 ? '#2C2C2C' : 'white',
+                                                            color: currentPage === i + 1 ? 'white' : '#2C2C2C',
+                                                            cursor: 'pointer',
+                                                            borderRadius: '8px'
+                                                        }}
+                                                    >
+                                                        {i + 1}
+                                                    </button>
+                                                ))}
+
+                                                <button
+                                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                                    disabled={currentPage === totalPages}
+                                                    style={{
+                                                        padding: '10px 20px',
+                                                        border: '1px solid #E4D8CB',
+                                                        background: currentPage === totalPages ? '#f5f5f5' : 'white',
+                                                        color: currentPage === totalPages ? '#ccc' : '#2C2C2C',
+                                                        cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                                                        borderRadius: '8px'
+                                                    }}
+                                                >
+                                                    Siguiente &raquo;
+                                                </button>
                                             </div>
-                                            <div className="product-info">
-                                                <h3 className="product-name">{product.name}</h3>
-                                                <p className="product-price">
-                                                    ${parseFloat(product.price).toFixed(2)}
-                                                    {product.tax_rate > 0 && <span style={{ fontSize: '0.75rem', color: '#888', marginLeft: '5px' }}>+ {product.tax_rate}% IVA</span>}
-                                                </p>
-                                                {product.track_stock && (
-                                                    <p className={`product-stock ${outOfStock ? 'out-of-stock' : ''}`}>
-                                                        {outOfStock ? 'Sin stock' : `Stock: ${product.stock_quantity} unidades`}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                });
+                                        )}
+                                    </>
+                                );
                             })()
                         ) : (
                             <div className="no-products">
@@ -280,12 +442,60 @@ const Coleccion = () => {
                     <div className="product-modal" onClick={(e) => e.stopPropagation()}>
                         <button className="modal-close-btn" onClick={closeProductDetail}>×</button>
                         <div className="modal-content-grid">
-                            <div className="modal-image-section">
-                                {selectedProduct.image ? (
-                                    <img src={selectedProduct.image} alt={selectedProduct.name} className="modal-product-image" />
-                                ) : (
-                                    <div className="modal-placeholder-image">{selectedProduct.name.charAt(0)}</div>
-                                )}
+                            <div className="modal-image-section" style={{ position: 'relative' }}>
+                                {(() => {
+                                    const images = [selectedProduct.image, ...(selectedProduct.images ? selectedProduct.images.map(img => img.image) : [])].filter(Boolean);
+                                    if (images.length === 0) {
+                                        return <div className="modal-placeholder-image">{selectedProduct.name.charAt(0)}</div>;
+                                    }
+                                    const currentSrc = images[currentImageIndex];
+                                    const finalSrc = currentSrc.startsWith('http') ? currentSrc : `${process.env.REACT_APP_LUXE_SERVICE || ''}${currentSrc}`;
+
+                                    return (
+                                        <>
+                                            <img src={finalSrc} alt={selectedProduct.name} className="modal-product-image" />
+
+                                            {images.length > 1 && (
+                                                <>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handlePrevImage(); }}
+                                                        style={{
+                                                            position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)',
+                                                            background: 'rgba(255,255,255,0.8)', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                        }}
+                                                    >
+                                                        ❮
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleNextImage(); }}
+                                                        style={{
+                                                            position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                                                            background: 'rgba(255,255,255,0.8)', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                        }}
+                                                    >
+                                                        ❯
+                                                    </button>
+
+                                                    <div style={{ position: 'absolute', bottom: '10px', left: '0', right: '0', display: 'flex', justifyContent: 'center', gap: '5px' }}>
+                                                        {images.map((_, idx) => (
+                                                            <div
+                                                                key={idx}
+                                                                style={{
+                                                                    width: '8px', height: '8px', borderRadius: '50%',
+                                                                    background: idx === currentImageIndex ? '#2C2C2C' : 'rgba(255,255,255,0.6)',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                                onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(idx); }}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </>
+                                    );
+                                })()}
                             </div>
                             <div className="modal-info-section">
                                 <h2 className="modal-product-name">{selectedProduct.name}</h2>

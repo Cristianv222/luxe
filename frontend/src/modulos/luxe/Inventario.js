@@ -52,8 +52,10 @@ const Inventario = () => {
         is_available: true,
         track_stock: false,
         stock_quantity: 0,
-        min_stock_alert: 5
+        min_stock_alert: 5,
+        gallery_images: []
     });
+    const [existingImages, setExistingImages] = useState([]); // For edit mode
     const [editingProduct, setEditingProduct] = useState(null);
 
     // Configuración Global
@@ -171,6 +173,25 @@ const Inventario = () => {
         setNewProduct(prev => ({ ...prev, image: e.target.files[0] }));
     };
 
+    const handleGalleryImagesChange = (e) => {
+        setNewProduct(prev => ({ ...prev, gallery_images: Array.from(e.target.files) }));
+    };
+
+    const handleDeleteGalleryImage = async (imageId) => {
+        if (!window.confirm("¿Eliminar imagen de galería?")) return;
+        try {
+            await api.delete(`/api/menu/products/${editingProduct.id}/delete_image/`, {
+                data: { image_id: imageId },
+                baseURL: process.env.REACT_APP_LUXE_SERVICE
+            });
+            // Update local state
+            setExistingImages(prev => prev.filter(img => img.id !== imageId));
+        } catch (err) {
+            console.error(err);
+            alert("Error al eliminar imagen");
+        }
+    };
+
     const handleEditProduct = (product) => {
         setEditingProduct(product);
         setNewProduct({
@@ -195,8 +216,10 @@ const Inventario = () => {
             is_available: product.is_available !== undefined ? product.is_available : true,
             track_stock: product.track_stock || false,
             stock_quantity: product.stock_quantity || 0,
-            min_stock_alert: product.min_stock_alert || 5
+            min_stock_alert: product.min_stock_alert || 5,
+            gallery_images: []
         });
+        setExistingImages(product.images || []);
         // Asegurar que las categorías y subcategorías estén cargadas
         fetchCategories();
         if (subcategories.length === 0) fetchSubCategories();
@@ -281,6 +304,12 @@ const Inventario = () => {
         }
         if (newProduct.image instanceof File) {
             formData.append('image', newProduct.image);
+        }
+
+        if (newProduct.gallery_images && newProduct.gallery_images.length > 0) {
+            newProduct.gallery_images.forEach(file => {
+                formData.append('gallery_images', file);
+            });
         }
 
         if (!editingProduct) {
@@ -624,8 +653,10 @@ const Inventario = () => {
                                 name: '', code: '', barcode: '', description: '', price: '', cost_price: '', last_purchase_cost: '', tax_rate: '15',
                                 category: '', line: '', subgroup: '', image: null, is_active: true, is_available: true,
                                 track_stock: false, stock_quantity: 0, min_stock_alert: 5,
-                                unit_measure: 'Unidad', accounting_sales_account: '', accounting_cost_account: '', accounting_inventory_account: ''
+                                unit_measure: 'Unidad', accounting_sales_account: '', accounting_cost_account: '', accounting_inventory_account: '',
+                                gallery_images: []
                             });
+                            setExistingImages([]);
                             // Asegurar que las categorías estén cargadas
                             fetchCategories();
                             fetchSubCategories();
@@ -966,8 +997,49 @@ const Inventario = () => {
                             </div>
 
                             <div className="form-group-boutique" style={{ marginTop: '10px' }}>
-                                <label>Imagen</label>
-                                <input type="file" onChange={handleImageChange} />
+                                <label>Imagen de Portada (Principal)</label>
+                                <input type="file" onChange={handleImageChange} accept="image/*" />
+                                <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
+                                    Esta es la imagen que se mostrará en las listas de productos.
+                                </small>
+                            </div>
+
+                            <div className="form-group-boutique" style={{ marginTop: '15px' }}>
+                                <label>Otras Imágenes (Galería)</label>
+                                <input
+                                    type="file"
+                                    multiple
+                                    onChange={handleGalleryImagesChange}
+                                    accept="image/*"
+                                />
+                                <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
+                                    Seleccione varias imágenes para mostrar en el detalle del producto.
+                                </small>
+
+                                {/* Preview / List of existing images */}
+                                {existingImages.length > 0 && (
+                                    <div style={{ marginTop: '10px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                        {existingImages.map(img => (
+                                            <div key={img.id} style={{ position: 'relative', width: '80px', height: '80px', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
+                                                <img
+                                                    src={img.image.startsWith('http') ? img.image : `${process.env.REACT_APP_LUXE_SERVICE}${img.image}`}
+                                                    alt="Gallery"
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteGalleryImage(img.id)}
+                                                    style={{
+                                                        position: 'absolute', top: 0, right: 0, background: 'rgba(255,0,0,0.7)',
+                                                        color: 'white', border: 'none', padding: '2px 5px', cursor: 'pointer', fontSize: '12px'
+                                                    }}
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="modal-footer-boutique" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', borderTop: '1px solid #E4D8CB', paddingTop: '1.5rem' }}>

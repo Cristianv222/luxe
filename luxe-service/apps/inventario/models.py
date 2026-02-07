@@ -101,7 +101,37 @@ class SubCategory(models.Model):
         unique_together = ['category', 'slug']
     
     def __str__(self):
-        return f'{self.category.name} > {self.name}'
+        return f"{self.category.name} - {self.name}"
+
+
+def product_gallery_image_path(instance, filename):
+    """Genera la ruta para las imágenes de la galería del producto"""
+    ext = filename.split('.')[-1]
+    filename = f'{uuid.uuid4()}.{ext}'
+    return os.path.join('inventario', 'products', str(instance.product.id), 'gallery', filename)
+
+
+class ProductImage(models.Model):
+    """Imágenes adicionales para la galería del producto"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(
+        'Product',
+        on_delete=models.CASCADE,
+        related_name='images',
+        verbose_name='Producto'
+    )
+    image = models.ImageField(
+        upload_to=product_gallery_image_path,
+        verbose_name='Imagen'
+    )
+    is_active = models.BooleanField(default=True, verbose_name='Activa')
+    display_order = models.PositiveIntegerField(default=0, verbose_name='Orden')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Imagen de Producto'
+        verbose_name_plural = 'Imágenes de Producto'
+        ordering = ['display_order', 'created_at']
 
 
 class Product(models.Model):

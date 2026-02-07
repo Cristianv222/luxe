@@ -141,34 +141,46 @@ class SubCategoryViewSet(viewsets.ModelViewSet):
     lookup_field = 'pk'
 
 
+from .models import Category, Product, Size, Extra, Combo, ComboProduct, SubCategory, ProductImage # Added ProductImage
+from .serializers import (
+    CategorySerializer,
+    ProductListSerializer,
+    ProductDetailSerializer,
+    ProductCreateUpdateSerializer,
+    SubCategorySerializer,
+    SizeSerializer,
+    SizeCreateUpdateSerializer,
+    ExtraSerializer,
+    ExtraCreateUpdateSerializer,
+    ComboListSerializer,
+    ComboDetailSerializer,
+    ComboCreateUpdateSerializer,
+    ProductImageSerializer, # Added ProductImageSerializer
+)
+
+# ... (Previous imports remain same)
+
 class ProductViewSet(viewsets.ModelViewSet):
     """
     ViewSet para productos del menú
-    
-    list: Lista todos los productos
-    retrieve: Obtiene detalle de un producto
-    create: Crea un nuevo producto
-    update: Actualiza un producto
-    partial_update: Actualiza parcialmente un producto
-    destroy: Elimina un producto
     """
     queryset = Product.objects.all()
-    permission_classes = [AllowAny]
+    permissions_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     filterset_fields = ['category', 'subcategory', 'is_active', 'is_available', 'is_featured', 'is_new']
     search_fields = ['name', 'description', 'ingredients', 'code', 'barcode']
     ordering_fields = ['display_order', 'name', 'price', 'created_at']
     ordering = ['category__display_order', 'display_order', 'name']
-    lookup_field = 'pk'  # ← CAMBIADO de 'slug' a 'pk'
+    lookup_field = 'pk'
     
     def get_queryset(self):
         """Optimiza queries y filtra según contexto"""
         queryset = super().get_queryset().select_related('category').prefetch_related(
             'sizes',
-            'extras'
+            'extras',
+            'images'  # Prefetch images
         )
-        
-        # Filtros adicionales por query params
+        # ... (Rest of get_queryset logic remains the same)
         min_price = self.request.query_params.get('min_price')
         max_price = self.request.query_params.get('max_price')
         
@@ -177,7 +189,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         if max_price:
             queryset = queryset.filter(price__lte=max_price)
         
-        # Filtro de stock para POS
         in_stock = self.request.query_params.get('in_stock')
         if in_stock == 'true':
             queryset = queryset.filter(Q(track_stock=False) | Q(stock_quantity__gt=0))
@@ -185,12 +196,56 @@ class ProductViewSet(viewsets.ModelViewSet):
         return queryset
     
     def get_serializer_class(self):
-        """Retorna el serializer apropiado según la acción"""
         if self.action == 'list':
             return ProductListSerializer
         elif self.action in ['create', 'update', 'partial_update']:
             return ProductCreateUpdateSerializer
         return ProductDetailSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        
+        # Handle extra images
+        product = serializer.instance
+        images = request.FILES.getlist('gallery_images')
+        for image in images:
+            ProductImage.objects.create(product=product, image=image)
+            
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        # Handle extra images
+        images = request.FILES.getlist('gallery_images')
+        for image in images:
+            ProductImage.objects.create(product=instance, image=image)
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            instance._prefetched_objects_cache = {}
+
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['delete'])
+    def delete_image(self, request, pk=None):
+        """Delete specific gallery image"""
+        image_id = request.data.get('image_id')
+        if not image_id:
+            return Response({'error': 'image_id required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            image = ProductImage.objects.get(id=image_id, product_id=pk)
+            image.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except ProductImage.DoesNotExist:
+            return Response({'error': 'Image not found'}, status=status.HTTP_404_NOT_FOUND)
     
     @action(detail=False, methods=['get'])
     def featured(self, request):
@@ -512,7 +567,7 @@ class MenuViewSet(viewsets.ViewSet):
             products = category.products.filter(
                 is_active=True,
                 is_available=True
-            ).prefetch_related('sizes', 'extras').order_by('display_order', 'name')
+            ).prefetch_related('sizes', 'extras', 'images').order_by('display_order', 'name')
             
             category_data['products'] = ProductListSerializer(
                 products,

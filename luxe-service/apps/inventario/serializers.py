@@ -1,5 +1,13 @@
 from rest_framework import serializers
-from .models import Category, Product, Size, Extra, Combo, ComboProduct, SubCategory
+from .models import Category, Product, Size, Extra, Combo, ComboProduct, SubCategory, ProductImage
+
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    """Serializer para imágenes de producto"""
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image', 'is_active', 'display_order', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -78,12 +86,13 @@ class ProductListSerializer(serializers.ModelSerializer):
     subcategory_name = serializers.CharField(source='subcategory.name', read_only=True)
     has_sizes = serializers.SerializerMethodField()
     has_extras = serializers.SerializerMethodField()
+    images = ProductImageSerializer(many=True, read_only=True)
     
     class Meta:
         model = Product
         fields = [
             'id', 'category', 'category_name', 'subcategory', 'subcategory_name', 'name', 'slug', 'code', 'barcode',
-            'description', 'image', 'price', 'cost_price', 'tax_rate', 'calories',
+            'description', 'image', 'images', 'price', 'cost_price', 'tax_rate', 'calories',
             'is_active', 'is_available', 'is_featured', 'is_new',
             'prep_time', 'display_order', 'has_sizes', 'has_extras',
             'track_stock', 'stock_quantity', 'min_stock_alert',
@@ -107,13 +116,14 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     subcategory = SubCategorySerializer(read_only=True)
     sizes = SizeSerializer(many=True, read_only=True)
     extras = ExtraSerializer(many=True, read_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
     is_available_now = serializers.SerializerMethodField()
     
     class Meta:
         model = Product
         fields = [
             'id', 'category', 'subcategory', 'name', 'slug', 'code', 'barcode', 'description',
-            'image', 'price', 'cost_price', 'last_purchase_cost', 'tax_rate', 'calories',
+            'image', 'images', 'price', 'cost_price', 'last_purchase_cost', 'tax_rate', 'calories',
             'ingredients', 'allergens',
             'is_active', 'is_available', 'is_featured', 'is_new',
             'prep_time', 'display_order', 'sizes', 'extras',
@@ -131,11 +141,14 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
 class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer para crear/actualizar productos"""
+    # Imágenes adicionales se manejarán en la vista: request.FILES.getlist('gallery_images')
+    images = ProductImageSerializer(many=True, read_only=True)
+    
     class Meta:
         model = Product
-        model = Product
         fields = [
-            'category', 'subcategory', 'name', 'slug', 'code', 'barcode', 'description', 'image',
+            'category', 'subcategory', 'name', 'slug', 'code', 'barcode', 'description', 
+            'image', 'images',
             'price', 'cost_price', 'last_purchase_cost', 'tax_rate', 
             'calories', 'ingredients', 'allergens',
             'is_active', 'is_available', 'is_featured', 'is_new',
