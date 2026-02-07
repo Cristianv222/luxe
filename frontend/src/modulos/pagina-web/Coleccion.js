@@ -14,9 +14,11 @@ const Coleccion = () => {
     const { user } = useAuth();
     const { cart, addToCart: contextAddToCart, isCartOpen, setIsCartOpen, toggleCart } = useCart();
     const navigate = useNavigate();
-    const [categories, setCategories] = useState([]);
-    const [products, setProducts] = useState([]);
+    const [categoriesData, setCategoriesData] = useState([]); // Stores full menu data
+    const [products, setProducts] = useState([]); // Currently displayed products
     const [activeCategory, setActiveCategory] = useState(null);
+    const [subCategories, setSubCategories] = useState([]);
+    const [activeSubCategory, setActiveSubCategory] = useState(null);
 
     // Alert Modal State
     const [alertModal, setAlertModal] = useState({
@@ -40,22 +42,38 @@ const Coleccion = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const catResponse = await api.get('api/menu/categories/', { baseURL: '/api/luxe' });
-                const cats = catResponse.data.results || catResponse.data || [];
-                const activeCats = cats.filter(c => c.is_active);
-                setCategories(activeCats);
-                if (activeCats.length > 0) setActiveCategory(activeCats[0].id);
+                // Use FULL endpoint to get hierarchy: categories -> products
+                const response = await api.get('api/menu/menu/full/', { baseURL: '/api/luxe' });
+                const data = response.data || [];
 
-                const prodResponse = await api.get('api/menu/products/', { baseURL: '/api/luxe' });
-                const prods = prodResponse.data.results || prodResponse.data || [];
-                // Mostrar TODOS los productos activos (no solo destacados)
-                setProducts(prods.filter(p => p.is_active));
+                setCategoriesData(data);
+
+                if (data.length > 0) {
+                    setActiveCategory(data[0].id);
+                    setProducts(data[0].products || []);
+                    // Subcategories also available in data[0].subcategories
+                    setSubCategories(data[0].subcategories || []);
+                }
             } catch (err) {
                 console.error("Error loading data:", err);
             }
         };
         fetchData();
     }, []);
+
+    // Handle category change
+    const handleCategoryChange = (catId) => {
+        setActiveCategory(catId);
+        const category = categoriesData.find(c => c.id === catId);
+        if (category) {
+            setProducts(category.products || []);
+            setSubCategories(category.subcategories || []);
+            setActiveSubCategory(null); // Reset subcategory filter
+        }
+    };
+
+    // No need for separate subcategory effect anymore as it is handled in handleCategoryChange
+
 
     const addToCart = (product) => {
         contextAddToCart(product);
@@ -133,11 +151,11 @@ const Coleccion = () => {
                     {/* TABS DE CATEGORÍAS */}
                     <div className="tabs-container">
                         <div className="tabs-scroll">
-                            {categories.map(cat => (
+                            {categoriesData.map(cat => (
                                 <button
                                     key={cat.id}
                                     className={`tab-btn ${activeCategory === cat.id ? 'active' : ''}`}
-                                    onClick={() => setActiveCategory(cat.id)}
+                                    onClick={() => handleCategoryChange(cat.id)}
                                 >
                                     {cat.name}
                                 </button>
@@ -145,13 +163,64 @@ const Coleccion = () => {
                         </div>
                     </div>
 
+                    {/* TABS DE SUBCATEGORÍAS - ESTILO PILL */}
+                    {subCategories.length > 0 && (
+                        <div className="subtabs-container" style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            gap: '10px',
+                            marginBottom: '30px',
+                            flexWrap: 'wrap'
+                        }}>
+                            <button
+                                className={`subtab-btn ${activeSubCategory === null ? 'active' : ''}`}
+                                onClick={() => setActiveSubCategory(null)}
+                                style={{
+                                    padding: '8px 16px',
+                                    borderRadius: '20px',
+                                    border: '1px solid #E4D8CB',
+                                    background: activeSubCategory === null ? '#E4D8CB' : 'transparent',
+                                    color: activeSubCategory === null ? 'white' : '#666',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                Todo
+                            </button>
+                            {subCategories.map(sub => (
+                                <button
+                                    key={sub.id}
+                                    onClick={() => setActiveSubCategory(sub.id)}
+                                    style={{
+                                        padding: '8px 16px',
+                                        borderRadius: '20px',
+                                        border: '1px solid #E4D8CB',
+                                        background: activeSubCategory === sub.id ? '#E4D8CB' : 'transparent',
+                                        color: activeSubCategory === sub.id ? 'white' : '#666',
+                                        cursor: 'pointer',
+                                        fontSize: '0.9rem',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {sub.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                     {/* GRID DE PRODUCTOS */}
                     <div className="product-grid">
                         {products.length > 0 ? (
                             (() => {
                                 const filtered = products.filter(p => {
-                                    const prodCatId = (typeof p.category === 'object') ? p.category?.id : p.category;
-                                    return !activeCategory || prodCatId === activeCategory;
+                                    // Products are already filtered by Category (via hierarchy)
+                                    // Just need to filter by SubCategory if active
+
+                                    const prodSubId = (typeof p.subcategory === 'object') ? p.subcategory?.id : (p.subcategory || null);
+                                    const matchesSubCategory = !activeSubCategory || prodSubId === activeSubCategory;
+
+                                    return matchesSubCategory;
                                 });
 
                                 if (filtered.length === 0) {

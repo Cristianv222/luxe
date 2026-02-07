@@ -6,12 +6,13 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Prefetch
 
 from core.permissions import require_authentication, require_staff
-from .models import Category, Product, Size, Extra, Combo, ComboProduct
+from .models import Category, Product, Size, Extra, Combo, ComboProduct, SubCategory
 from .serializers import (
     CategorySerializer,
     ProductListSerializer,
     ProductDetailSerializer,
     ProductCreateUpdateSerializer,
+    SubCategorySerializer,
     SizeSerializer,
     SizeCreateUpdateSerializer,
     ExtraSerializer,
@@ -124,6 +125,22 @@ class CategoryViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+
+class SubCategoryViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para subcategorías
+    """
+    queryset = SubCategory.objects.all()
+    serializer_class = SubCategorySerializer
+    permission_classes = [AllowAny]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields = ['category', 'is_active']
+    search_fields = ['name', 'description']
+    ordering_fields = ['display_order', 'name', 'created_at']
+    ordering = ['display_order', 'name']
+    lookup_field = 'pk'
+
+
 class ProductViewSet(viewsets.ModelViewSet):
     """
     ViewSet para productos del menú
@@ -138,7 +155,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
-    filterset_fields = ['category', 'is_active', 'is_available', 'is_featured', 'is_new']
+    filterset_fields = ['category', 'subcategory', 'is_active', 'is_available', 'is_featured', 'is_new']
     search_fields = ['name', 'description', 'ingredients', 'code', 'barcode']
     ordering_fields = ['display_order', 'name', 'price', 'created_at']
     ordering = ['category__display_order', 'display_order', 'name']
@@ -486,21 +503,19 @@ class MenuViewSet(viewsets.ViewSet):
         """
         Obtiene el menú completo con todas las categorías y productos
         """
-        categories = Category.objects.filter(is_active=True).prefetch_related(
-            Prefetch(
-                'products',
-                queryset=Product.objects.filter(
-                    is_active=True,
-                    is_available=True
-                ).prefetch_related('sizes', 'extras')
-            )
-        ).order_by('display_order')
+        categories = Category.objects.filter(is_active=True).order_by('display_order')
         
         data = []
         for category in categories:
             category_data = CategorySerializer(category).data
+            # Explicitly filter active products
+            products = category.products.filter(
+                is_active=True,
+                is_available=True
+            ).prefetch_related('sizes', 'extras').order_by('display_order', 'name')
+            
             category_data['products'] = ProductListSerializer(
-                category.products.all(),
+                products,
                 many=True
             ).data
             data.append(category_data)

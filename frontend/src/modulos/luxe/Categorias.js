@@ -12,7 +12,8 @@ const Categorias = () => {
     const [newCategory, setNewCategory] = useState({
         name: '',
         description: '',
-        image: null
+        image: null,
+        is_active: true
     });
     const [editingCategory, setEditingCategory] = useState(null);
 
@@ -48,7 +49,8 @@ const Categorias = () => {
         setNewCategory({
             name: category.name,
             description: category.description,
-            image: null
+            image: null,
+            is_active: category.is_active !== undefined ? category.is_active : true
         });
         setIsModalOpen(true);
     };
@@ -78,6 +80,7 @@ const Categorias = () => {
         formData.append('name', newCategory.name);
         formData.append('slug', slug);
         formData.append('description', newCategory.description);
+        formData.append('is_active', newCategory.is_active);
         if (newCategory.image instanceof File) {
             formData.append('image', newCategory.image);
         }
@@ -95,7 +98,7 @@ const Categorias = () => {
                 });
             }
             setIsModalOpen(false);
-            setNewCategory({ name: '', description: '', image: null });
+            setNewCategory({ name: '', description: '', image: null, is_active: true });
             setEditingCategory(null);
             fetchCategories();
         } catch (err) {
@@ -113,7 +116,7 @@ const Categorias = () => {
                 <h3 style={{ fontFamily: 'var(--font-serif)', margin: 0, fontSize: '1.5rem' }}>Gestión de Categorías</h3>
                 <button className="ff-button ff-button-primary" onClick={() => {
                     setEditingCategory(null);
-                    setNewCategory({ name: '', description: '', image: null });
+                    setNewCategory({ name: '', description: '', image: null, is_active: true });
                     setIsModalOpen(true);
                 }}>
                     + Nueva Categoría
@@ -127,6 +130,7 @@ const Categorias = () => {
                             <th>Imagen</th>
                             <th>Nombre</th>
                             <th>Descripción</th>
+                            <th>Estado</th>
                             <th>Productos Activos</th>
                             <th>Acciones</th>
                         </tr>
@@ -150,6 +154,11 @@ const Categorias = () => {
                                     </td>
                                     <td><strong>{cat.name}</strong></td>
                                     <td>{cat.description}</td>
+                                    <td>
+                                        <span className={`badge ${cat.is_active ? 'badge-success' : 'badge-danger'}`} style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', backgroundColor: cat.is_active ? '#dcfce7' : '#fee2e2', color: cat.is_active ? '#15803d' : '#b91c1c' }}>
+                                            {cat.is_active ? 'Activo' : 'Inactivo'}
+                                        </span>
+                                    </td>
                                     <td>{cat.products_count || 0}</td>
                                     <td>
                                         <button
@@ -206,6 +215,18 @@ const Categorias = () => {
                             required={!editingCategory}
                             style={{ fontFamily: 'var(--font-sans)' }}
                         />
+                    </div>
+                    <div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: '600' }}>
+                            <input
+                                type="checkbox"
+                                name="is_active"
+                                checked={newCategory.is_active}
+                                onChange={(e) => setNewCategory(prev => ({ ...prev, is_active: e.target.checked }))}
+                                style={{ width: '20px', height: '20px' }}
+                            />
+                            Activo
+                        </label>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
                         <button type="button" className="ff-button ff-button-secondary" onClick={() => setIsModalOpen(false)}>Cancelar</button>

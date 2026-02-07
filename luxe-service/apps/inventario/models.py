@@ -71,6 +71,39 @@ class Category(models.Model):
         return self.name
 
 
+
+class SubCategory(models.Model):
+    """Subcategorías para organizar mejor los productos"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    category = models.ForeignKey(
+        Category, 
+        on_delete=models.CASCADE, 
+        related_name='subcategories',
+        verbose_name='Categoría Padre'
+    )
+    
+    name = models.CharField(max_length=100, verbose_name='Nombre')
+    slug = models.SlugField(max_length=100, unique=True, verbose_name='Slug')
+    description = models.TextField(blank=True, verbose_name='Descripción')
+    
+    # Configuración
+    is_active = models.BooleanField(default=True, verbose_name='Activo')
+    display_order = models.PositiveIntegerField(default=0, verbose_name='Orden')
+    
+    # Auditoría
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Subcategoría'
+        verbose_name_plural = 'Subcategorías'
+        ordering = ['category', 'display_order', 'name']
+        unique_together = ['category', 'slug']
+    
+    def __str__(self):
+        return f'{self.category.name} > {self.name}'
+
+
 class Product(models.Model):
     """Productos del menú de fast food"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -79,6 +112,15 @@ class Product(models.Model):
         on_delete=models.CASCADE, 
         related_name='products',
         verbose_name='Categoría'
+    )
+
+    subcategory = models.ForeignKey(
+        SubCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='products',
+        verbose_name='Subcategoría'
     )
     
     # Información básica

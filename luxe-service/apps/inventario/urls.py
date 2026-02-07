@@ -9,6 +9,7 @@ router = DefaultRouter()
 # Registrar los ViewSets
 router.register(r'categories', views.CategoryViewSet, basename='category')
 router.register(r'products', views.ProductViewSet, basename='product')
+router.register(r'subcategories', views.SubCategoryViewSet, basename='subcategory')
 router.register(r'sizes', views.SizeViewSet, basename='size')
 router.register(r'extras', views.ExtraViewSet, basename='extra')
 router.register(r'combos', views.ComboViewSet, basename='combo')

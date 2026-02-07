@@ -1,23 +1,46 @@
 from rest_framework import serializers
-from .models import Category, Product, Size, Extra, Combo, ComboProduct
+from .models import Category, Product, Size, Extra, Combo, ComboProduct, SubCategory
 
 
 class CategorySerializer(serializers.ModelSerializer):
     """Serializer para categorías"""
     products_count = serializers.SerializerMethodField()
     
+    subcategories = serializers.SerializerMethodField()
+
     class Meta:
         model = Category
         fields = [
             'id', 'name', 'slug', 'description', 'image',
             'color', 'icon', 'is_active', 'display_order',
-            'products_count', 'created_at', 'updated_at'
+            'products_count', 'subcategories', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
     
     def get_products_count(self, obj):
         """Cuenta productos activos en la categoría"""
         return obj.products.filter(is_active=True, is_available=True).count()
+
+    def get_subcategories(self, obj):
+        """Retorna subcategorías activas"""
+        subcats = obj.subcategories.filter(is_active=True).order_by('display_order')
+        return SubCategorySerializer(subcats, many=True).data
+
+
+class SubCategorySerializer(serializers.ModelSerializer):
+    """Serializer para subcategorías"""
+    products_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = SubCategory
+        fields = [
+            'id', 'category', 'name', 'slug', 'description', 
+            'is_active', 'display_order', 'products_count'
+        ]
+        read_only_fields = ['id']
+
+    def get_products_count(self, obj):
+        return obj.products.filter(is_active=True).count()
 
 
 class SizeSerializer(serializers.ModelSerializer):
@@ -52,13 +75,14 @@ class ExtraSerializer(serializers.ModelSerializer):
 class ProductListSerializer(serializers.ModelSerializer):
     """Serializer simplificado para listados de productos"""
     category_name = serializers.CharField(source='category.name', read_only=True)
+    subcategory_name = serializers.CharField(source='subcategory.name', read_only=True)
     has_sizes = serializers.SerializerMethodField()
     has_extras = serializers.SerializerMethodField()
     
     class Meta:
         model = Product
         fields = [
-            'id', 'category', 'category_name', 'name', 'slug', 'code', 'barcode',
+            'id', 'category', 'category_name', 'subcategory', 'subcategory_name', 'name', 'slug', 'code', 'barcode',
             'description', 'image', 'price', 'cost_price', 'tax_rate', 'calories',
             'is_active', 'is_available', 'is_featured', 'is_new',
             'prep_time', 'display_order', 'has_sizes', 'has_extras',
@@ -80,6 +104,7 @@ class ProductListSerializer(serializers.ModelSerializer):
 class ProductDetailSerializer(serializers.ModelSerializer):
     """Serializer completo para detalle de productos"""
     category = CategorySerializer(read_only=True)
+    subcategory = SubCategorySerializer(read_only=True)
     sizes = SizeSerializer(many=True, read_only=True)
     extras = ExtraSerializer(many=True, read_only=True)
     is_available_now = serializers.SerializerMethodField()
@@ -87,7 +112,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id', 'category', 'name', 'slug', 'code', 'barcode', 'description',
+            'id', 'category', 'subcategory', 'name', 'slug', 'code', 'barcode', 'description',
             'image', 'price', 'cost_price', 'last_purchase_cost', 'tax_rate', 'calories',
             'ingredients', 'allergens',
             'is_active', 'is_available', 'is_featured', 'is_new',
@@ -108,8 +133,9 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
     """Serializer para crear/actualizar productos"""
     class Meta:
         model = Product
+        model = Product
         fields = [
-            'category', 'name', 'slug', 'code', 'barcode', 'description', 'image',
+            'category', 'subcategory', 'name', 'slug', 'code', 'barcode', 'description', 'image',
             'price', 'cost_price', 'last_purchase_cost', 'tax_rate', 
             'calories', 'ingredients', 'allergens',
             'is_active', 'is_available', 'is_featured', 'is_new',

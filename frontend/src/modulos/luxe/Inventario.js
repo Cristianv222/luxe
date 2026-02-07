@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import Modal from '../../comun/Modal';
 import Categorias from './Categorias';
+import SubCategorias from './SubCategorias';
 import './Luxe.css';
 import './Loyalty.css';
 
@@ -12,6 +13,8 @@ const Inventario = () => {
     // Estado para Productos
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [subcategories, setSubCategories] = useState([]); // All subcategories
+    const [filteredSubcategories, setFilteredSubcategories] = useState([]); // For dropdown based on selected category
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
@@ -38,6 +41,7 @@ const Inventario = () => {
         tax_rate: '0',
         unit_measure: 'Unidad',
         category: '',
+        subcategory: '',
         line: '',
         subgroup: '',
         accounting_sales_account: '',
@@ -99,12 +103,23 @@ const Inventario = () => {
 
     const fetchCategories = async () => {
         try {
-            const response = await api.get('/api/menu/categories/', {
+            const response = await api.get('/api/menu/menu/summary/', {
                 baseURL: process.env.REACT_APP_LUXE_SERVICE
             });
-            setCategories(response.data.results || response.data || []);
+            setCategories(response.data || []);
         } catch (err) {
             console.error('Error fetching categories:', err);
+        }
+    };
+
+    const fetchSubCategories = async () => {
+        try {
+            const response = await api.get('/api/menu/subcategories/', {
+                baseURL: process.env.REACT_APP_LUXE_SERVICE
+            });
+            setSubCategories(response.data.results || response.data || []);
+        } catch (err) {
+            console.error('Error fetching subcategories:', err);
         }
     };
 
@@ -112,6 +127,7 @@ const Inventario = () => {
         if (activeTab === 'products') {
             fetchProducts(searchQuery, 1);
             fetchCategories();
+            fetchSubCategories();
         }
     }, [activeTab]);
 
@@ -129,8 +145,27 @@ const Inventario = () => {
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target;
         const newValue = type === 'checkbox' ? checked : value;
+
+        if (name === 'category') {
+            // Filter subcategories when category changes
+            // If filteredSubcategories state is used, update it.
+            // But actually, we can derive it in render or effect.
+            // Let's settle on: filtering subcategories for the dropdown.
+        }
+
         setNewProduct(prev => ({ ...prev, [name]: newValue }));
     };
+
+    // Update filtered subcategories whenever selected category changes
+    useEffect(() => {
+        if (newProduct.category) {
+            // Use loose equality (==) because state might be string (from select) and ID is number
+            const filtered = subcategories.filter(s => s.category == newProduct.category);
+            setFilteredSubcategories(filtered);
+        } else {
+            setFilteredSubcategories([]);
+        }
+    }, [newProduct.category, subcategories]);
 
     const handleImageChange = (e) => {
         setNewProduct(prev => ({ ...prev, image: e.target.files[0] }));
@@ -149,11 +184,12 @@ const Inventario = () => {
             tax_rate: product.tax_rate || 0,
             unit_measure: product.unit_measure || 'Unidad', // Nuevo
             line: product.line || '', // Nuevo
-            subgroup: product.subgroup || '', // Nuevo
-            category: product.category,
-            accounting_sales_account: product.accounting_sales_account || '', // Nuevo
-            accounting_cost_account: product.accounting_cost_account || '', // Nuevo
-            accounting_inventory_account: product.accounting_inventory_account || '', // Nuevo
+            subgroup: product.subgroup || '',
+            category: (product.category && typeof product.category === 'object') ? product.category.id : product.category,
+            subcategory: (product.subcategory && typeof product.subcategory === 'object') ? product.subcategory.id : (product.subcategory || ''),
+            accounting_sales_account: product.accounting_sales_account || '',
+            accounting_cost_account: product.accounting_cost_account || '',
+            accounting_inventory_account: product.accounting_inventory_account || '',
             image: null,
             is_active: product.is_active !== undefined ? product.is_active : true,
             is_available: product.is_available !== undefined ? product.is_available : true,
@@ -161,8 +197,9 @@ const Inventario = () => {
             stock_quantity: product.stock_quantity || 0,
             min_stock_alert: product.min_stock_alert || 5
         });
-        // Asegurar que las categorías estén cargadas
+        // Asegurar que las categorías y subcategorías estén cargadas
         fetchCategories();
+        if (subcategories.length === 0) fetchSubCategories();
         setIsModalOpen(true);
     };
 
@@ -215,6 +252,7 @@ const Inventario = () => {
         formData.append('barcode', newProduct.barcode);
         formData.append('description', newProduct.description);
         formData.append('category', newProduct.category);
+        if (newProduct.subcategory) formData.append('subcategory', newProduct.subcategory);
 
         // Precios y Costos
         formData.append('price', newProduct.price);
@@ -484,6 +522,12 @@ const Inventario = () => {
                     <i className="bi bi-tags" style={{ marginRight: '8px' }}></i> Categorías
                 </button>
                 <button
+                    className={`ff-tab ${activeTab === 'subcategories' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('subcategories')}
+                >
+                    <i className="bi bi-diagram-2" style={{ marginRight: '8px' }}></i> Subcategorías
+                </button>
+                <button
                     className={`ff-tab ${activeTab === 'config' ? 'active' : ''}`}
                     onClick={() => setActiveTab('config')}
                 >
@@ -493,6 +537,7 @@ const Inventario = () => {
 
             {/* Content Categories */}
             {activeTab === 'categories' && <Categorias />}
+            {activeTab === 'subcategories' && <SubCategorias />}
 
             {/* Config Content */}
             {activeTab === 'config' && (
@@ -583,6 +628,7 @@ const Inventario = () => {
                             });
                             // Asegurar que las categorías estén cargadas
                             fetchCategories();
+                            fetchSubCategories();
                             setIsModalOpen(true);
                         }}>
                             <i className="bi bi-plus-circle"></i> Nuevo Producto
@@ -789,6 +835,20 @@ const Inventario = () => {
                                         <option value="">Seleccionar...</option>
                                         {categories.map(cat => (
                                             <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group-boutique">
+                                    <label>Subcategoría</label>
+                                    <select
+                                        name="subcategory"
+                                        value={newProduct.subcategory}
+                                        onChange={handleInputChange}
+                                        disabled={!newProduct.category}
+                                    >
+                                        <option value="">Seleccionar...</option>
+                                        {filteredSubcategories.map(sub => (
+                                            <option key={sub.id} value={sub.id}>{sub.name}</option>
                                         ))}
                                     </select>
                                 </div>
