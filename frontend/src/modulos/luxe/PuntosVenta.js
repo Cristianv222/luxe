@@ -42,6 +42,38 @@ const PuntosVenta = () => {
         pageSize: 20
     });
 
+    // Estado para Alertas/Confirmaciones
+    const [alertModal, setAlertModal] = useState({
+        show: false,
+        type: 'info', // 'success', 'error', 'warning', 'info'
+        title: '',
+        message: '',
+        onConfirm: null,
+        onCancel: null,
+        showCancelButton: false,
+        confirmText: 'ACEPTAR',
+        cancelText: 'CANCELAR'
+    });
+
+    const showAlert = (type, title, message, onConfirm = null, showCancel = false, confirmText = 'ACEPTAR', zIndex = 10000) => {
+        setAlertModal({
+            show: true,
+            type,
+            title,
+            message,
+            onConfirm,
+            onCancel: () => setAlertModal(prev => ({ ...prev, show: false })),
+            showCancelButton: showCancel,
+            confirmText: confirmText || 'ACEPTAR',
+            cancelText: 'CANCELAR',
+            zIndex: zIndex
+        });
+    };
+
+    const closeAlert = () => {
+        setAlertModal(prev => ({ ...prev, show: false }));
+    };
+
     // 2. ESTADO DEL PUNTO DE VENTA
     const [cart, setCart] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('all');
@@ -202,7 +234,7 @@ const PuntosVenta = () => {
             }
         } else {
             console.warn("⚠️ Producto no encontrado para el código:", code);
-            alert(`Producto con código "${code}" no encontrado`);
+            showAlert('warning', 'Producto no encontrado', `Producto con código "${code}" no encontrado`);
         }
     }, [products, searchTerm]);
 
@@ -266,7 +298,7 @@ const PuntosVenta = () => {
     // =====================================
     const addToCart = useCallback((product) => {
         if (product.track_stock && product.stock_quantity <= 0) {
-            alert("Producto agotado");
+            showAlert('warning', 'Producto Agotado', "Este producto no tiene stock disponible.");
             return;
         }
 
@@ -274,7 +306,7 @@ const PuntosVenta = () => {
             const existingItemIndex = prevCart.findIndex(item => item.product_id === product.id);
             if (existingItemIndex >= 0) {
                 if (product.track_stock && prevCart[existingItemIndex].quantity >= product.stock_quantity) {
-                    alert("No hay suficiente stock disponible");
+                    showAlert('warning', 'Stock Insuficiente', "No hay suficiente stock disponible para agregar más unidades.");
                     return prevCart;
                 }
                 const newCart = [...prevCart];
@@ -308,7 +340,7 @@ const PuntosVenta = () => {
                     const newQuantity = Math.max(1, item.quantity + delta);
 
                     if (delta > 0 && product && product.track_stock && newQuantity > product.stock_quantity) {
-                        alert("No hay suficiente stock disponible");
+                        showAlert('warning', 'Stock Insuficiente', "No hay suficiente stock disponible.");
                         return item;
                     }
                     return { ...item, quantity: newQuantity };
@@ -413,9 +445,9 @@ const PuntosVenta = () => {
 
             if (res.data.valid) {
                 setAppliedDiscount(res.data.discount);
-                alert(`¡Éxito! ${res.data.message}`);
+                showAlert('success', 'Descuento Aplicado', `¡Éxito! ${res.data.message}`);
             } else {
-                alert(res.data.error || 'Código inválido');
+                showAlert('error', 'Código Inválido', res.data.error || 'El código ingresado no es válido.');
                 setAppliedDiscount(null);
             }
         } catch (err) {
@@ -470,7 +502,7 @@ const PuntosVenta = () => {
             const res = await api.post('/api/customers/pos_register/', payload, { baseURL: '/api/luxe' });
             const createdCustomer = res.data;
 
-            alert('¡Cliente registrado exitosamente!');
+            showAlert('success', 'Cliente Registrado', '¡Cliente registrado exitosamente!');
             selectCustomer(createdCustomer);
             setShowCustomerModal(false);
 
@@ -490,7 +522,7 @@ const PuntosVenta = () => {
             const msg = err.response?.data?.cedula
                 ? 'Cédula ya registrada: ' + err.response.data.cedula
                 : (err.response?.data?.message || JSON.stringify(err.response?.data) || err.message);
-            alert('Error al crear cliente: ' + msg);
+            showAlert('error', 'Error al crear cliente', msg);
         }
     };
 
@@ -500,6 +532,9 @@ const PuntosVenta = () => {
         if (cart.length === 0) return;
         setProcessingOrder(true);
         setShowReviewModal(false);
+
+        // Mostrar alerta de "Enviando..."
+        showAlert('info', 'Procesando Venta', 'Enviando orden al sistema...', null, false, '', 10000);
 
         let tableNumber = selectedDeliveryMethod === 'in_store' ? 'TIENDA' : (selectedDeliveryMethod === 'pickup' ? 'RECOGIDA' : 'ENVIO');
         let orderNotes = cashGiven ? `Pago con: ${formatCurrency(cashGiven)} - Cambio: ${formatCurrency(cashGiven - calculateTotal)}` : '';
@@ -518,6 +553,7 @@ const PuntosVenta = () => {
         try {
             const res = await api.post('/api/orders/orders/', payload, { baseURL: process.env.REACT_APP_LUXE_SERVICE });
 
+            // Orden exitosa, intentar imprimir
             try {
                 const printResponse = await printerService.printReceipt({
                     order_number: res.data.order_number || res.data.id,
@@ -533,13 +569,52 @@ const PuntosVenta = () => {
                 });
 
                 if (printResponse.printed === false || printResponse.warning) {
-                    alert(`✅ Orden #${res.data.order_number || res.data.id} confirmada\n⚠️ ${printResponse.warning || printResponse.message || 'No se pudo imprimir'}`);
+                    // Feedback SRI (Caso Advertencia)
+                    let sriMsg = '';
+                    if (res.data.sri_info) {
+                        const { status_display, sri_number } = res.data.sri_info;
+                        if (res.data.sri_info.status === 'AUTHORIZED') {
+                            sriMsg = `\n\n✅ SRI: AUTORIZADO (${sri_number})`;
+                        } else {
+                            sriMsg = `\n\n⚠️ SRI: ${status_display}`;
+                        }
+                    }
+
+                    showAlert(
+                        'warning',
+                        'Orden Guardada - Error Impresión',
+                        `Orden #${res.data.order_number || res.data.id} confirmada.\n\n⚠️ Error Impresora: ${printResponse.warning || 'No disponible'}.${sriMsg}`,
+                        null, false, 'ACEPTAR', 10000
+                    );
                 } else {
-                    alert(`✅ Orden #${res.data.order_number || res.data.id} confirmada e impresa`);
+                    // Feedback SRI
+                    let sriMsg = '';
+                    if (res.data.sri_info) {
+                        const { status_display, sri_number, error } = res.data.sri_info;
+                        if (res.data.sri_info.status === 'AUTHORIZED') {
+                            sriMsg = `\n\n✅ SRI: AUTORIZADO\nNo. ${sri_number}`;
+                        } else if (res.data.sri_info.status === 'SENT') {
+                            sriMsg = `\n\n⏳ SRI: ENVIADO (Procesando)`;
+                        } else {
+                            sriMsg = `\n\n⚠️ SRI: ${status_display}\n${error || ''}`;
+                        }
+                    }
+
+                    showAlert(
+                        'success',
+                        'Orden Facturada',
+                        `Orden #${res.data.order_number || res.data.id} procesada exitosamente.${sriMsg}`,
+                        null, false, 'ACEPTAR', 10000
+                    );
                 }
             } catch (printError) {
                 console.warn('No se pudo imprimir (pero orden fue creada):', printError);
-                alert(`✅ Orden #${res.data.order_number || res.data.id} confirmada\n⚠️ No se pudo imprimir: ${printError.response?.data?.warning || 'Impresora no disponible'}`);
+                showAlert(
+                    'warning',
+                    'Orden Guardada - Sin Impresión',
+                    `Orden #${res.data.order_number || res.data.id} creada con éxito.\n\n⚠️ Error de impresora: ${printError.response?.data?.warning || 'Impresora no disponible'}.`,
+                    null, false, 'ACEPTAR', 10000
+                );
             }
 
             setCart([]);
@@ -552,19 +627,51 @@ const PuntosVenta = () => {
             loadData();
         } catch (e) {
             console.error(e);
-            const msg = e.response?.data?.detail || JSON.stringify(e.response?.data) || e.message;
-            alert('Error al procesar orden: ' + msg);
+
+            // Si el error es un array (validaciones DRF), unimos los mensajes
+            let msg = '';
+            if (e.response?.data) {
+                if (typeof e.response.data === 'string') {
+                    msg = e.response.data;
+                } else if (Array.isArray(e.response.data)) {
+                    msg = e.response.data.join('\n');
+                } else if (typeof e.response.data === 'object') {
+                    // Si es un objeto (diccionario de errores), lo formateamos
+                    msg = Object.entries(e.response.data)
+                        .map(([key, value]) => {
+                            const valStr = Array.isArray(value) ? value.join(' ') : value;
+                            return `${key}: ${valStr}`;
+                        })
+                        .join('\n');
+                }
+            } else {
+                msg = e.message || 'Error desconocido';
+            }
+
+            // Check for specific SRI or Invoice errors to handle retries?
+            // For now, just show error alert
+            showAlert('error', 'Error al Procesar Orden', msg, () => {
+                // Opción para reintentar si fuera necesario, pero por ahora solo cerrar
+            }, isInvoiceError(msg), 'REINTENTAR', 10000);
         } finally {
             setProcessingOrder(false);
         }
     };
 
+    const isInvoiceError = (msg) => {
+        // Función simple para detectar si vale la pena mostrar botón de reintento específico
+        // En este caso, el botón de confirmar en el modal de error actuará como "OK" o "Reintentar" si pasamos la función.
+        // Pero como el reintento implica volver a llamar finalPlaceOrder, 
+        // y el estado del carrito sigue ahí, el usuario puede simplemente volver a dar click en "CONFIRMAR PAGO".
+        return false;
+    };
+
     const handleOpenCashDrawer = async () => {
         try {
             await printerService.openCashDrawer();
-            alert('Caja abierta');
+            showAlert('success', 'Caja Abierta', 'El cajón de dinero se ha abierto correctamente.');
         } catch (err) {
-            alert('Error al abrir caja');
+            showAlert('error', 'Error', 'No se pudo abrir el cajón de dinero. Verifique la conexión de la impresora.');
         }
     };
 
@@ -1179,6 +1286,65 @@ const PuntosVenta = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            {/* Modal de Alertas Personalizado */}
+            {alertModal.show && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: alertModal.zIndex || 10000, animation: 'fadeIn 0.2s ease-out' }}>
+                    <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '0', maxWidth: '450px', width: '90%', boxShadow: '0 25px 50px rgba(0,0,0,0.3)', animation: 'slideUp 0.3s ease-out', overflow: 'hidden' }}>
+
+                        {/* Header con Icono y Color según Tipo */}
+                        <div style={{ padding: '30px 25px 25px', background: alertModal.type === 'success' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : alertModal.type === 'error' ? 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)' : alertModal.type === 'warning' ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', textAlign: 'center' }}>
+                            <div style={{ width: '70px', height: '70px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px', fontSize: '32px', color: 'white', boxShadow: '0 0 0 8px rgba(255,255,255,0.1)' }}>
+                                {alertModal.type === 'success' && <i className="bi bi-check-lg"></i>}
+                                {alertModal.type === 'error' && <i className="bi bi-x-lg"></i>}
+                                {alertModal.type === 'warning' && <i className="bi bi-exclamation-lg"></i>}
+                                {alertModal.type === 'info' && <i className="bi bi-info-lg"></i>}
+                            </div>
+                            <h3 style={{ margin: 0, color: 'white', fontSize: '22px', fontFamily: "'Inter', sans-serif", fontWeight: '700', textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+                                {alertModal.title}
+                            </h3>
+                        </div>
+
+                        {/* Contenido del Mensaje */}
+                        <div style={{ padding: '30px', textAlign: 'center' }}>
+                            <p style={{ margin: '0 0 30px', color: '#4b5563', fontSize: '16px', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                                {alertModal.message}
+                            </p>
+
+                            {/* Botones de Acción */}
+                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                                {alertModal.showCancelButton && (
+                                    <button
+                                        onClick={() => { if (alertModal.onCancel) alertModal.onCancel(); else closeAlert(); }}
+                                        style={{ flex: 1, padding: '14px 20px', backgroundColor: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    >
+                                        {alertModal.cancelText}
+                                    </button>
+                                )}
+
+                                <button
+                                    onClick={() => { if (alertModal.onConfirm) alertModal.onConfirm(); closeAlert(); }}
+                                    style={{
+                                        flex: 2,
+                                        padding: '14px 30px',
+                                        backgroundColor: alertModal.type === 'error' ? '#dc2626' : alertModal.type === 'warning' ? '#d97706' : '#0f172a',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontSize: '15px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        letterSpacing: '0.5px',
+                                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {alertModal.confirmText}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

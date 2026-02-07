@@ -196,6 +196,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     can_be_cancelled = serializers.SerializerMethodField()
     can_be_modified = serializers.SerializerMethodField()
     payment_method_display = serializers.SerializerMethodField()
+    sri_info = serializers.SerializerMethodField()
     
     class Meta:
         model = Order
@@ -208,7 +209,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             'table_number', 'estimated_prep_time', 'items', 'delivery_info',
             'status_history', 'can_be_cancelled', 'can_be_modified',
             'created_at', 'updated_at', 'confirmed_at', 'ready_at',
-            'delivered_at', 'cancelled_at', 'payment_method_display'
+            'delivered_at', 'cancelled_at', 'payment_method_display', 'sri_info'
         ]
         read_only_fields = [
             'id', 'order_number', 'subtotal', 'tax_amount', 'total',
@@ -227,6 +228,18 @@ class OrderDetailSerializer(serializers.ModelSerializer):
         payment = obj.payments.filter(status='completed').first() or obj.payments.first()
         if payment and payment.payment_method:
             return payment.payment_method.name
+        return None
+
+    def get_sri_info(self, obj):
+        if hasattr(obj, 'sri_document'):
+            doc = obj.sri_document
+            return {
+                'status': doc.status,
+                'status_display': doc.get_status_display(),
+                'sri_number': doc.sri_number,
+                'key': doc.access_key,
+                'error': doc.error_message
+            }
         return None
 
 
@@ -518,20 +531,18 @@ class OrderCreateSerializer(serializers.Serializer):
         self._send_to_printer(order)
         
         # ========================================
-        # EMITIR FACTURA AL SRI EN SEGUNDO PLANO
+        # EMITIR FACTURA AL SRI
         # ========================================
-        # COMENTADO: El usuario solicitó que NO se emita automáticamente al crear.
-        # Se moverá a una señal post_save cuando el estado cambie a "completed".
-        # 
-        # if order.payment_status == 'paid' and order.status == 'completed':
-        #     import threading
-        #     thread = threading.Thread(
-        #         target=self._emit_invoice_to_sri_async,
-        #         args=(order.id,),
-        #         daemon=True
-        #     )
-        #     thread.start()
-        #     logger.info(f'📄 Emisión de factura SRI iniciada en segundo plano para orden {order.order_number}')
+        # Si es venta POS, intentamos emitir SINCRÓNICAMENTE para dar feedback inmediato al cajero.
+        if order.status == 'completed' and order.payment_status == 'paid':
+            try:
+                logger.info(f'📄 Intentando emisión síncrona SRI para orden {order.order_number} (POS)')
+                self._emit_invoice_to_sri(order)
+                # Refrescar para que el serializer de salida vea el nuevo documento sri
+                order.refresh_from_db()
+            except Exception as e:
+                logger.error(f"Error en emisión síncrona SRI: {e}")
+                # No fallamos la orden, proseguimos
         
         return order
     
