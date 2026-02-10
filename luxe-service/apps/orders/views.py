@@ -598,11 +598,49 @@ class OrderViewSet(viewsets.ModelViewSet):
                 'status': 'error',
                 'message': 'No se pudo conectar al servicio de impresión'
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-        except Exception as e:
-            logger.error(f'Error al reimprimir orden {order.order_number}: {str(e)}')
             return Response({
                 'status': 'error',
                 'message': f'Error inesperado: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'])
+    def retry_sri(self, request, order_number=None):
+        """
+        Reintenta manualmente la emisión de factura SRI
+        POST /api/orders/{order_number}/retry_sri/
+        """
+        order = self.get_object()
+        from apps.sri.services import SRIIntegrationService
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        try:
+            # 1. Verificar si ya está autorizada
+            if hasattr(order, 'sri_document') and order.sri_document.status == 'AUTHORIZED':
+                 return Response({
+                     'status': 'AUTHORIZED',
+                     'message': 'Esta factura ya está autorizada',
+                     'sri_number': order.sri_document.sri_number
+                 }, status=status.HTTP_400_BAD_REQUEST)
+
+            # 2. Reintentar emisión
+            logger.info(f"🔄 Reintentando SRI MANUAL para orden {order.order_number}")
+            doc = SRIIntegrationService.emit_invoice(order)
+            
+            # 3. Responder con resultado
+            return Response({
+                'status': doc.status,
+                'status_display': doc.get_status_display(),
+                'error': doc.error_message,
+                'sri_number': doc.sri_number,
+                'access_key': doc.access_key
+            })
+            
+        except Exception as e:
+            logger.error(f"Error en reintento SRI {order.order_number}: {e}")
+            return Response({
+                'error': str(e),
+                'status': 'FAILED'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

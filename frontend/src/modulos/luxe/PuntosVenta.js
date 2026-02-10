@@ -565,6 +565,11 @@ const PuntosVenta = () => {
                     discount: calculateDiscountAmount,
                     tax: calculateTax,
                     total: calculateTotal,
+                    sri_info: res.data.sri_info || null,
+                    customer_identification: res.data.customer_identification || (selectedCustomer?.cedula || selectedCustomer?.identification_number || '9999999999999'),
+                    customer_address: res.data.delivery_info?.address || selectedCustomer?.address || 'Cuenca',
+                    customer_phone: res.data.delivery_info?.contact_phone || selectedCustomer?.phone || '9999999999',
+                    customer_email: selectedCustomer?.email || '',
                     printed_at: new Date().toISOString()
                 });
 

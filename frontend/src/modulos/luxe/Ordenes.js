@@ -11,6 +11,7 @@ const Ordenes = () => {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [sriLoading, setSriLoading] = useState(false);
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -136,13 +137,52 @@ const Ordenes = () => {
                 subtotal: parseFloat(selectedOrder.subtotal),
                 discount: parseFloat(selectedOrder.discount_amount || 0),
                 tax: parseFloat(selectedOrder.tax_amount || 0),
-                total: parseFloat(selectedOrder.total)
+                total: parseFloat(selectedOrder.total),
+                sri_info: selectedOrder.sri_info || null,
+                customer_identification: selectedOrder.customer_identification || (selectedOrder.customer?.cedula || '9999999999999'),
+                customer_address: selectedOrder.delivery_info?.address || selectedOrder.customer?.address || 'Cuenca',
+                customer_phone: selectedOrder.delivery_info?.contact_phone || selectedOrder.customer?.phone || '9999999999',
+                customer_email: selectedOrder.customer?.email || '',
+                printed_at: new Date().toISOString()
             };
             await printerService.printReceipt(receiptData);
             alert('Ticket enviado a la impresora');
         } catch (error) {
             console.error('Error printing ticket:', error);
             alert('Error al imprimir el ticket.');
+        }
+    };
+
+    const handleRetrySRI = async () => {
+        if (!selectedOrder) return;
+        setSriLoading(true);
+        try {
+            const res = await api.post(`/api/orders/orders/${selectedOrder.order_number}/retry_sri/`, {}, {
+                baseURL: process.env.REACT_APP_LUXE_SERVICE
+            });
+
+            // Mostrar resultado
+            let msg = `SRI: ${res.data.status_display}`;
+            if (res.data.error) msg += `\n${res.data.error}`;
+            alert(msg);
+
+            // Actualizar estado local
+            setSelectedOrder(prev => ({
+                ...prev,
+                sri_info: {
+                    ...(prev.sri_info || {}),
+                    status: res.data.status,
+                    status_display: res.data.status_display,
+                    sri_number: res.data.sri_number,
+                    error: res.data.error,
+                    key: res.data.access_key
+                }
+            }));
+        } catch (err) {
+            console.error('Error retrying SRI:', err);
+            alert('Error al reintentar SRI: ' + (err.response?.data?.error || err.message));
+        } finally {
+            setSriLoading(false);
         }
     };
 
@@ -294,6 +334,55 @@ const Ordenes = () => {
                                 </div>
                             </div>
 
+                            {/* Sección SRI */}
+                            <div style={{ padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px', marginBottom: '2rem', border: '1px solid #e9ecef' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <h4 style={{ fontFamily: 'var(--font-serif)', marginBottom: '0.5rem', color: '#495057' }}>Estado SRI / Facturación</h4>
+                                        {selectedOrder.sri_info ? (
+                                            <div>
+                                                <div style={{ marginBottom: '0.25rem' }}>
+                                                    <strong>Estado: </strong>
+                                                    <span className={`status-badge ${selectedOrder.sri_info.status === 'AUTHORIZED' ? 'completed' : 'pending'}`}>
+                                                        {selectedOrder.sri_info.status_display}
+                                                    </span>
+                                                </div>
+                                                {selectedOrder.sri_info.sri_number && (
+                                                    <div style={{ fontSize: '0.9rem', color: '#6c757d' }}>
+                                                        <strong>Factura: </strong> {selectedOrder.sri_info.sri_number}
+                                                    </div>
+                                                )}
+                                                {selectedOrder.sri_info.error && (
+                                                    <div style={{ fontSize: '0.85rem', color: '#dc3545', marginTop: '0.5rem', maxWidth: '400px' }}>
+                                                        {selectedOrder.sri_info.error}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <p style={{ color: '#6c757d', fontStyle: 'italic' }}>Sin información de facturación</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        {/* Mostrar botón solo si NO está autorizado */}
+                                        {(!selectedOrder.sri_info || selectedOrder.sri_info.status !== 'AUTHORIZED') && (
+                                            <button
+                                                onClick={handleRetrySRI}
+                                                className="ff-button ff-button-secondary"
+                                                disabled={sriLoading}
+                                                style={{ fontSize: '0.9rem' }}
+                                            >
+                                                {sriLoading ? 'Procesando...' : (
+                                                    <>
+                                                        <i className="bi bi-arrow-repeat" style={{ marginRight: '5px' }}></i>
+                                                        {selectedOrder.sri_info ? 'Reintentar SRI' : 'Emitir Factura'}
+                                                    </>
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="ff-table-container">
                                 <table className="ff-table">
                                     <thead>
@@ -358,41 +447,44 @@ const Ordenes = () => {
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* Custom Delete Confirmation Modal */}
-            {showDeleteConfirm && (
-                <div className="ff-modal-overlay" style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: 'rgba(0,0,0,0.6)'
-                }}>
-                    <div className="ff-modal-content" style={{ maxWidth: '500px', padding: '2rem', textAlign: 'center' }}>
-                        <div style={{ fontSize: '3rem', color: '#e74c3c', marginBottom: '1rem' }}>
-                            <i className="bi bi-exclamation-triangle"></i>
-                        </div>
-                        <h3 className="ff-modal-title" style={{ color: '#c0392b', marginBottom: '1rem' }}>
-                            ¡Atención! Proceso SRI
-                        </h3>
-                        <p style={{ fontSize: '1.1rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-                            Estás a punto de eliminar la orden <strong>#{selectedOrder?.order_number}</strong>.
-                        </p>
-                        <div style={{ backgroundColor: '#fff3cd', border: '1px solid #ffeeba', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', color: '#856404' }}>
-                            <strong>⚠️ Confirmar:</strong><br />
-                            Esta acción eliminará la orden permanentemente, restaurará el stock y ajustará el saldo del cliente.
-                        </div>
-                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                            <button onClick={handleDeleteOrder} className="ff-button ff-button-danger">
-                                Sí, Eliminar todo
-                            </button>
-                            <button onClick={() => setShowDeleteConfirm(false)} className="ff-button ff-button-secondary">
-                                Cancelar
-                            </button>
+            {
+                showDeleteConfirm && (
+                    <div className="ff-modal-overlay" style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        backgroundColor: 'rgba(0,0,0,0.6)'
+                    }}>
+                        <div className="ff-modal-content" style={{ maxWidth: '500px', padding: '2rem', textAlign: 'center' }}>
+                            <div style={{ fontSize: '3rem', color: '#e74c3c', marginBottom: '1rem' }}>
+                                <i className="bi bi-exclamation-triangle"></i>
+                            </div>
+                            <h3 className="ff-modal-title" style={{ color: '#c0392b', marginBottom: '1rem' }}>
+                                ¡Atención! Proceso SRI
+                            </h3>
+                            <p style={{ fontSize: '1.1rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                                Estás a punto de eliminar la orden <strong>#{selectedOrder?.order_number}</strong>.
+                            </p>
+                            <div style={{ backgroundColor: '#fff3cd', border: '1px solid #ffeeba', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', color: '#856404' }}>
+                                <strong>⚠️ Confirmar:</strong><br />
+                                Esta acción eliminará la orden permanentemente, restaurará el stock y ajustará el saldo del cliente.
+                            </div>
+                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                                <button onClick={handleDeleteOrder} className="ff-button ff-button-danger">
+                                    Sí, Eliminar todo
+                                </button>
+                                <button onClick={() => setShowDeleteConfirm(false)} className="ff-button ff-button-secondary">
+                                    Cancelar
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 

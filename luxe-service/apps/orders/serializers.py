@@ -233,12 +233,22 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     def get_sri_info(self, obj):
         if hasattr(obj, 'sri_document'):
             doc = obj.sri_document
+            from apps.sri.models import SRIConfiguration
+            try:
+                config = SRIConfiguration.get_settings()
+                environment = config.get_environment_display()
+            except:
+                environment = 'PRUEBAS'
+                
             return {
                 'status': doc.status,
                 'status_display': doc.get_status_display(),
                 'sri_number': doc.sri_number,
                 'key': doc.access_key,
-                'error': doc.error_message
+                'authorization_date': doc.authorization_date,
+                'error': doc.error_message,
+                'environment': environment,
+                'emission_type': 'NORMAL'
             }
         return None
 
@@ -577,17 +587,54 @@ class OrderCreateSerializer(serializers.Serializer):
                 'total': float(order.total)
             }
             
+            # Agregar información extendida del cliente
+            cust_ident = order.customer_identification
+            if not cust_ident and order.customer:
+                 cust_ident = order.customer.cedula
+            if not cust_ident: cust_ident = '9999999999999'
+
+            cust_addr = 'Cuenca'
+            cust_phone = '9999999999'
+            cust_email = ''
+            
+            if hasattr(order, 'delivery_info') and order.delivery_info:
+                 cust_addr = order.delivery_info.address or cust_addr
+                 cust_phone = order.delivery_info.contact_phone or cust_phone
+            elif order.customer:
+                 cust_addr = order.customer.address or cust_addr
+                 cust_phone = order.customer.phone or cust_phone
+                 cust_email = order.customer.email or cust_email
+
+            order_data.update({
+                'customer_identification': cust_ident,
+                'customer_address': cust_addr,
+                'customer_phone': cust_phone,
+                'customer_email': cust_email,
+                'printed_at': timezone.now().isoformat()
+            })
+
             # Agregar información del SRI si está disponible
             try:
                 if hasattr(order, 'sri_document'):
                     sri_doc = order.sri_document
+                    
+                    from apps.sri.models import SRIConfiguration
+                    try:
+                        config = SRIConfiguration.get_settings()
+                        environment = config.get_environment_display()
+                    except:
+                        environment = 'PRUEBAS'
+
                     order_data['sri_info'] = {
                         'sri_number': sri_doc.sri_number or '',
-                        'access_key': sri_doc.access_key or '',
+                        'key': sri_doc.access_key or '', # Clave de acceso
+                        'access_key': sri_doc.access_key or '', # Compatibilidad
                         'customer_name': order.customer_name or 'CONSUMIDOR FINAL',
-                        'customer_identification': order.customer_identification or '9999999999999',
-                        'authorization_date': sri_doc.authorization_date.strftime('%d/%m/%Y %H:%M') if sri_doc.authorization_date else None,
-                        'status': sri_doc.status
+                        'customer_identification': cust_ident,
+                        'authorization_date': sri_doc.authorization_date.strftime('%d/%m/%Y %H:%M:%S') if sri_doc.authorization_date else None,
+                        'status': sri_doc.status,
+                        'environment': environment,
+                        'emission_type': 'NORMAL'
                     }
                     logger.info(f'ℹ️ Datos SRI agregados al ticket de orden {order.order_number}')
             except Exception as e:

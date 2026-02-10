@@ -747,57 +747,157 @@ class PrintReceiptView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def generate_receipt_content(self, printer, order_data):
-        """Genera el contenido formateado para el ticket"""
+        """Genera el contenido formateado para el ticket estilo SRI"""
         settings = PrinterSettings.get_settings()
         chars_per_line = printer.characters_per_line or 42
     
         lines = []
-    
-# Encabezado de la empresa
-        lines.append(settings.get_company_name().center(chars_per_line))
-        lines.append(settings.get_company_address().center(chars_per_line))
-        lines.append(f"RUC: {settings.get_tax_id()}".center(chars_per_line))
-        lines.append("=" * chars_per_line)
-    
-# Información del ticket
-        # Verificar si hay información de factura electrónica SRI
+
+        # Helper para centrar
+        def center(text):
+            return text[:chars_per_line].center(chars_per_line)
+        
+        # Helper para línea de total
+        def print_total_line(label, value):
+            try:
+                val_str = f"{float(value):.2f}"
+            except:
+                val_str = "0.00"
+            padding = chars_per_line - len(label) - len(val_str)
+            if padding < 1: padding = 1
+            return f"{label}{' ' * padding}{val_str}"
+
+        # --- ENCABEZADO ---
+        lines.append(center(settings.get_company_name()))
+        lines.append(center(f"RUC: {settings.get_tax_id()}"))
+        
+        # Información SRI
         sri_info = order_data.get('sri_info', {})
-        
-        if sri_info and sri_info.get('sri_number'):
-            # Titulo de Factura Electronica
-            lines.append("**FACTURA ELECTRONICA**".center(chars_per_line))
-            lines.append(f"No. {sri_info.get('sri_number', 'N/A')}")
+        # Mostrar como factura si hay info SRI, incluso si está pendiente/generada
+        if sri_info:
+            sri_num = sri_info.get('sri_number') or 'PENDIENTE'
+            lines.append(center(f"FACTURA N. {sri_num}"))
+            
+            lines.append("NUMERO DE AUTORIZACION:")
+            key = sri_info.get('key') or sri_info.get('access_key') or 'PENDIENTE'
+            lines.append(key[:chars_per_line])
+            if len(key) > chars_per_line:
+                 lines.append(key[chars_per_line:])
+
+            # Fecha Autorización
+            auth_date = sri_info.get('authorization_date')
+            if auth_date:
+                # Intentar parsear si es string ISO
+                if isinstance(auth_date, str):
+                    try:
+                        from django.utils.dateparse import parse_datetime
+                        dt = parse_datetime(auth_date)
+                        if dt:
+                            auth_date = dt.strftime('%d/%m/%Y %H:%M:%S')
+                    except:
+                         pass
+                lines.append(f"FECHA AUTORIZACION: {auth_date}")
+            else:
+                lines.append("FECHA AUTORIZACION: PENDIENTE")
+            
+            lines.append(f"AMBIENTE: {sri_info.get('environment', 'PRUEBAS')}")
+            lines.append(f"EMISION: {sri_info.get('emission_type', 'NORMAL')}")
+            
+            lines.append("CLAVE DE ACCESO:")
+            lines.append(key[:chars_per_line])
+            if len(key) > chars_per_line:
+                 lines.append(key[chars_per_line:])
+                 
         else:
-            # Ticket normal
-            lines.append("TICKET DE VENTA".center(chars_per_line))
-    
-# Usar hora del cliente si existe, sino hora local del servidor
-        printed_at_str = order_data.get('printed_at')
-        current_time = None
+            lines.append(center("NOTA DE VENTA"))
+            lines.append(center(f"Orden #: {order_data.get('order_number')}"))
+
+        # Separador doble o simple
+        lines.append("=" * chars_per_line)
         
-        if printed_at_str:
+        # --- INFO EMPRESA DETALLADA (como en la foto) ---
+        lines.append(center(settings.get_company_name()))
+        lines.append(f"Dirección Matriz: {settings.get_company_address()}")
+        lines.append(f"Teléfono: {settings.get_company_phone()}")
+        lines.append(f"Correo: {settings.get_company_email()}")
+        lines.append("Obligado a Llevar Contabilidad: NO")  # Configurable en futuro
+        lines.append("Contribuyente Régimen RIMPE")         # Configurable en futuro
+        
+        lines.append("-" * chars_per_line)
+        
+        # --- INFO CLIENTE ---
+        # Recibir fecha de emisión del frontend o usar actual
+        printed_at = order_data.get('printed_at')
+        if printed_at:
             from django.utils.dateparse import parse_datetime
-            dt = parse_datetime(printed_at_str)
-            if dt:
-                current_time = timezone.localtime(dt)
+            dt = parse_datetime(printed_at)
+            fecha_emision = dt.strftime('%d/%m/%Y %H:%M:%S') if dt else ''
+        else:
+            fecha_emision = timezone.localtime(timezone.now()).strftime('%d/%m/%Y %H:%M:%S')
+
+        lines.append(f"Nombres: {order_data.get('customer_name', 'CONSUMIDOR FINAL')}")
+        lines.append(f"Direccion: {order_data.get('customer_address', 'Cuenca')}")
+        lines.append(f"Telefono: {order_data.get('customer_phone', '--')}")
+        lines.append(f"RUC: {order_data.get('customer_identification', '9999999999999')}")
+        lines.append(f"Fecha Emisión: {fecha_emision}")
         
-        if not current_time:
-            current_time = timezone.localtime(timezone.now())
-    
-        lines.append(f"Fecha: {current_time.strftime('%d/%m/%Y')}  Hora: {current_time.strftime('%H:%M')}")
+        lines.append("-" * chars_per_line)
         
-        lines.append(f"Ticket #: {order_data.get('order_number', 'N/A')}")
+        # --- DETALLE PRODUCTOS ---
+        # Encabezado compacto: CANT PRODUCTO V.TOT
+        # O intentamos replicar columnas: CANT ... V.UNI V.TOT
+        # Usaremos formato: "Prod Name" \n "Cant  Code  V.Uni  V.Tot"
         
-        # Cliente - usar datos del SRI si están disponibles
-        customer_name = sri_info.get('customer_name') or order_data.get('customer_name', 'CONSUMIDOR FINAL')
-        lines.append(f"Cliente: {customer_name}")
+        lines.append(f"{'CANT':<5} {'DETA':<15} {'V.UNI':>8} {'V.TOT':>8}")
+        lines.append("-" * chars_per_line)
         
-        # Identificación - mostrar si está disponible
-        customer_identification = sri_info.get('customer_identification')
-        if customer_identification and customer_identification != '9999999999999':
-            lines.append(f"CI/RUC: {customer_identification}")
+        items = order_data.get('items', [])
+        for item in items:
+            name = item.get('name', 'Producto')
+            try:
+                qty = float(item.get('quantity', 0))
+                price = float(item.get('price', 0))
+                total = float(item.get('total', 0))
+            except:
+                qty, price, total = 0, 0, 0
+
+            # Nombre producto (puede ser largo)
+            lines.append(name)
+            
+            # Detalle valores (indentado)
+            # CANT   COD(fake)   V.UNI    V.TOT
+            line_vals = f"{qty:,.2f}   {'ITM'}     {price:,.2f}   {total:,.2f}"
+            lines.append(line_vals.rjust(chars_per_line))
+
+        lines.append("-" * chars_per_line)
         
-        # Mapeo de tipos de orden
+        # --- TOTALES ---
+        subtotal = float(order_data.get('subtotal', 0))
+        tax = float(order_data.get('tax', 0))
+        discount = float(order_data.get('discount', 0))
+        total_val = float(order_data.get('total', 0))
+        
+        subtotal_neto = subtotal - discount
+        
+        lines.append(print_total_line("Subtotal:", subtotal))
+        lines.append(print_total_line("Descuento:", discount))
+        lines.append(print_total_line("Subtotal Neto:", subtotal_neto))
+        lines.append(print_total_line("Subtotal 0%:", 0.00)) # Asumimos todo grava IVA por ahora o ajustar lógica
+        lines.append(print_total_line("Subtotal 15%:", subtotal_neto))
+        lines.append(print_total_line("IVA 15%:", tax))
+        lines.append(print_total_line("Propina:", 0.00))
+        lines.append(print_total_line("V TOTAL:", total_val))
+        
+        lines.append("=" * chars_per_line)
+        
+        # --- PIE DE PAGINA / INFO ADICIONAL ---
+        lines.append("INFORMACION ADICIONAL")
+        lines.append(f"vendedor: Vendedor") # Podría venir en order_data
+        lines.append(f"correo: {settings.get_company_email()}")
+        
+        lines.append("\n\n")
+        
+        return "\n".join(lines)
         order_type_map = {
             'in_store': 'EN TIENDA',
             'pickup': 'PARA LLEVAR',
