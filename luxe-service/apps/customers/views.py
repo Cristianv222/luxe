@@ -7,13 +7,15 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count, Sum, Avg, Q
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime, date
 import logging
 
 from .models import (
     Customer, CustomerAddress, CustomerNote, 
     CustomerLoyalty, CustomerLoyaltyHistory, CustomerDevice
 )
+import openpyxl
+import math
 from .serializers import (
     CustomerSerializer, CustomerCreateSerializer, CustomerUpdateSerializer,
     CustomerLoginSerializer, CustomerAddressSerializer, CustomerNoteSerializer,
@@ -600,7 +602,245 @@ def admin_customer_list(request):
     Listar todos los clientes (solo admin)
     GET /api/customers/admin/list/
     """
-    # Parámetros de filtrado
+    customer_type = request.query_params.get('type')
+    is_active = request.query_params.get('active')
+    search = request.query_params.get('search', '')
+    
+    queryset = Customer.objects.all()
+    
+    if search:
+        queryset = queryset.filter(
+            Q(first_name__icontains=search) | 
+            Q(last_name__icontains=search) |
+            Q(email__icontains=search) |
+            Q(cedula__icontains=search) |
+            Q(phone__icontains=search) |
+            Q(razon_social__icontains=search)
+        ).distinct()
+        
+    if customer_type:
+        queryset = queryset.filter(customer_type=customer_type)
+
+    if is_active:
+         active_bool = is_active.lower() == 'true'
+         queryset = queryset.filter(is_active=active_bool)
+    
+    # Paginación
+    page = int(request.query_params.get('page', 1))
+    page_size = int(request.query_params.get('page_size', 20))
+    start = (page - 1) * page_size
+    end = start + page_size
+    
+    total = queryset.count()
+    from django.db.models import Max
+    
+    customers = queryset.order_by('-total_spent', '-created_at')[start:end]
+    
+    # Lógica de sincronización: Si el gasto es 0 pero existen órdenes, recalculamos
+    for c in customers:
+        if c.total_spent == 0:
+            # Excluir canceladas para evitar ruido
+            paid_orders = c.orders.filter(payment_status='paid').exclude(status='cancelled')
+            if paid_orders.exists():
+                stats = paid_orders.aggregate(
+                    total_amnt=Sum('total'),
+                    order_count=Count('id'),
+                    last_date=Max('created_at')
+                )
+                c.total_spent = stats['total_amnt'] or 0
+                c.total_orders = stats['order_count'] or 0
+                c.last_order_date = stats['last_date']
+                
+                if c.total_orders > 0:
+                    c.average_order_value = c.total_spent / c.total_orders
+                else:
+                    c.average_order_value = 0
+                    
+                c.save(update_fields=['total_spent', 'total_orders', 'last_order_date', 'average_order_value'])
+    
+    serializer = CustomerSerializer(customers, many=True)
+    
+    return Response({
+        'status': 'success',
+        'data': {
+            'customers': serializer.data,
+            'pagination': {
+                'page': page,
+                'page_size': page_size,
+                'total': total,
+                'total_pages': (total + page_size - 1) // page_size
+            }
+        }
+    })
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])  # Admin only in prod
+def reset_customer_stats(request):
+    """
+    DEV ONLY: Resetear estadísticas de gasto de TODOS los clientes a 0.
+    POST /api/customers/admin/reset-stats/
+    """
+    try:
+        # Resetear todos a 0
+        Customer.objects.update(
+            total_spent=0,
+            total_orders=0,
+            average_order_value=0,
+            last_order_date=None
+        )
+        return Response({
+            'status': 'success',
+            'message': 'Estadísticas de clientes reseteadas a 0 correctamente.'
+        })
+    except Exception as e:
+        logger.error(f"Error reset stats: {e}")
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])  # Debería ser IsAdminUser en prod
+def import_customers_excel(request):
+    """
+    Importar clientes desde archivo Excel
+    POST /api/customers/admin/import-excel/
+    """
+    if 'file' not in request.FILES:
+        return Response({'status': 'error', 'message': 'No file provided'}, status=400)
+    
+    excel_file = request.FILES['file']
+    
+    try:
+        wb = openpyxl.load_workbook(excel_file)
+        ws = wb.active
+        
+        # Leer headers (primera fila)
+        headers = {}
+        header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        for idx, cell in enumerate(header_row):
+            if cell:
+                headers[str(cell).strip()] = idx
+        
+        success_count = 0
+        errors = []
+        
+        # Iterar sobre las filas de datos (row 2 en adelante)
+        for index, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            try:
+                def get_val(col_name):
+                    if col_name in headers:
+                        val = row[headers[col_name]]
+                        if val is None or val == 'None' or val == '':
+                            return None
+                        return val
+                    return None
+
+                # 1. Extraer datos básicos
+                cedula = str(get_val('DNI') or '').strip()
+                if not cedula or cedula.lower() == 'nan':
+                    cedula = None
+                
+                razon_social = str(get_val('Razón Social') or '').strip()
+                if not razon_social or razon_social.lower() == 'nan':
+                    razon_social = None
+                    
+                nombre_completo = str(get_val('Nombre') or '').strip()
+                if not nombre_completo or nombre_completo.lower() == 'nan':
+                    nombre_completo = ''
+                
+                # Prioridad: Nombre > Razón Social
+                final_name = nombre_completo if nombre_completo else (razon_social if razon_social else 'Cliente Sin Nombre')
+                
+                # Separar Nombres y Apellidos
+                parts = final_name.split()
+                if len(parts) >= 3:
+                    last_name = f"{parts[0]} {parts[1]}"
+                    first_name = " ".join(parts[2:])
+                elif len(parts) == 2:
+                    last_name = parts[0]
+                    first_name = parts[1]
+                else:
+                    last_name = final_name
+                    first_name = "." 
+                
+                email = str(get_val('Correo') or '').strip()
+                if not email or '@' not in email or email.lower() == 'nan':
+                    import random
+                    suffix = random.randint(1000, 9999)
+                    clean_name = "".join(e for e in first_name if e.isalnum()).lower()
+                    email = f"{clean_name}{suffix}@sincorreo.com"
+                
+                phone = str(get_val('Teléfonos') or '').strip()
+                if not phone or phone.lower() == 'nan':
+                    phone = None
+                
+                address = str(get_val('Dirección') or '').strip()
+                if not address or address.lower() == 'nan':
+                    address = ''
+                
+                # Fecha cumpleaños
+                birth_date = None
+                cumple_raw = get_val('CUMPLEAÑOS')
+                if cumple_raw:
+                    if isinstance(cumple_raw, (datetime, date)):
+                        birth_date = cumple_raw
+                    else:
+                        # Try parsing string
+                        try:
+                            # Try common formats if string
+                            from dateutil import parser
+                            birth_date = parser.parse(str(cumple_raw)).date()
+                        except:
+                            pass 
+                
+                # 2. Verificar existencia
+                customer = None
+                if cedula:
+                    customer = Customer.objects.filter(cedula=cedula).first()
+                
+                if not customer:
+                    customer = Customer.objects.filter(email=email).first()
+                
+                # 3. Crear o Actualizar
+                if customer:
+                    if not customer.cedula and cedula: customer.cedula = cedula
+                    if not customer.phone and phone: customer.phone = phone
+                    if not customer.razon_social and razon_social: customer.razon_social = razon_social
+                    if not customer.address and address: customer.address = address
+                    if not customer.birth_date and birth_date: customer.birth_date = birth_date
+                    customer.save()
+                else:
+                    # Crear nuevo
+                    Customer.objects.create(
+                        email=email,
+                        first_name=first_name[:50],
+                        last_name=last_name[:50],
+                        cedula=cedula,
+                        razon_social=razon_social,
+                        phone=phone,
+                        address=address,
+                        birth_date=birth_date,
+                        password="!Imported123", # Password dummy
+                        customer_type='regular',
+                        is_active=True
+                    )
+                
+                success_count += 1
+                
+            except Exception as e:
+                errors.append(f"Fila {index}: {str(e)}")
+        
+        return Response({
+            'status': 'success', 
+            'message': f'Procesados {success_count} clientes.',
+            'errors': errors
+        })
+        
+    except Exception as e:
+        logger.error(f"Error importando excel: {str(e)}")
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_customer_list(request):
     customer_type = request.query_params.get('type')
     is_active = request.query_params.get('active')
     is_vip = request.query_params.get('vip')

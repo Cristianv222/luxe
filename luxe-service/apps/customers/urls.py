@@ -43,6 +43,8 @@ urlpatterns = [
     # ========== ENDPOINTS DE ADMINISTRADOR ==========
     # Listado y búsqueda
     path('admin/list/', views.admin_customer_list, name='admin-customer-list'),
+    path('admin/import-excel/', views.import_customers_excel, name='import-customers-excel'),
+    path('admin/reset-stats/', views.reset_customer_stats, name='reset-customer-stats'),
     path('admin/search/', views.admin_search_customers, name='admin-search'),
     path('admin/stats/', views.admin_customer_stats, name='admin-stats'),
     

@@ -153,6 +153,28 @@ const Ordenes = () => {
         }
     };
 
+    const handleDownloadDocument = async (url, type) => {
+        if (!url) return;
+        try {
+            // El backend espera una petición autenticada para generar el PDF/XML
+            const response = await api.get(url, {
+                responseType: 'blob',
+                baseURL: process.env.REACT_APP_LUXE_SERVICE
+            });
+            const blob = new Blob([response.data], { type: type === 'pdf' ? 'application/pdf' : 'application/xml' });
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = `factura_${selectedOrder.sri_info?.sri_number || selectedOrder.order_number}.${type}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(link.href);
+        } catch (error) {
+            console.error(`Error downloading ${type}:`, error);
+            alert(`Error al descargar el documento ${type.toUpperCase()}.`);
+        }
+    };
+
     const handleRetrySRI = async () => {
         if (!selectedOrder) return;
         setSriLoading(true);
@@ -331,25 +353,57 @@ const Ordenes = () => {
                                     <button onClick={handlePrintTicket} className="ff-button ff-button-primary">
                                         <i className="bi bi-printer" style={{ marginRight: '8px' }}></i> Imprimir
                                     </button>
+
+                                    {selectedOrder.sri_info?.pdf_url && (
+                                        <button
+                                            onClick={() => handleDownloadDocument(selectedOrder.sri_info.pdf_url, 'pdf')}
+                                            className="ff-button ff-button-secondary"
+                                            style={{ marginLeft: '10px', display: 'inline-flex', alignItems: 'center' }}
+                                        >
+                                            <i className="bi bi-file-earmark-pdf" style={{ marginRight: '8px' }}></i> Factura PDF
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* Sección SRI */}
                             <div style={{ padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px', marginBottom: '2rem', border: '1px solid #e9ecef' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div>
+                                    <div style={{ flex: 1 }}>
                                         <h4 style={{ fontFamily: 'var(--font-serif)', marginBottom: '0.5rem', color: '#495057' }}>Estado SRI / Facturación</h4>
                                         {selectedOrder.sri_info ? (
                                             <div>
-                                                <div style={{ marginBottom: '0.25rem' }}>
+                                                <div style={{ marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                     <strong>Estado: </strong>
                                                     <span className={`status-badge ${selectedOrder.sri_info.status === 'AUTHORIZED' ? 'completed' : 'pending'}`}>
                                                         {selectedOrder.sri_info.status_display}
                                                     </span>
+
+                                                    {/* Mostrar botones PDF/XML solo si existen las URLs */}
+                                                    {selectedOrder.sri_info.status === 'AUTHORIZED' && (
+                                                        <div style={{ display: 'flex', gap: '8px', marginLeft: '10px' }}>
+                                                            {selectedOrder.sri_info.pdf_url && (
+                                                                <button
+                                                                    onClick={() => handleDownloadDocument(selectedOrder.sri_info.pdf_url, 'pdf')}
+                                                                    className="btn-boutique outline"
+                                                                    style={{ padding: '2px 8px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none', border: '1px solid currentColor', background: 'transparent' }}
+                                                                    title="Ver PDF Factura"
+                                                                >
+                                                                    <i className="bi bi-file-earmark-pdf"></i> PDF
+                                                                </button>
+                                                            )}
+
+                                                        </div>
+                                                    )}
                                                 </div>
+
                                                 {selectedOrder.sri_info.sri_number && (
                                                     <div style={{ fontSize: '0.9rem', color: '#6c757d' }}>
                                                         <strong>Factura: </strong> {selectedOrder.sri_info.sri_number}
+                                                    </div>
+                                                )}
+                                                {selectedOrder.sri_info.key && (
+                                                    <div style={{ fontSize: '0.8rem', color: '#adb5bd', marginTop: '2px', fontFamily: 'monospace' }}>
+                                                        CA: {selectedOrder.sri_info.key}
                                                     </div>
                                                 )}
                                                 {selectedOrder.sri_info.error && (
@@ -363,7 +417,7 @@ const Ordenes = () => {
                                         )}
                                     </div>
                                     <div>
-                                        {/* Mostrar botón solo si NO está autorizado */}
+                                        {/* Mostrar botón de reintentar solo si NO está autorizado */}
                                         {(!selectedOrder.sri_info || selectedOrder.sri_info.status !== 'AUTHORIZED') && (
                                             <button
                                                 onClick={handleRetrySRI}

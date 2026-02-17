@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 1cm;
+        }
+
+        body {
+            font-family: Helvetica, sans-serif;
+            font-size: 8pt;
+            color: #000;
+        }
+
+        .header-box {
+            width: 100%;
+            border: 1px solid #000;
+            border-radius: 4px;
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .header-left {
+            width: 55%;
+            padding: 10px;
+            vertical-align: top;
+            border-right: 1px solid #000;
+        }
+
+        .header-right {
+            width: 45%;
+            padding: 10px;
+            vertical-align: top;
+        }
+
+        .company-name {
+            font-size: 14pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        .company-name-sub {
+            font-size: 12pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .info-row {
+            margin-bottom: 3px;
+        }
+
+        .info-label {
+            font-weight: bold;
+        }
+
+        .invoice-title-box {
+            text-align: left;
+        }
+
+        .invoice-header {
+            font-size: 12pt;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .accounting-info {
+            text-align: center;
+            margin: 10px 0;
+            font-size: 9pt;
+        }
+
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            margin-top: 10px;
+            font-size: 9pt;
+        }
+
+        .client-table {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .client-table td {
+            padding: 2px 0;
+        }
+
+        .client-label {
+            font-weight: bold;
+            width: 15%;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+
+        .items-table th {
+            background-color: #eee;
+            color: #000;
+            border: 1px solid #000;
+            padding: 4px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 8pt;
+        }
+
+        .items-table td {
+            border: 1px solid #000;
+            padding: 4px;
+            font-size: 8pt;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .totals-container {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .totals-table {
+            width: 40%;
+            float: right;
+            border-collapse: collapse;
+            margin-left: auto;
+        }
+
+        .totals-table td {
+            padding: 3px;
+            text-align: right;
+        }
+
+        .total-box {
+            border: 1px solid #000;
+            padding: 3px;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+
+        .auth-info-container {
+            margin-top: 30px;
+            width: 100%;
+        }
+
+        .auth-table {
+            width: 100%;
+        }
+
+        .qr-cell {
+            width: 20%;
+            vertical-align: top;
+        }
+
+        .auth-details-cell {
+            width: 80%;
+            padding-left: 20px;
+            vertical-align: top;
+        }
+
+        .auth-row {
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header Box -->
+    <div class="header-box">
+        <table class="header-table">
+            <tr>
+                <td class="header-left">
+                    <div class="company-name">{{ settings.get_company_name }}</div>
+                    <div class="info-row text-center"><span class="info-label">RUC:</span> {{ settings.get_tax_id }}
+                    </div>
+                    <div class="info-row text-center"><span class="info-label">Dirección:</span> {{
+                        settings.get_company_address }}</div>
+                    <div class="info-row text-center"><span class="info-label">Teléfono:</span> {{
+                        settings.get_company_phone }}</div>
+                    <div class="info-row text-center"><span class="info-label">Email:</span> {{
+                        settings.get_company_email }}</div>
+                </td>
+                <td class="header-right">
+                    <div class="invoice-header">INVOICE</div>
+                    <div class="info-row"><span class="info-label">No:</span> {{ document.sri_number }}</div>
+                    <div class="info-row"><span class="info-label">Fecha:</span> {{
+                        document.authorization_date|date:"d/m/Y" }}</div>
+                    <div class="info-row"><span class="info-label">Ambiente:</span> {{ environment }}</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="accounting-info">
+        OBLIGADO A LLEVAR CONTABILIDAD: NO
+    </div>
+
+    <!-- Client Data -->
+    <div class="section-title">DATOS DEL CLIENTE</div>
+    <table class="client-table">
+        <tr>
+            <td class="client-label">Razón Social:</td>
+            <td>{{ order.customer_name|default:"CONSUMIDOR FINAL"|upper }}</td>
+        </tr>
+        <tr>
+            <td class="client-label">Identificación:</td>
+            <td>{{ order.customer_identification|default:order.customer.identification|default:"9999999999999" }} {% if not order.customer_identification and not order.customer.identification %}(Consumer){% endif %}</td>
+        </tr>
+        <tr>
+            <td class="client-label">Dirección:</td>
+            <td>{% if order.customer %}{{ order.customer.address }}{% else %}S/D{% endif %}</td>
+        </tr>
+    </table>
+
+    <!-- Items Detail -->
+    <div class="section-title">DETALLE</div>
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th width="15%">Código</th>
+                <th width="40%">Descripción</th>
+                <th width="10%">Cant.</th>
+                <th width="12%">P. Unit.</th>
+                <th width="10%">Desc.</th>
+                <th width="13%">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="text-left">{{ item.product.code }}</td>
+                <td class="text-left">{{ item.product.name }}</td>
+                <td class="text-center">{{ item.quantity|floatformat:2 }}</td>
+                <td class="text-right">${{ item.unit_price }}</td>
+                <td class="text-right">$0.00</td>
+                <td class="text-right">${{ item.line_total }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Totals -->
+    <table width="100%" style="margin-top: 10px;">
+        <tr>
+            <td width="60%"></td>
+            <td width="40%">
+                <table width="100%">
+                    <tr>
+                        <td class="text-right info-label">SUBTOTAL SIN IMPUESTOS:</td>
+                        <td class="text-right">${{ order.subtotal }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-right info-label">DESCUENTO:</td>
+                        <td class="text-right">${{ order.discount_amount|default:"0.00" }}</td>
+                    </tr>
+                    {% if order.tax_amount > 0 %}
+                    <tr>
+                        <td class="text-right info-label">IVA 15%:</td>
+                        <td class="text-right">${{ order.tax_amount }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="text-right info-label" style="padding-top: 5px;">TOTAL:</td>
+                        <td class="text-right" style="padding-top: 5px;">
+                            <div class="total-box">${{ order.total }}</div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Authorization Info -->
+    <div class="section-title" style="margin-top: 20px;">INFORMACIÓN DE AUTORIZACIÓN</div>
+    <div style="margin-top: 10px;">
+        <table width="100%">
+            <tr>
+                <td><span class="info-label">CLAVE DE ACCESO:</span></td>
+                <td>{{ document.access_key }}</td>
+            </tr>
+            <tr>
+                <td><span class="info-label">No. AUTORIZACIÓN:</span></td>
+                <td>{{ document.access_key }}</td>
+            </tr>
+            <tr>
+                <td><span class="info-label">FECHA AUTORIZACIÓN:</span></td>
+                <td>{{ document.authorization_date|date:"d/m/Y H:i:s" }}</td>
+            </tr>
+            <tr>
+                <td><span class="info-label">ESTADO:</span></td>
+                <td>{{ document.get_status_display|upper }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <table style="margin-top: 20px; width: 100%;">
+        <tr>
+            <td width="15%">
+                {% if qr_code %}
+                <img src="data:image/png;base64,{{ qr_code }}" width="80" height="80" />
+                {% endif %}
+            </td>
+            <td width="85%" valign="middle">
+                <div class="info-label">Código QR para verificación</div>
+                <div style="font-size: 7pt;">Clave de Acceso: {{ document.access_key }}</div>
+                <div style="font-size: 7pt;">Consulte su documento en: www.sri.gob.ec</div>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

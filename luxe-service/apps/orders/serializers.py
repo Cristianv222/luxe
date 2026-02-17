@@ -237,8 +237,17 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             try:
                 config = SRIConfiguration.get_settings()
                 environment = config.get_environment_display()
-            except:
+                
+                # Construir URLs para PDF y XML (Backend Proxy / Generador Local)
+                # Apuntan a los endpoints añadidos en SRIDocumentViewSet
+                pdf_url = f"/api/sri/documents/{doc.id}/pdf/"
+                xml_url = f"/api/sri/documents/{doc.id}/xml/"
+                    
+            except Exception as e:
+                logger.error(f"Error getting SRI info: {e}")
                 environment = 'PRUEBAS'
+                pdf_url = None
+                xml_url = None
                 
             return {
                 'status': doc.status,
@@ -248,7 +257,9 @@ class OrderDetailSerializer(serializers.ModelSerializer):
                 'authorization_date': doc.authorization_date,
                 'error': doc.error_message,
                 'environment': environment,
-                'emission_type': 'NORMAL'
+                'emission_type': 'NORMAL',
+                'pdf_url': pdf_url, 
+                'xml_url': xml_url
             }
         return None
 

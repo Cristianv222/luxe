@@ -41,7 +41,7 @@ class Customer(models.Model):
    # Información básica
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True, verbose_name='Correo electrónico')
-    phone = models.CharField(max_length=20, unique=True, verbose_name='Teléfono')
+    phone = models.CharField(max_length=20, unique=True, null=True, blank=True, verbose_name='Teléfono')
     
     # NUEVO CAMPO CEDULA
     cedula = models.CharField(
@@ -55,6 +55,10 @@ class Customer(models.Model):
     
     first_name = models.CharField(max_length=50, verbose_name='Nombres')
     last_name = models.CharField(max_length=50, verbose_name='Apellidos')
+    
+    # NUEVO CAMPO RAZON SOCIAL
+    razon_social = models.CharField(max_length=255, blank=True, null=True, verbose_name='Razón Social')
+    
     birth_date = models.DateField(null=True, blank=True, verbose_name='Fecha de nacimiento')
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, null=True, blank=True)
     

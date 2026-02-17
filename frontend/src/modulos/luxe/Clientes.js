@@ -21,6 +21,12 @@ const Clientes = () => {
     const [viewingCustomer, setViewingCustomer] = useState(null);
     const [submitting, setSubmitting] = useState(false);
 
+    // Import States
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [importFile, setImportFile] = useState(null);
+    const [importing, setImporting] = useState(false);
+    const [importResults, setImportResults] = useState(null);
+
     const [formData, setFormData] = useState({
         email: '',
         username: '',
@@ -198,6 +204,57 @@ const Clientes = () => {
         }
     };
 
+    const handleImportSubmit = async () => {
+        if (!importFile) return;
+
+        setImporting(true);
+        setImportResults(null);
+
+        const fd = new FormData();
+        fd.append('file', importFile);
+
+        try {
+            const res = await api.post('/api/customers/admin/import-excel/', fd, {
+                baseURL: process.env.REACT_APP_LUXE_SERVICE,
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            setImportResults(res.data);
+            if (res.data.status === 'success') {
+                setTimeout(() => {
+                    fetchCustomers();
+                    // setIsImportModalOpen(false); // Optional: close automatically
+                }, 1500);
+            }
+        } catch (err) {
+            setImportResults({
+                status: 'error',
+                message: err.response?.data?.message || 'Error al importar archivo'
+            });
+        } finally {
+            setImporting(false);
+        }
+    };
+
+    const handleResetStats = async () => {
+        if (!window.confirm('¿Estás SEGURO de que quieres vaciar (poner a 0) el Gasto Total y Órdenes de TODOS los clientes? Esta acción es solo para desarrollo y NO se puede deshacer.')) return;
+
+        try {
+            const res = await api.post('/api/customers/admin/reset-stats/', {}, {
+                baseURL: process.env.REACT_APP_LUXE_SERVICE
+            });
+            if (res.data.status === 'success') {
+                alert('Gastos vaciados exitosamente.');
+                fetchCustomers();
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error al vaciar gastos.');
+        }
+    };
+
     // --- UI Helpers ---
     const getTierBadge = (tier) => {
         const styles = {
@@ -247,6 +304,12 @@ const Clientes = () => {
                             />
                         </div>
                         <button type="submit" className="btn-boutique dark">Buscar</button>
+                        <button type="button" className="btn-boutique danger" onClick={handleResetStats} title="Desarrollo: Poner gastos a 0">
+                            <i className="bi bi-trash"></i> Vaciar Gastos
+                        </button>
+                        <button type="button" className="btn-boutique outline" onClick={() => setIsImportModalOpen(true)}>
+                            <i className="bi bi-file-earmark-spreadsheet"></i> Importar Excel
+                        </button>
                         <button type="button" className="btn-boutique success" onClick={openCreateModal}>
                             <i className="bi bi-person-plus-fill"></i> Nuevo Cliente
                         </button>
@@ -507,6 +570,54 @@ const Clientes = () => {
                 )}
             </Modal>
 
+
+            {/* Import Modal */}
+            <Modal
+                isOpen={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                title="Importar Clientes desde Excel"
+            >
+                <div className="boutique-form">
+                    <div style={{ padding: '1.5rem', background: '#F8FAFC', borderRadius: '0.8rem', marginBottom: '1.5rem', border: '1px dashed #CBD5E1' }}>
+                        <p style={{ marginBottom: '1rem', fontSize: '0.9rem', color: '#64748B' }}>
+                            Sube un archivo Excel (.xlsx) con las siguientes columnas obligatorias:
+                            <br /><strong>DNI, Nombre, Razón Social, Dirección, Correo, Teléfonos, CUMPLEAÑOS</strong>
+                        </p>
+                        <input
+                            type="file"
+                            accept=".xlsx, .xls"
+                            onChange={e => setImportFile(e.target.files[0])}
+                            style={{ width: '100%' }}
+                        />
+                    </div>
+
+                    {importResults && (
+                        <div style={{ marginBottom: '1.5rem', maxHeight: '200px', overflowY: 'auto' }}>
+                            <div className={`alert alert-${importResults.status === 'success' ? 'success' : 'danger'}`} style={{ padding: '1rem', borderRadius: '0.5rem', background: importResults.status === 'success' ? '#DCFCE7' : '#FEE2E2', color: importResults.status === 'success' ? '#166534' : '#991B1B' }}>
+                                {importResults.message}
+                            </div>
+                            {importResults.errors && importResults.errors.length > 0 && (
+                                <ul style={{ fontSize: '0.8rem', color: '#DC2626', marginTop: '0.5rem', paddingLeft: '1.5rem' }}>
+                                    {importResults.errors.map((err, i) => <li key={i}>{err}</li>)}
+                                </ul>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="modal-footer-boutique" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                        <button type="button" className="btn-boutique dark" onClick={() => setIsImportModalOpen(false)}>Cerrar</button>
+                        <button
+                            type="button"
+                            className="btn-boutique primary"
+                            onClick={handleImportSubmit}
+                            disabled={!importFile || importing}
+                        >
+                            {importing ? 'Importando...' : 'Subir y Procesar'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
             <style jsx>{`
                 .detail-item {
                     margin-bottom: 0.8rem;
@@ -528,7 +639,7 @@ const Clientes = () => {
                     border-color: #FEE2E2 !important;
                 }
             `}</style>
-        </div>
+        </div >
     );
 };
 
