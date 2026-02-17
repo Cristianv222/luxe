@@ -204,8 +204,8 @@
                 <td class="header-right">
                     <div class="invoice-header">INVOICE</div>
                     <div class="info-row"><span class="info-label">No:</span> {{ document.sri_number }}</div>
-                    <div class="info-row"><span class="info-label">Fecha:</span> {{
-                        document.authorization_date|date:"d/m/Y" }}</div>
+                    <div class="info-row"><span class="info-label">Fecha:</span> {{ order.created_at|date:"d/m/Y" }}
+                    </div>
                     <div class="info-row"><span class="info-label">Ambiente:</span> {{ environment }}</div>
                 </td>
             </tr>
@@ -310,7 +310,7 @@
             </tr>
             <tr>
                 <td><span class="info-label">FECHA AUTORIZACIÓN:</span></td>
-                <td>{{ document.authorization_date|date:"d/m/Y H:i:s" }}</td>
+                <td>{{ document.authorization_date|date:"d/m/Y H:i:s"|default:"Pendiente" }}</td>
             </tr>
             <tr>
                 <td><span class="info-label">ESTADO:</span></td>

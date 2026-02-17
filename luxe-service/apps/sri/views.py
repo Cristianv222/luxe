@@ -132,14 +132,60 @@ class SRIDocumentViewSet(viewsets.ReadOnlyModelViewSet):
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="factura_{document.sri_number}.pdf"'
     
-        template = get_template(template_path)
-        html = template.render(context)
-    
+        # Renderizar el template con el contexto
+        from django.template.loader import render_to_string
+        html = render_to_string(template_path, context, request=request)
+        
+        # Generar PDF
         pisa_status = pisa.CreatePDF(html, dest=response)
     
         if pisa_status.err:
             return HttpResponse('Error generando PDF', status=500)
         return response
+
+    @action(detail=True, methods=['get'], url_path='debug-html')
+    def debug_html(self, request, pk=None):
+        """DEBUG TEMPORAL: Ver el HTML renderizado sin convertir a PDF"""
+        document = self.get_object()
+        order = document.order
+    
+        settings = PrinterSettings.get_settings()
+    
+        qr_image_base64 = None
+        if document.access_key:
+            try:
+                qr = qrcode.QRCode(
+                    version=1,
+                    error_correction=qrcode.constants.ERROR_CORRECT_L,
+                    box_size=10,
+                    border=0,
+                )
+                qr.add_data(document.access_key)
+                qr.make(fit=True)
+            
+                img = qr.make_image(fill_color="black", back_color="white")
+                buffer = BytesIO()
+                img.save(buffer, format="PNG")
+                qr_image_base64 = base64.b64encode(buffer.getvalue()).decode()
+            except Exception as e:
+                print(f"Error generando QR: {e}")
+    
+        context = {
+            'document': document,
+            'order': order,
+            'settings': settings,
+            'environment': SRIConfiguration.get_settings().get_environment_display(),
+            'items': order.items.all(),
+            'qr_code': qr_image_base64,
+        }
+    
+        template_path = 'sri/invoice_pdf.html'
+        
+        from django.template.loader import render_to_string
+        html = render_to_string(template_path, context, request=request)
+        
+        return HttpResponse(html, content_type='text/html')
+
 
     @action(detail=True, methods=['get'])
     def xml(self, request, pk=None):
