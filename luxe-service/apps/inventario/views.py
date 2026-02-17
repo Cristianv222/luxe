@@ -259,6 +259,21 @@ class ProductViewSet(viewsets.ModelViewSet):
         serializer = ProductListSerializer(products, many=True)
         return Response(serializer.data)
     
+    @action(detail=True, methods=['post'])
+    def toggle_featured(self, request, pk=None):
+        """Marca o desmarca un producto como destacado"""
+        product = self.get_object()
+        product.is_featured = not product.is_featured
+        product.save()
+        
+        serializer = ProductDetailSerializer(product)
+        return Response({
+            'message': 'Producto destacado actualizado',
+            'is_featured': product.is_featured,
+            'product': serializer.data
+        })
+
+    
     @action(detail=False, methods=['get'])
     def new(self, request):
         """Obtiene productos nuevos"""

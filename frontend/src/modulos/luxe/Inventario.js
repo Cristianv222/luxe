@@ -228,11 +228,8 @@ const Inventario = () => {
 
     const handleToggleFeatured = async (product) => {
         try {
-            const formData = new FormData();
-            formData.append('is_featured', !product.is_featured);
-            await api.patch(`/api/menu/products/${product.id}/`, formData, {
+            await api.post(`/api/menu/products/${product.id}/toggle_featured/`, {}, {
                 baseURL: process.env.REACT_APP_LUXE_SERVICE,
-                headers: { 'Content-Type': 'multipart/form-data' },
             });
             fetchProducts(searchQuery, pagination.page, false);
         } catch (err) {
@@ -240,6 +237,7 @@ const Inventario = () => {
             alert('Error al actualizar destacado');
         }
     };
+
 
     const handleToggleActive = async (product) => {
         // Si está activo, lo vamos a desactivar (Corazón Roto)
