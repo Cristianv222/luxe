@@ -16,6 +16,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    cpus: 1.0
+    mem_limit: 2G
 
   redis:
     image: redis:7-alpine
@@ -29,6 +31,8 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+    cpus: 0.5
+    mem_limit: 128M
 
   luxe-service:
     build: 
@@ -83,6 +87,8 @@ services:
       - luxe-network
       - proxy-network
     restart: unless-stopped
+    cpus: 0.5
+    mem_limit: 1G
     logging:
       driver: "json-file"
       options:
@@ -105,6 +111,8 @@ services:
       - luxe-network
       - proxy-network
     restart: unless-stopped
+    cpus: 0.5
+    mem_limit: 1G
     logging:
       driver: "json-file"
       options:
