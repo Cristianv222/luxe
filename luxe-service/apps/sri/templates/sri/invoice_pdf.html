@@ -191,12 +191,12 @@
         <table class="header-table">
             <tr>
                 <td class="header-left">
-                    <div class="company-name">{{ settings.get_company_name }}</div>
-                    <div class="info-row text-center"><span class="info-label">RUC:</span> {{ settings.get_tax_id }}
-                    </div>
-                    <div class="info-row text-center"><span class="info-label">Dirección:</span> {{ settings.get_company_address }}</div>
-                    <div class="info-row text-center"><span class="info-label">Teléfono:</span> {{ settings.get_company_phone }}</div>
-                    <div class="info-row text-center"><span class="info-label">Email:</span> {{ settings.get_company_email }}</div>
+                    <div class="company-name">{{ company_name }}</div>
+                    <div class="info-row"><span class="info-label">RUC:</span> {{ company_tax_id }}</div>
+                    <div class="info-row"><span class="info-label">Dirección:</span> {{ company_address }}</div>
+                    <div class="info-row"><span class="info-label">Teléfono:</span> {{ company_phone }}</div>
+                    <div class="info-row"><span class="info-label">Email:</span> {{ company_email }}</div>
+                </td>
                 </td>
                 <td class="header-right">
                     <div class="invoice-header">INVOICE</div>
@@ -223,9 +223,12 @@
         <tr>
             <td class="client-label">Identificación:</td>
             <td>
-                {{ order.customer_identification|default:order.customer.cedula|default:"9999999999999" }}
-                {% if not order.customer_identification and not order.customer.cedula %}
-                (Consumer)
+                {% if order.customer_identification %}
+                {{ order.customer_identification }}
+                {% elif order.customer %}
+                {{ order.customer.cedula|default:"9999999999999" }}
+                {% else %}
+                9999999999999 (Consumer)
                 {% endif %}
             </td>
         </tr>

@@ -118,13 +118,20 @@ class SRIDocumentViewSet(viewsets.ReadOnlyModelViewSet):
             except Exception as e:
                 print(f"Error generando QR: {e}")
     
-        # Contexto para el template - USANDO EL CÓDIGO ORIGINAL QUE FUNCIONA
+        # Contexto para el template - USANDO VALORES EXPLICITOS PARA EVITAR ERRORES DE RENDERIZADO
         context = {
             'document': document,
             'order': order,
-            'settings': settings,
+            'settings': settings, # Mantenemos por compatibilidad
+            # Valores explícitos extraídos de las propiedades
+            'company_name': settings.resolved_company_name,
+            'company_address': settings.resolved_company_address,
+            'company_phone': settings.resolved_company_phone,
+            'company_email': settings.resolved_company_email,
+            'company_tax_id': settings.resolved_tax_id,
+            'company_logo': settings.resolved_company_logo,
             'environment': SRIConfiguration.get_settings().get_environment_display(),
-            'items': order.items.all(),  # ← ESTO funciona porque en el template usas item.line_total
+            'items': order.items.all(),
             'qr_code': qr_image_base64,
         }
     

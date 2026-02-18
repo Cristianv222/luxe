@@ -604,55 +604,56 @@ class PrinterSettings(models.Model):
     
     # Métodos para obtener valores (BD o settings.py)
     
-    def get_company_name(self):
+    @property
+    def resolved_company_name(self):
         """Obtiene nombre de empresa (BD o settings)"""
         if self.company_name:
             return self.company_name
-        
         from django.conf import settings
         return getattr(settings, 'COMPANY_CONFIG', {}).get('name', 'Mi Empresa')
     
-    def get_company_address(self):
+    @property
+    def resolved_company_address(self):
         """Obtiene dirección (BD o settings)"""
         if self.company_address:
             return self.company_address
-        
         from django.conf import settings
         return getattr(settings, 'COMPANY_CONFIG', {}).get('address', 'Dirección no configurada')
     
-    def get_company_phone(self):
+    @property
+    def resolved_company_phone(self):
         """Obtiene teléfono (BD o settings)"""
         if self.company_phone:
             return self.company_phone
-        
         from django.conf import settings
         return getattr(settings, 'COMPANY_CONFIG', {}).get('phone', '000-0000')
     
-    def get_company_email(self):
+    @property
+    def resolved_company_email(self):
         """Obtiene email (BD o settings)"""
         if self.company_email:
             return self.company_email
-        
         from django.conf import settings
         return getattr(settings, 'COMPANY_CONFIG', {}).get('email', '')
     
-    def get_company_website(self):
+    @property
+    def resolved_company_website(self):
         """Obtiene website (BD o settings)"""
         if self.company_website:
             return self.company_website
-        
         from django.conf import settings
         return getattr(settings, 'COMPANY_CONFIG', {}).get('website', '')
     
-    def get_tax_id(self):
+    @property
+    def resolved_tax_id(self):
         """Obtiene RUC/NIT (BD o settings)"""
         if self.tax_id:
             return self.tax_id
-        
         from django.conf import settings
         return getattr(settings, 'COMPANY_CONFIG', {}).get('tax_id', '')
     
-    def get_company_logo(self):
+    @property
+    def resolved_company_logo(self):
         """Obtiene logo (BD o settings)"""
         if self.company_logo:
             return self.company_logo
@@ -669,19 +670,19 @@ class PrinterSettings(models.Model):
         
         return logo_path
     
-    def get_receipt_header(self):
+    @property
+    def resolved_receipt_header(self):
         """Obtiene encabezado de ticket (BD o settings)"""
         if self.receipt_header:
             return self.receipt_header
-        
         from django.conf import settings
         return getattr(settings, 'PRINTING_CONFIG', {}).get('receipt_header', '')
     
-    def get_receipt_footer(self):
+    @property
+    def resolved_receipt_footer(self):
         """Obtiene pie de ticket (BD o settings)"""
         if self.receipt_footer:
             return self.receipt_footer
-        
         from django.conf import settings
         return getattr(settings, 'PRINTING_CONFIG', {}).get('receipt_footer', '¡Gracias por su compra!')
     

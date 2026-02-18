@@ -165,7 +165,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     ViewSet para productos del menú
     """
     queryset = Product.objects.all()
-    permissions_classes = [AllowAny]
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     filterset_fields = ['category', 'subcategory', 'is_active', 'is_available', 'is_featured', 'is_new']
     search_fields = ['name', 'description', 'ingredients', 'code', 'barcode']
