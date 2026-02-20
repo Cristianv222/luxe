@@ -20,24 +20,42 @@ class InventoryExportExcelView(APIView):
         ws = wb.active
         ws.title = "Inventario"
         
-        # Headers
-        headers = ['ID', 'Nombre', 'Categoría', 'Precio', 'Stock', 'Mínimo', 'Activo', 'Disponible']
+        # Headers completos
+        headers = [
+            'ID', 'Código', 'Código de Barras', 'Nombre', 'Descripción', 'Línea (Category)', 
+            'Categoría (Subgroup)', 'Marca', 'Tallas Dispo.', 'Costo Actual', 
+            'Último Costo', 'Precio Venta', 'Impuesto (%)', 'Stock Actual', 
+            'Mínimo Stock', 'Activo', 'Disponible',
+            'Cta. Ventas', 'Cta. Costos', 'Cta. Inventario'
+        ]
         ws.append(headers)
         
         for p in products:
             ws.append([
                 str(p.id),
+                p.code or '',
+                p.barcode or '',
                 p.name,
+                p.description or '',
                 p.category.name if p.category else '-',
-                float(p.price),
+                p.subgroup or '-',
+                p.brand or '-',
+                p.available_sizes or '',
+                float(p.cost_price) if p.cost_price else 0,
+                float(p.last_purchase_cost) if p.last_purchase_cost else 0,
+                float(p.price) if p.price else 0,
+                float(p.tax_rate) if p.tax_rate else 0,
                 p.stock_quantity if p.track_stock else 'N/A',
                 p.min_stock_alert if p.track_stock else 'N/A',
                 'Sí' if p.is_active else 'No',
-                'Sí' if p.is_available else 'No'
+                'Sí' if p.is_available else 'No',
+                p.accounting_sales_account or '',
+                p.accounting_cost_account or '',
+                p.accounting_inventory_account or ''
             ])
             
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename="inventario_luxe.xlsx"'
+        response['Content-Disposition'] = 'attachment; filename="inventario_completo.xlsx"'
         
         wb.save(response)
         return response
@@ -153,21 +171,22 @@ class InventoryImportExcelView(APIView):
                     cell_code = get_val(1)
                     cell_barcode = get_val(2)
                     cell_name = get_val(3)
-                    cell_linea = get_val(4) or ''
-                    cell_categoria = get_val(5) or ''
-                    cell_subgrupo = get_val(7) or ''
-                    cell_medida = get_val(8) or 'Unidad'
+                    cell_desc = get_val(4) or ''
+                    cell_linea = get_val(5) or ''
+                    cell_subgrupo = get_val(6) or ''
+                    cell_brand = get_val(7) or '' # Marca
+                    cell_sizes = get_val(8) or ''
                     
-                    cell_stock = get_val(9)
-                    cell_price = get_val(10)
+                    cell_cost = get_val(9)
+                    cell_last_cost = get_val(10)
+                    cell_price = get_val(11)
+                    cell_tax = get_val(12)
                     
-                    cell_cost = get_val(15)
-                    cell_last_cost = get_val(16)
-                    cell_tax = get_val(18)
+                    cell_stock = get_val(13)
                     
-                    acc_sales = get_val(19) or ''
-                    acc_cost = get_val(20) or ''
-                    acc_inv = get_val(21) or ''
+                    acc_sales = get_val(17) or ''
+                    acc_cost = get_val(18) or ''
+                    acc_inv = get_val(19) or ''
 
                     if not cell_name:
                         continue
@@ -281,7 +300,9 @@ class InventoryImportExcelView(APIView):
                     
                     product.line = str(cell_linea)[:100]
                     product.subgroup = str(cell_subgrupo)[:100]
-                    product.unit_measure = str(cell_medida)[:50]
+                    product.brand = str(cell_brand)[:100]
+                    product.description = str(cell_desc)
+                    product.available_sizes = str(cell_sizes)[:200]
                     
                     # Stock logic
                     # User wants to UPDATE stock, likely replace or add? 
