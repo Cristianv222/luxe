@@ -4,7 +4,7 @@ services:
     container_name: luxe_postgres_local
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres_secure_2025
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: luxe_service_db
     volumes:
       - postgres-data-local:/var/lib/postgresql/data
@@ -22,7 +22,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: luxe_redis_local
-    command: redis-server --requirepass redis_secure_2025
+    command: redis-server --requirepass ${REDIS_PASSWORD}
     networks:
       - luxe-network
     ports:
@@ -34,14 +34,22 @@ services:
       context: ./luxe-service
       dockerfile: Dockerfile
     container_name: luxe_service_local
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /home/appuser
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ./luxe-service:/app
       - ./luxe-service/media:/app/media
     environment:
-      - SECRET_KEY=dev-secret-key
-      - DATABASE_URL=postgresql://postgres:postgres_secure_2025@postgres:5432/luxe_service_db
-      - REDIS_URL=redis://:redis_secure_2025@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/luxe_service_db
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - ALLOWED_HOSTS=*
       - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
       - DEBUG=True
@@ -54,14 +62,28 @@ services:
         condition: service_started
     networks:
       - luxe-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/luxe/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
     build: 
       context: ./frontend
       dockerfile: Dockerfile.prod
     container_name: luxe_frontend_local
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
     ports:
-      - "8080:80"
+      - "8080:8080"
     environment:
       - NODE_ENV=development
       - REACT_APP_API_BASE_URL=http://localhost:8000
@@ -72,6 +94,11 @@ services:
       - luxe-network
     depends_on:
       - luxe-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   luxe-network:

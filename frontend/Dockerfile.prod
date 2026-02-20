@@ -1,5 +1,5 @@
 # Etapa 1: Construcción (Build)
-FROM node:18-alpine as build
+FROM node:18.19.0-alpine3.19 as build
 
 WORKDIR /app
 
@@ -22,7 +22,7 @@ ENV NODE_ENV=production
 RUN npm run build
 
 # Etapa 2: Servidor Web (Nginx) - ¡Esta imagen es la única que queda viva!
-FROM nginx:alpine
+FROM nginx:1.25.3-alpine
 
 # Copiamos los archivos compilados de la etapa anterior al directorio de Nginx
 COPY --from=build /app/build /usr/share/nginx/html
@@ -30,6 +30,14 @@ COPY --from=build /app/build /usr/share/nginx/html
 # Copiamos una config básica de Nginx para SPA (Single Page Application)
 COPY nginx-custom.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+# Usuario sin privilegios
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup && \
+    chmod -R g+rwx /var/cache/nginx /var/run /var/log/nginx && \
+    chown -R appuser:appgroup /usr/share/nginx/html /var/cache/nginx /var/run /var/log/nginx /etc/nginx/conf.d && \
+    sed -i 's/listen 80;/listen 8080;/g' /etc/nginx/conf.d/default.conf
+
+USER appuser
+
+EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]

@@ -209,7 +209,7 @@ CELERY_TIMEZONE = TIME_ZONE
 # ============================================
 AUTH_SERVICE_URL = os.getenv('AUTH_SERVICE_URL', 'http://auth-service:8000')
 BASE_URL = os.getenv('BASE_URL', 'http://localhost:8002')
-HARDWARE_SERVICE_TOKEN = os.getenv('HARDWARE_SERVICE_TOKEN', '4ab1eb1da612019e57b1803e83185649564f12ae')
+HARDWARE_SERVICE_TOKEN = os.getenv('HARDWARE_SERVICE_TOKEN', '')
 
 # ============================================
 # CACHE

@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+node_modules
+*.test.js
+/tests
+README.md
+__pycache__
+*.pyc
+venv
+.venv
+.vscode
+.idea

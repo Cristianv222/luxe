@@ -1,0 +1,10 @@
+.git
+.env
+.env.*
+node_modules
+*.test.js
+/tests
+README.md
+.vscode
+.idea
+build
