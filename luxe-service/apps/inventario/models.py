@@ -226,6 +226,9 @@ class Product(models.Model):
     unit_measure = models.CharField(max_length=50, default='Unidad', verbose_name='Unidad de Medida')
     line = models.CharField(max_length=100, blank=True, verbose_name='Línea')
     subgroup = models.CharField(max_length=100, blank=True, verbose_name='Subgrupo')
+    brand = models.CharField(max_length=100, blank=True, null=True, verbose_name='Marca')
+    available_sizes = models.CharField(max_length=200, blank=True, null=True, verbose_name='Tallas Disponibles', help_text='Ej: S, M, L, XL')
+    
     
     # Contabilidad
     accounting_sales_account = models.CharField(max_length=50, blank=True, verbose_name='Cuenta Ventas (Ingreso)')
@@ -321,6 +324,103 @@ class Size(models.Model):
     def get_final_price(self):
         """Calcula el precio final del tamaño"""
         return self.product.price + self.price_adjustment
+
+
+class Color(models.Model):
+    """Colores disponibles para productos"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=50, unique=True, verbose_name='Nombre')
+    hex_code = models.CharField(
+        max_length=7, 
+        blank=True, 
+        null=True, 
+        verbose_name='Código Hexadecimal',
+        help_text='Ej: #FF0000 para rojo'
+    )
+    is_active = models.BooleanField(default=True, verbose_name='Activo')
+    display_order = models.PositiveIntegerField(default=0, verbose_name='Orden')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Color'
+        verbose_name_plural = 'Colores'
+        ordering = ['display_order', 'name']
+        
+    def __str__(self):
+        return self.name
+
+
+class ProductVariant(models.Model):
+    """Variante específica de un producto (Combinación de Talla y Color)"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='variants',
+        verbose_name='Producto'
+    )
+    size = models.ForeignKey(
+        Size,
+        on_delete=models.CASCADE,
+        related_name='variants',
+        verbose_name='Talla',
+        null=True,
+        blank=True
+    )
+    color = models.ForeignKey(
+        Color,
+        on_delete=models.CASCADE,
+        related_name='variants',
+        verbose_name='Color',
+        null=True,
+        blank=True
+    )
+    
+    # Inventario local para la variante
+    stock_quantity = models.IntegerField(default=0, verbose_name='Stock')
+    sku = models.CharField(max_length=100, unique=True, blank=True, null=True, verbose_name='SKU de Variante')
+    
+    # Precio específico (opcional, si no usa el del producto + ajuste de talla)
+    price_override = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        null=True, 
+        blank=True, 
+        verbose_name='Precio Específico (Opcional)'
+    )
+    
+    is_active = models.BooleanField(default=True, verbose_name='Activa')
+    
+    class Meta:
+        verbose_name = 'Variante de Producto'
+        verbose_name_plural = 'Variantes de Productos'
+        unique_together = ['product', 'size', 'color']
+        
+    def __str__(self):
+        parts = [self.product.name]
+        if self.size:
+            parts.append(f"Talla: {self.size.name}")
+        if self.color:
+            parts.append(f"Color: {self.color.name}")
+        return " - ".join(parts)
+        
+    def get_price(self):
+        """Retorna el precio final de la variante"""
+        if self.price_override is not None:
+            return self.price_override
+        if self.size:
+            return self.size.get_final_price()
+        return self.product.price
+
+    def save(self, *args, **kwargs):
+        if not self.sku:
+            # Generar un SKU básico basado en el producto y atributos
+            base = self.product.code if self.product.code else str(self.product.id)[:5]
+            attrs = ""
+            if self.size: attrs += f"-S{str(self.size.name)[:2].upper()}"
+            if self.color: attrs += f"-C{str(self.color.name)[:2].upper()}"
+            self.sku = f"{base}{attrs}"
+        super().save(*args, **kwargs)
 
 
 class Extra(models.Model):

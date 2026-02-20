@@ -414,6 +414,24 @@ class OrderItem(models.Model):
         verbose_name='Tamaño'
     )
     
+    # Si seleccionó un color específico
+    color = models.ForeignKey(
+        'inventario.Color',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Color'
+    )
+    
+    # Variante (combinación exacta)
+    variant = models.ForeignKey(
+        'inventario.ProductVariant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Variante'
+    )
+    
     quantity = models.PositiveIntegerField(
         default=1,
         validators=[MinValueValidator(1)],
@@ -463,9 +481,12 @@ class OrderItem(models.Model):
         
         # Calcular precio unitario si no se proporciona
         if not self.unit_price:
-            self.unit_price = self.product.price
-            if self.size:
-                self.unit_price = self.size.get_final_price()
+            if self.variant:
+                self.unit_price = self.variant.get_price()
+            else:
+                self.unit_price = self.product.price
+                if self.size:
+                    self.unit_price = self.size.get_final_price()
         
         # Guardar costo histórico si no existe
         if not self.unit_cost:

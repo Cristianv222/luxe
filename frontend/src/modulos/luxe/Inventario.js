@@ -42,6 +42,8 @@ const Inventario = () => {
         unit_measure: 'Unidad',
         category: '',
         subcategory: '',
+        brand: '',
+        available_sizes: '',
         line: '',
         subgroup: '',
         accounting_sales_account: '',
@@ -204,6 +206,8 @@ const Inventario = () => {
             last_purchase_cost: product.last_purchase_cost || 0, // Nuevo
             tax_rate: product.tax_rate || 0,
             unit_measure: product.unit_measure || 'Unidad', // Nuevo
+            brand: product.brand || '',
+            available_sizes: product.available_sizes || '',
             line: product.line || '', // Nuevo
             subgroup: product.subgroup || '',
             category: (product.category && typeof product.category === 'object') ? product.category.id : product.category,
@@ -283,6 +287,8 @@ const Inventario = () => {
 
         // Detalles
         formData.append('unit_measure', newProduct.unit_measure);
+        formData.append('brand', newProduct.brand);
+        formData.append('available_sizes', newProduct.available_sizes);
         formData.append('line', newProduct.line);
         formData.append('subgroup', newProduct.subgroup);
 
@@ -687,6 +693,8 @@ const Inventario = () => {
                                             <th>Nombre</th>
                                             <th>Descripción (Web)</th>
                                             <th>Categoría</th>
+                                            <th>Marca</th>
+                                            <th>Tallas</th>
                                             <th>Stock (Existencias)</th>
                                             <th>Precio Venta</th>
                                             <th>Costo Actual</th>
@@ -780,6 +788,8 @@ const Inventario = () => {
                                                             {product.category_name || product.category || '-'}
                                                         </span>
                                                     </td>
+                                                    <td>{product.brand || '-'}</td>
+                                                    <td>{product.available_sizes || '-'}</td>
                                                     <td>
                                                         {product.track_stock ? (
                                                             <span style={{
@@ -897,6 +907,10 @@ const Inventario = () => {
 
                             <div className="form-grid-3">
                                 <div className="form-group-boutique">
+                                    <label>Marca Original</label>
+                                    <input type="text" name="brand" value={newProduct.brand} onChange={handleInputChange} placeholder="Ej: Nike, Zara..." />
+                                </div>
+                                <div className="form-group-boutique">
                                     <label>Línea</label>
                                     <input type="text" name="line" value={newProduct.line} onChange={handleInputChange} />
                                 </div>
@@ -907,6 +921,10 @@ const Inventario = () => {
                                 <div className="form-group-boutique">
                                     <label>Unidad Medida</label>
                                     <input type="text" name="unit_measure" value={newProduct.unit_measure} onChange={handleInputChange} />
+                                </div>
+                                <div className="form-group-boutique" style={{ gridColumn: 'span 2' }}>
+                                    <label>Tallas Disponibles (Separadas por comas)</label>
+                                    <input type="text" name="available_sizes" value={newProduct.available_sizes} onChange={handleInputChange} placeholder="Ej: S, M, L, XL" />
                                 </div>
                             </div>
 
@@ -973,7 +991,7 @@ const Inventario = () => {
                                 {newProduct.track_stock && (
                                     <div className="form-grid-2" style={{ marginTop: '10px' }}>
                                         <div className="form-group-boutique">
-                                            <label>Stock Actual</label>
+                                            <label>Stock General</label>
                                             <input
                                                 type="number"
                                                 name="stock_quantity"
@@ -989,6 +1007,47 @@ const Inventario = () => {
                                                 value={newProduct.min_stock_alert}
                                                 onChange={handleInputChange}
                                             />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {newProduct.track_stock && editingProduct && editingProduct.variants && editingProduct.variants.length > 0 && (
+                                    <div style={{ marginTop: '20px', padding: '15px', background: '#fff', border: '1px solid #E4D8CB', borderRadius: '8px' }}>
+                                        <h4 style={{ margin: '0 0 10px', fontSize: '1rem', color: '#2C2C2C' }}>Inventario por Variantes</h4>
+                                        <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '15px' }}>
+                                            Este producto tiene control de inventario específico por talla y color.
+                                            Para modificar el stock de las variantes, por favor <a href="http://localhost:8000/admin/inventario/productvariant/" target="_blank" rel="noreferrer" style={{ color: '#8B7E74', fontWeight: 'bold' }}>ingrese al Panel Avanzado</a>.
+                                        </p>
+                                        <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                                            <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
+                                                <thead>
+                                                    <tr style={{ background: '#F5F5F0', textAlign: 'left' }}>
+                                                        <th style={{ padding: '8px', borderBottom: '1px solid #ddd' }}>SKU</th>
+                                                        <th style={{ padding: '8px', borderBottom: '1px solid #ddd' }}>Talla</th>
+                                                        <th style={{ padding: '8px', borderBottom: '1px solid #ddd' }}>Color</th>
+                                                        <th style={{ padding: '8px', borderBottom: '1px solid #ddd' }}>Stock</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {editingProduct.variants.map(v => (
+                                                        <tr key={v.id}>
+                                                            <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{v.sku || '-'}</td>
+                                                            <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{v.size?.name || '-'}</td>
+                                                            <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>
+                                                                {v.color ? (
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                                        <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: v.color.hex_code }}></span>
+                                                                        {v.color.name}
+                                                                    </div>
+                                                                ) : '-'}
+                                                            </td>
+                                                            <td style={{ padding: '8px', borderBottom: '1px solid #eee', fontWeight: 'bold', color: v.stock_quantity <= 0 ? '#dc2626' : '#16A34A' }}>
+                                                                {v.stock_quantity}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
                                 )}

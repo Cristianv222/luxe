@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Product, Size, Extra, Combo, ComboProduct, SubCategory, ProductImage
+from .models import Category, Product, Size, Extra, Combo, ComboProduct, SubCategory, ProductImage, Color, ProductVariant
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -68,6 +68,25 @@ class SizeSerializer(serializers.ModelSerializer):
         """Calcula el precio final del tamaño"""
         return float(obj.get_final_price())
 
+class ColorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Color
+        fields = ['id', 'name', 'hex_code', 'is_active', 'display_order', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+class ProductVariantSerializer(serializers.ModelSerializer):
+    color = ColorSerializer(read_only=True)
+    size = SizeSerializer(read_only=True)
+    price = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ProductVariant
+        fields = ['id', 'product', 'size', 'color', 'stock_quantity', 'sku', 'price', 'is_active']
+        read_only_fields = ['id']
+        
+    def get_price(self, obj):
+        return float(obj.get_price())
+
 
 class ExtraSerializer(serializers.ModelSerializer):
     """Serializer para extras"""
@@ -87,6 +106,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     has_sizes = serializers.SerializerMethodField()
     has_extras = serializers.SerializerMethodField()
     images = ProductImageSerializer(many=True, read_only=True)
+    variants = ProductVariantSerializer(many=True, read_only=True)
     
     class Meta:
         model = Product
@@ -94,9 +114,9 @@ class ProductListSerializer(serializers.ModelSerializer):
             'id', 'category', 'category_name', 'subcategory', 'subcategory_name', 'name', 'slug', 'code', 'barcode',
             'description', 'image', 'images', 'price', 'cost_price', 'tax_rate', 'calories',
             'is_active', 'is_available', 'is_featured', 'is_new',
-            'prep_time', 'display_order', 'has_sizes', 'has_extras',
+            'prep_time', 'display_order', 'has_sizes', 'has_extras', 'variants',
             'track_stock', 'stock_quantity', 'min_stock_alert',
-            'line', 'subgroup', 'unit_measure',
+            'line', 'subgroup', 'unit_measure', 'brand', 'available_sizes',
             'accounting_sales_account', 'accounting_cost_account', 'accounting_inventory_account'
         ]
         read_only_fields = ['id']
@@ -117,6 +137,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     sizes = SizeSerializer(many=True, read_only=True)
     extras = ExtraSerializer(many=True, read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
+    variants = ProductVariantSerializer(many=True, read_only=True)
     is_available_now = serializers.SerializerMethodField()
     
     class Meta:
@@ -126,9 +147,9 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             'image', 'images', 'price', 'cost_price', 'last_purchase_cost', 'tax_rate', 'calories',
             'ingredients', 'allergens',
             'is_active', 'is_available', 'is_featured', 'is_new',
-            'prep_time', 'display_order', 'sizes', 'extras',
+            'prep_time', 'display_order', 'sizes', 'extras', 'variants',
             'track_stock', 'stock_quantity', 'min_stock_alert',
-            'unit_measure', 'line', 'subgroup',
+            'unit_measure', 'line', 'subgroup', 'brand', 'available_sizes',
             'accounting_sales_account', 'accounting_cost_account', 'accounting_inventory_account',
             'is_available_now', 'created_at', 'updated_at'
         ]
@@ -154,7 +175,7 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
             'is_active', 'is_available', 'is_featured', 'is_new',
             'prep_time', 'display_order',
             'track_stock', 'stock_quantity', 'min_stock_alert',
-            'unit_measure', 'line', 'subgroup',
+            'unit_measure', 'line', 'subgroup', 'brand', 'available_sizes',
             'accounting_sales_account', 'accounting_cost_account', 'accounting_inventory_account'
         ]
     

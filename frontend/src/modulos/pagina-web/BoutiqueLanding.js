@@ -62,9 +62,13 @@ const BoutiqueLanding = () => {
     }, []);
 
     const [selectedProduct, setSelectedProduct] = useState(null);
+    const [selectedSizeId, setSelectedSizeId] = useState('');
+    const [selectedColorId, setSelectedColorId] = useState('');
 
     const openProductDetail = (product) => {
         setSelectedProduct(product);
+        setSelectedSizeId('');
+        setSelectedColorId('');
     };
 
     const closeProductDetail = () => {
@@ -72,7 +76,13 @@ const BoutiqueLanding = () => {
     };
 
     const isOutOfStock = (product) => {
-        return product.track_stock && product.stock_quantity <= 0;
+        if (!product.track_stock) return false;
+
+        if (product.variants && product.variants.length > 0) {
+            return product.variants.every(v => v.stock_quantity <= 0);
+        }
+
+        return product.stock_quantity <= 0;
     };
 
     const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -158,7 +168,9 @@ const BoutiqueLanding = () => {
                                         )}
                                     </div>
                                     <div className="product-info">
-                                        <h3 className="product-name">{product.name}</h3>
+                                        {product.brand && <p style={{ fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.5px' }}>{product.brand}</p>}
+                                        <h3 className="product-name" style={{ margin: product.brand ? '0 0 5px 0' : '' }}>{product.name}</h3>
+                                        {product.available_sizes && <p style={{ fontSize: '0.8rem', color: '#666', margin: '0 0 8px 0' }}>Tallas: <span style={{ fontWeight: '500' }}>{product.available_sizes}</span></p>}
                                         <p className="product-price">
                                             ${parseFloat(product.price).toFixed(2)}
                                             {product.tax_rate > 0 && <span style={{ fontSize: '0.75rem', color: '#888', marginLeft: '5px' }}>+ {product.tax_rate}% IVA</span>}
@@ -209,35 +221,188 @@ const BoutiqueLanding = () => {
                                 )}
                             </div>
                             <div className="modal-info-section">
-                                <h2 className="modal-product-name">{selectedProduct.name}</h2>
-                                <p className="modal-product-price">
-                                    ${parseFloat(selectedProduct.price).toFixed(2)}
-                                    {selectedProduct.tax_rate > 0 && <span style={{ fontSize: '0.9rem', color: '#888', marginLeft: '10px' }}>+ {selectedProduct.tax_rate}% IVA</span>}
-                                </p>
+                                {selectedProduct.brand && <p style={{ fontSize: '0.9rem', color: '#888', textTransform: 'uppercase', marginBottom: '5px', letterSpacing: '1px' }}>{selectedProduct.brand}</p>}
+                                <h2 className="modal-product-name" style={{ margin: selectedProduct.brand ? '0 0 15px 0' : '' }}>{selectedProduct.name}</h2>
+                                {(() => {
+                                    // Determinar precio base o el de la variante seleccionada
+                                    let displayPrice = parseFloat(selectedProduct.price);
+                                    let activeVariant = null;
+
+                                    if (selectedProduct.variants && selectedProduct.variants.length > 0) {
+                                        activeVariant = selectedProduct.variants.find(v =>
+                                            (!selectedSizeId || v.size?.id === selectedSizeId) &&
+                                            (!selectedColorId || v.color?.id === selectedColorId)
+                                        );
+                                        // If an exact variant is matched and has a specific price
+                                        if (activeVariant && activeVariant.price) {
+                                            displayPrice = parseFloat(activeVariant.price);
+                                        }
+                                    }
+
+                                    return (
+                                        <p className="modal-product-price">
+                                            ${displayPrice.toFixed(2)}
+                                            {selectedProduct.tax_rate > 0 && <span style={{ fontSize: '0.9rem', color: '#888', marginLeft: '10px' }}>+ {selectedProduct.tax_rate}% IVA</span>}
+                                        </p>
+                                    );
+                                })()}
                                 <p className="modal-product-description">{selectedProduct.description || 'Producto de alta calidad seleccionado especialmente para ti.'}</p>
 
-                                {selectedProduct.track_stock && (
-                                    <p className={`modal-stock-info ${isOutOfStock(selectedProduct) ? 'out-of-stock' : ''}`}>
-                                        {isOutOfStock(selectedProduct) ? '✕ Sin stock disponible' : `✓ En stock: ${selectedProduct.stock_quantity} unidades`}
-                                    </p>
+                                {/* Tallas estáticas (si no hay variantes avanzadas) */}
+                                {selectedProduct.available_sizes && (!selectedProduct.variants || selectedProduct.variants.length === 0) && (
+                                    <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '15px' }}><strong style={{ color: '#333' }}>Tallas Disponibles:</strong> {selectedProduct.available_sizes}</p>
                                 )}
 
-                                <button
-                                    className="modal-add-to-cart-btn"
-                                    onClick={() => {
-                                        if (!isOutOfStock(selectedProduct)) {
-                                            addToCart(selectedProduct);
-                                            closeProductDetail();
+                                {/* Selector de Variante (Color y Talla) */}
+                                {selectedProduct.variants && selectedProduct.variants.length > 0 && (() => {
+                                    const sizeMap = new Map();
+                                    const colorMap = new Map();
+                                    selectedProduct.variants.forEach(v => {
+                                        if (v.size && !sizeMap.has(v.size.id)) sizeMap.set(v.size.id, v.size);
+                                        if (v.color && !colorMap.has(v.color.id)) colorMap.set(v.color.id, v.color);
+                                    });
+                                    const availableSizes = Array.from(sizeMap.values());
+                                    const availableColors = Array.from(colorMap.values());
+
+                                    return (
+                                        <div style={{ marginBottom: '20px' }}>
+                                            {/* Selector de Colores */}
+                                            {availableColors.length > 0 && (
+                                                <div style={{ marginBottom: '15px' }}>
+                                                    <p style={{ margin: '0 0 8px', fontWeight: '600', fontSize: '0.95rem' }}>Color:</p>
+                                                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                                        {availableColors.map(color => (
+                                                            <div
+                                                                key={color.id}
+                                                                onClick={() => setSelectedColorId(color.id)}
+                                                                style={{
+                                                                    width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer',
+                                                                    backgroundColor: color.hex_code || '#ccc',
+                                                                    border: selectedColorId === color.id ? '2px solid #2C2C2C' : '1px solid #ccc',
+                                                                    boxShadow: selectedColorId === color.id ? '0 0 0 2px white inset' : 'none',
+                                                                    title: color.name
+                                                                }}
+                                                                title={color.name}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Selector de Tallas */}
+                                            {availableSizes.length > 0 && (
+                                                <div style={{ marginBottom: '15px' }}>
+                                                    <p style={{ margin: '0 0 8px', fontWeight: '600', fontSize: '0.95rem' }}>Talla:</p>
+                                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                        {availableSizes.map(size => (
+                                                            <button
+                                                                key={size.id}
+                                                                onClick={() => setSelectedSizeId(size.id)}
+                                                                style={{
+                                                                    padding: '6px 12px', border: '1px solid #E4D8CB', borderRadius: '4px',
+                                                                    background: selectedSizeId === size.id ? '#2C2C2C' : 'white',
+                                                                    color: selectedSizeId === size.id ? 'white' : '#333',
+                                                                    cursor: 'pointer', fontSize: '0.9rem'
+                                                                }}
+                                                            >
+                                                                {size.name}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+
+                                {(() => {
+                                    let stockMessage = '';
+                                    let disableButton = false;
+                                    let buttonText = 'Agregar al Carrito';
+
+                                    if (selectedProduct.variants && selectedProduct.variants.length > 0) {
+                                        // Detectar qué se requiere
+                                        const needsSize = selectedProduct.variants.some(v => v.size);
+                                        const needsColor = selectedProduct.variants.some(v => v.color);
+
+                                        if ((needsSize && !selectedSizeId) || (needsColor && !selectedColorId)) {
+                                            disableButton = true;
+                                            buttonText = 'Selecciona opciones';
+                                            stockMessage = 'Por favor selecciona ' + [needsSize && !selectedSizeId ? 'una talla' : '', needsColor && !selectedColorId ? 'un color' : ''].filter(Boolean).join(' y ');
+                                        } else {
+                                            // Encontrar la variante exacta
+                                            const exactVariant = selectedProduct.variants.find(v =>
+                                                (!needsSize || v.size?.id === selectedSizeId) &&
+                                                (!needsColor || v.color?.id === selectedColorId)
+                                            );
+
+                                            if (!exactVariant) {
+                                                disableButton = true;
+                                                buttonText = 'No disponible';
+                                                stockMessage = '✕ Esta combinación no existe';
+                                            } else if (exactVariant.stock_quantity <= 0) {
+                                                disableButton = true;
+                                                buttonText = 'Agotado';
+                                                stockMessage = '✕ Combinación agotada';
+                                            } else {
+                                                stockMessage = `✓ En stock: ${exactVariant.stock_quantity} unidades`;
+                                            }
                                         }
-                                    }}
-                                    disabled={isOutOfStock(selectedProduct)}
-                                    style={{
-                                        opacity: isOutOfStock(selectedProduct) ? 0.5 : 1,
-                                        cursor: isOutOfStock(selectedProduct) ? 'not-allowed' : 'pointer'
-                                    }}
-                                >
-                                    {isOutOfStock(selectedProduct) ? 'Agotado' : 'Agregar al Carrito'}
-                                </button>
+                                    } else {
+                                        // Lógica normal
+                                        if (isOutOfStock(selectedProduct)) {
+                                            disableButton = true;
+                                            buttonText = 'Agotado';
+                                            stockMessage = '✕ Sin stock disponible';
+                                        } else if (selectedProduct.track_stock) {
+                                            stockMessage = `✓ En stock: ${selectedProduct.stock_quantity} unidades`;
+                                        }
+                                    }
+
+                                    return (
+                                        <>
+                                            {stockMessage && (
+                                                <p className={`modal-stock-info ${disableButton && buttonText === 'Agotado' ? 'out-of-stock' : ''}`} style={{ marginTop: '10px' }}>
+                                                    {stockMessage}
+                                                </p>
+                                            )}
+
+                                            <button
+                                                className="modal-add-to-cart-btn"
+                                                onClick={() => {
+                                                    if (!disableButton) {
+                                                        const productToAdd = { ...selectedProduct };
+
+                                                        if (selectedProduct.variants && selectedProduct.variants.length > 0) {
+                                                            const exactVariant = selectedProduct.variants.find(v =>
+                                                                (!selectedSizeId || v.size?.id === selectedSizeId) &&
+                                                                (!selectedColorId || v.color?.id === selectedColorId)
+                                                            );
+                                                            if (exactVariant) {
+                                                                productToAdd.variant_id = exactVariant.id;
+                                                                productToAdd.size_id = exactVariant.size?.id;
+                                                                productToAdd.color_id = exactVariant.color?.id;
+                                                                productToAdd.cart_name_suffix = [exactVariant.size?.name, exactVariant.color?.name].filter(Boolean).join(' | ');
+                                                                if (exactVariant.price) productToAdd.price = exactVariant.price;
+                                                            }
+                                                        }
+
+                                                        addToCart(productToAdd);
+                                                        closeProductDetail();
+                                                    }
+                                                }}
+                                                disabled={disableButton}
+                                                style={{
+                                                    opacity: disableButton ? 0.5 : 1,
+                                                    cursor: disableButton ? 'not-allowed' : 'pointer',
+                                                    marginTop: '20px'
+                                                }}
+                                            >
+                                                {buttonText}
+                                            </button>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>

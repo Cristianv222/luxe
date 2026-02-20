@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Product, Size, Extra, Combo, ComboProduct
+from .models import Category, Product, Size, Extra, Combo, ComboProduct, Color, ProductVariant
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -17,6 +17,10 @@ class SizeInline(admin.TabularInline):
     model = Size
     extra = 1
 
+class ProductVariantInline(admin.TabularInline):
+    model = ProductVariant
+    extra = 1
+
 class ExtraInline(admin.TabularInline):
     model = Extra.products.through
     extra = 1
@@ -27,7 +31,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = ('category', 'is_active', 'is_available', 'is_featured')
     search_fields = ('code', 'name', 'description')
     prepopulated_fields = {'slug': ('name',)}
-    inlines = [SizeInline]
+    inlines = [SizeInline, ProductVariantInline]
     ordering = ('category', 'display_order', 'name')
     list_editable = ('price', 'is_active', 'is_available')
 
@@ -55,3 +59,18 @@ class ComboAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
     inlines = [ComboProductInline]
 
+@admin.register(Color)
+class ColorAdmin(admin.ModelAdmin):
+    list_display = ('name', 'hex_code', 'is_active', 'display_order')
+    list_filter = ('is_active',)
+    search_fields = ('name',)
+
+@admin.register(ProductVariant)
+class ProductVariantAdmin(admin.ModelAdmin):
+    list_display = ('sku', 'product', 'size', 'color', 'stock_quantity', 'get_price_display', 'is_active')
+    list_filter = ('is_active', 'product__category', 'size', 'color')
+    search_fields = ('sku', 'product__name')
+    
+    def get_price_display(self, obj):
+        return f"${obj.get_price()}"
+    get_price_display.short_description = 'Precio Final'

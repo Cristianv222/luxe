@@ -6,7 +6,7 @@ import requests
 import logging
 
 from .models import Order, OrderItem, OrderItemExtra, DeliveryInfo, OrderStatusHistory
-from apps.inventario.serializers import ProductListSerializer, SizeSerializer, ExtraSerializer
+from apps.inventario.serializers import ProductListSerializer, SizeSerializer, ExtraSerializer, ColorSerializer, ProductVariantSerializer
 from apps.customers.serializers import CustomerSerializer
 
 # Configurar logger
@@ -30,6 +30,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
     """Serializer para items de orden"""
     product_details = ProductListSerializer(source='product', read_only=True)
     size_details = SizeSerializer(source='size', read_only=True)
+    color_details = ColorSerializer(source='color', read_only=True)
+    variant_details = ProductVariantSerializer(source='variant', read_only=True)
     extras = OrderItemExtraSerializer(many=True, read_only=True)
     total_with_extras = serializers.SerializerMethodField()
     
@@ -37,6 +39,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
         model = OrderItem
         fields = [
             'id', 'product', 'product_details', 'size', 'size_details',
+            'color', 'color_details', 'variant', 'variant_details',
             'quantity', 'unit_price', 'line_total', 'notes',
             'extras', 'total_with_extras', 'created_at', 'updated_at'
         ]
@@ -50,6 +53,8 @@ class OrderItemCreateSerializer(serializers.Serializer):
     """Serializer para crear items de orden"""
     product_id = serializers.UUIDField()
     size_id = serializers.UUIDField(required=False, allow_null=True)
+    color_id = serializers.UUIDField(required=False, allow_null=True)
+    variant_id = serializers.UUIDField(required=False, allow_null=True)
     quantity = serializers.IntegerField(min_value=1, default=1)
     notes = serializers.CharField(required=False, allow_blank=True)
     extra_ids = serializers.ListField(
@@ -80,6 +85,30 @@ class OrderItemCreateSerializer(serializers.Serializer):
                 return value
             except Size.DoesNotExist:
                 raise serializers.ValidationError('Tamaño no encontrado')
+        return value
+
+    def validate_color_id(self, value):
+        if value:
+            from apps.inventario.models import Color
+            try:
+                color = Color.objects.get(id=value)
+                if not color.is_active:
+                    raise serializers.ValidationError('Este color no está disponible')
+                return value
+            except Color.DoesNotExist:
+                raise serializers.ValidationError('Color no encontrado')
+        return value
+
+    def validate_variant_id(self, value):
+        if value:
+            from apps.inventario.models import ProductVariant
+            try:
+                variant = ProductVariant.objects.get(id=value)
+                if not variant.is_active:
+                    raise serializers.ValidationError('Esta variante no está disponible')
+                return value
+            except ProductVariant.DoesNotExist:
+                raise serializers.ValidationError('Variante no encontrada')
         return value
     
     def validate_extra_ids(self, value):
@@ -324,7 +353,7 @@ class OrderCreateSerializer(serializers.Serializer):
     @transaction.atomic
     def create(self, validated_data):
         """Crea la orden con todos sus items"""
-        from apps.inventario.models import Product, Size, Extra
+        from apps.inventario.models import Product, Size, Extra, Color, ProductVariant
         from apps.customers.models import Customer
         from apps.pos.models import Discount
         from apps.loyalty.models import UserCoupon
@@ -428,6 +457,18 @@ class OrderCreateSerializer(serializers.Serializer):
             size = None
             if item_data.get('size_id'):
                 size = Size.objects.get(id=item_data['size_id'])
+                
+            color = None
+            if item_data.get('color_id'):
+                color = Color.objects.get(id=item_data['color_id'])
+                
+            variant = None
+            if item_data.get('variant_id'):
+                variant = ProductVariant.objects.get(id=item_data['variant_id'])
+                # Si se selecciona variante, descontar stock de la variante también
+                if variant.stock_quantity >= item_data['quantity']:
+                    variant.stock_quantity -= item_data['quantity']
+                    variant.save()
             
             extra_ids = item_data.pop('extra_ids', [])
             
@@ -436,6 +477,8 @@ class OrderCreateSerializer(serializers.Serializer):
                 order=order,
                 product=product,
                 size=size,
+                color=color,
+                variant=variant,
                 quantity=item_data['quantity'],
                 unit_cost=product.cost_price,  # Guardar costo histórico para reporte de ganancias
                 notes=item_data.get('notes', '')
