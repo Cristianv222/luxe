@@ -4,6 +4,7 @@
 #
 # Requisitos previos:
 #   docker network create proxy-network   (si no existe aún)
+#   docker network create general-net     (si no existe aún — red de Nginx Proxy Manager)
 #   docker network create luxe_network    (se crea automático al levantar)
 
 services:
@@ -68,6 +69,8 @@ services:
     image: redis:7-alpine
     container_name: luxe_redis
     command: sh -c 'exec redis-server --requirepass "$$REDIS_PASSWORD" --save "" --appendonly no'
+    env_file:
+      - .env
     expose:
       - "6379"
     networks:
@@ -112,21 +115,20 @@ services:
       context: ./luxe-service
       dockerfile: Dockerfile
       target: production
-    command: >
-      sh -c "
-      python manage.py migrate --noinput &&
-      python manage.py collectstatic --noinput &&
-      exec gunicorn
-        --bind 0.0.0.0:8000
-        --workers 3
-        --timeout 120
-        --max-requests 1000
-        --max-requests-jitter 100
-        --limit-request-line 4094
-        --limit-request-fields 100
-        --access-logfile -
-        --error-logfile -
-        luxe_service.wsgi:application"
+    command: >-
+          sh -c "python manage.py migrate --noinput &&
+          python manage.py collectstatic --noinput &&
+          exec gunicorn
+          --bind 0.0.0.0:8000
+          --workers 3
+          --timeout 120
+          --max-requests 1000
+          --max-requests-jitter 100
+          --limit-request-line 4094
+          --limit-request-fields 100
+          --access-logfile -
+          --error-logfile -
+          luxe_service.wsgi:application"
     volumes:
       - luxe-static:/app/staticfiles
       - media-volume:/app/media
@@ -152,6 +154,15 @@ services:
       SECURE_HSTS_INCLUDE_SUBDOMAINS: "True"
       SECURE_HSTS_PRELOAD:            "True"
       X_FRAME_OPTIONS:                "DENY"       # Previene clickjacking
+      # DigitalOcean Spaces — almacenamiento de archivos media
+      USE_SPACES:                     ${USE_SPACES:-True}
+      AWS_ACCESS_KEY_ID:              ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY:          ${AWS_SECRET_ACCESS_KEY}
+      AWS_STORAGE_BUCKET_NAME:        ${AWS_STORAGE_BUCKET_NAME:-fronteratech}
+      AWS_S3_ENDPOINT_URL:            ${AWS_S3_ENDPOINT_URL:-https://nyc3.digitaloceanspaces.com}
+      AWS_S3_REGION_NAME:             ${AWS_S3_REGION_NAME:-nyc3}
+      AWS_LOCATION:                   ${AWS_LOCATION:-media-luxury}
+      AWS_DEFAULT_ACL:                ${AWS_DEFAULT_ACL:-public-read}
     expose:
       - "8000"
     depends_on:
@@ -162,6 +173,7 @@ services:
     networks:
       - luxe-network
       - proxy-network
+      - general-net          # ← NPM usa esta red para enrutar tráfico
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -187,7 +199,7 @@ services:
           cpus:   '0.25'
           memory: 256M
     healthcheck:
-      test: ["CMD", "curl", "-f", "--max-time", "5", "http://localhost:8000/health"]
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/luxe/api/orders/health/ | grep -qE '200|401'"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -219,6 +231,7 @@ services:
     networks:
       - luxe-network
       - proxy-network
+      - general-net          # ← NPM usa esta red para enrutar tráfico
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -281,3 +294,8 @@ networks:
   proxy-network:
     external: true
     name: proxy-network
+  # Red de Nginx Proxy Manager — necesaria para que NPM enrute el tráfico
+  # Crear manualmente: docker network create general-net
+  general-net:
+    external: true
+    name: general-net
