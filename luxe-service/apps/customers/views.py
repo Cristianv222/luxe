@@ -604,9 +604,17 @@ def admin_customer_list(request):
     """
     customer_type = request.query_params.get('type')
     is_active = request.query_params.get('active')
+    is_vip = request.query_params.get('vip')
     search = request.query_params.get('search', '')
+    city = request.query_params.get('city')
+    birthday_today = request.query_params.get('birthday_today')
     
     queryset = Customer.objects.all()
+    
+    if birthday_today and birthday_today.lower() == 'true':
+        # Usar la fecha local de hoy (respetando America/Guayaquil)
+        today = timezone.localdate()
+        queryset = queryset.filter(birth_date__month=today.month, birth_date__day=today.day)
     
     if search:
         queryset = queryset.filter(
@@ -624,6 +632,13 @@ def admin_customer_list(request):
     if is_active:
          active_bool = is_active.lower() == 'true'
          queryset = queryset.filter(is_active=active_bool)
+
+    if is_vip:
+         vip_bool = is_vip.lower() == 'true'
+         queryset = queryset.filter(is_vip=vip_bool)
+
+    if city:
+        queryset = queryset.filter(city__icontains=city)
     
     # Paginación
     page = int(request.query_params.get('page', 1))
@@ -838,84 +853,6 @@ def import_customers_excel(request):
         logger.error(f"Error importando excel: {str(e)}")
         return Response({'status': 'error', 'message': str(e)}, status=500)
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def admin_customer_list(request):
-    customer_type = request.query_params.get('type')
-    is_active = request.query_params.get('active')
-    is_vip = request.query_params.get('vip')
-    search = request.query_params.get('search')
-    city = request.query_params.get('city')
-    
-    queryset = Customer.objects.all()
-    
-    # Aplicar filtros
-    if customer_type:
-        queryset = queryset.filter(customer_type=customer_type)
-    
-    if is_active is not None:
-        queryset = queryset.filter(is_active=is_active.lower() == 'true')
-    
-    if is_vip is not None:
-        queryset = queryset.filter(is_vip=is_vip.lower() == 'true')
-    
-    if city:
-        queryset = queryset.filter(city__icontains=city)
-    
-    if search:
-        queryset = queryset.filter(
-            Q(email__icontains=search) |
-            Q(phone__icontains=search) |
-            Q(first_name__icontains=search) |
-            Q(last_name__icontains=search)
-        )
-    
-    # Paginación
-    page = int(request.query_params.get('page', 1))
-    page_size = int(request.query_params.get('page_size', 20))
-    start = (page - 1) * page_size
-    end = start + page_size
-    
-    total = queryset.count()
-    from django.db.models import Max
-    
-    customers = queryset.order_by('-total_spent', '-created_at')[start:end]
-    
-    # Lógica de sincronización: Si el gasto es 0 pero existen órdenes, recalculamos
-    for c in customers:
-        if c.total_spent == 0:
-            paid_orders = c.orders.filter(payment_status='paid')
-            if paid_orders.exists():
-                stats = paid_orders.aggregate(
-                    total_amnt=Sum('total'),
-                    order_count=Count('id'),
-                    last_date=Max('created_at')
-                )
-                c.total_spent = stats['total_amnt'] or 0
-                c.total_orders = stats['order_count'] or 0
-                c.last_order_date = stats['last_date']
-                
-                if c.total_orders > 0:
-                    c.average_order_value = c.total_spent / c.total_orders
-                else:
-                    c.average_order_value = 0
-                    
-                c.save(update_fields=['total_spent', 'total_orders', 'last_order_date', 'average_order_value'])
-    
-    serializer = CustomerSerializer(customers, many=True)
-    
-    return Response({
-        'status': 'success',
-        'data': {
-            'customers': serializer.data,
-            'pagination': {
-                'page': page,
-                'page_size': page_size,
-                'total': total,
-                'total_pages': (total + page_size - 1) // page_size
-            }
-        }
-    })
 
 
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])

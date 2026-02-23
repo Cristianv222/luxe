@@ -68,6 +68,17 @@ class SRIIntegrationService:
         # IMPORTANTE: Los precios en el sistema YA INCLUYEN IVA
         # Debemos desglosar el IVA antes de enviar a la API
         items = []
+        
+        # Calcular factor de descuento global para distribuir proporcionalmente
+        # (Si el descuento es sobre el total con IVA, lo aplicamos proporcional al line_total)
+        total_order_discount = float(order.discount_amount)
+        # Sumamos los line_total de todos los items para tener la base del total
+        total_lines_with_tax = sum(float(item.line_total) for item in order.items.all())
+        
+        discount_factor = 0
+        if total_order_discount > 0 and total_lines_with_tax > 0:
+            discount_factor = total_order_discount / total_lines_with_tax
+
         for item in order.items.all():
             # Obtener tax_rate del producto
             tax_rate = float(item.product.tax_rate) if item.product.tax_rate else 0.0
@@ -77,10 +88,6 @@ class SRIIntegrationService:
                 tax_rate = tax_rate * 100
             
             # Determinar el código de impuesto según SRI Ecuador
-            # Código 0 = IVA 0% (sin IVA)
-            # Código 2 = IVA 12% o 15% (con IVA)
-            # Código 6 = No objeto de impuesto
-            # Código 7 = Exento de IVA
             if tax_rate == 0:
                 tax_code = "0"  # IVA 0%
             elif tax_rate > 0:
@@ -93,25 +100,38 @@ class SRIIntegrationService:
             
             # Desglosar el IVA para obtener el precio base
             if tax_rate > 0:
-                # Precio SIN IVA = Precio CON IVA / (1 + tasa_iva)
-                # Ejemplo: $15.00 / 1.15 = $13.04
                 divisor = 1 + (tax_rate / 100)
                 unit_price_without_tax = unit_price_with_tax / divisor
             else:
-                # Si no tiene IVA, el precio es el mismo
                 unit_price_without_tax = unit_price_with_tax
             
-            # Calcular descuento por item (si aplica)
-            discount = float(item.discount) if hasattr(item, 'discount') and item.discount else 0.00
+            # Calcular descuento por item
+            # 1. Descuento específico del item (si existiera en el futuro)
+            item_specific_discount = float(item.discount) if hasattr(item, 'discount') and item.discount else 0.00
+            
+            # 2. Distribuir el descuento global de la orden proporcionalmente
+            # El descuento global se aplica sobre el total base (sin IVA)
+            # proporcional al peso de este item en el total.
+            item_proportion = float(item.line_total) / total_lines_with_tax if total_lines_with_tax > 0 else 0
+            global_discount_for_item_with_tax = total_order_discount * item_proportion
+            
+            # Desglosar el descuento para que sea sobre Base Imponible (como pide SRI)
+            if tax_rate > 0:
+                divisor = 1 + (tax_rate / 100)
+                item_discount_base = global_discount_for_item_with_tax / divisor
+            else:
+                item_discount_base = global_discount_for_item_with_tax
+            
+            total_item_discount = item_specific_discount + item_discount_base
             
             item_data = {
                 "main_code": item.product.code or f"PROD{item.product.id}",
-                "auxiliary_code": "",  # Opcional
-                "description": item.product.name[:300],  # Máximo 300 caracteres
+                "auxiliary_code": "",
+                "description": item.product.name[:300],
                 "quantity": float(item.quantity),
-                "unit_price": round(unit_price_without_tax, 2),  # ← PRECIO SIN IVA
-                "discount": discount,
-                "tax_code": tax_code  # ← CÓDIGO DE IMPUESTO EXPLÍCITO
+                "unit_price": round(unit_price_without_tax, 2),
+                "discount": round(total_item_discount, 2),
+                "tax_code": tax_code
             }
             items.append(item_data)
 

@@ -1,92 +1,168 @@
+# docker-compose.prod.yml
+# Archivo exclusivo para producción.
+# Desplegar con: docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+#
+# Requisitos previos:
+#   docker network create proxy-network   (si no existe aún)
+#   docker network create general-net     (si no existe aún — red de Nginx Proxy Manager)
+#   docker network create luxe_network    (se crea automático al levantar)
+
 services:
+
+  # ─────────────────────────────────────────
+  # PostgreSQL — base de datos
+  # ─────────────────────────────────────────
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
     container_name: luxe_postgres
-    env_file:
-      - .env
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_DB: luxe_service_db
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data/pgdata
+      - ./backups:/backups
+    environment:
+      POSTGRES_USER:              postgres
+      POSTGRES_PASSWORD:          ${POSTGRES_PASSWORD}
+      POSTGRES_DB:                luxe_service_db
+      POSTGRES_HOST_AUTH_METHOD:  md5
+      PGDATA:                     /var/lib/postgresql/data/pgdata
+    # Sin 'ports:' — la DB no debe ser accesible desde el host
+    expose:
+      - "5432"
     networks:
       - luxe-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     restart: unless-stopped
-    cpus: 1.0
-    mem_limit: 2G
-
-  redis:
-    image: redis:7-alpine
-    container_name: luxe_redis
-    env_file:
-      - .env
-    command: sh -c 'exec redis-server --requirepass "$$REDIS_PASSWORD"'
-    networks:
-      - luxe-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    restart: unless-stopped
-    cpus: 0.5
-    mem_limit: 128M
-
-  luxe-service:
-    image: luxe-service:1.0.0
-    build: 
-      context: ./luxe-service
-      dockerfile: Dockerfile
-    container_name: luxe_service
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    read_only: true
-    tmpfs:
-      - /tmp
-      - /home/appuser
-    entrypoint: /bin/sh
-    command:
-      - -c
-      - |
-        echo "Waiting for PostgreSQL..."
-        until python -c 'import socket; socket.create_connection(("postgres", 5432), timeout=1)' 2>/dev/null; do
-          sleep 1
-        done
-        echo "PostgreSQL is ready"
-        
-        echo "Running migrations..."
-        python manage.py migrate --noinput
-        echo "Collecting static files..."
-        python manage.py collectstatic --noinput --clear
-        echo "Starting Gunicorn..."
-        exec gunicorn luxe_service.wsgi:application \
-          --bind 0.0.0.0:8000 \
-          --workers 3 \
-          --threads 2 \
-          --worker-class gthread \
-          --timeout 120 \
-          --access-logfile - \
-          --error-logfile - \
-          --log-level info
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc:
+        soft: 100
+        hard: 200
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus:   '0.25'
+          memory: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d luxe_service_db"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ─────────────────────────────────────────
+  # Redis — caché y sesiones
+  # ─────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: luxe_redis
+    env_file:
+    - .env
+    command: sh -c 'exec redis-server --requirepass "$$REDIS_PASSWORD" --save "" --appendonly no'
+    expose:
+      - "6379"
+    networks:
+      - luxe-network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc:
+        soft: 100
+        hard: 200
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus:   '0.10'
+          memory: 64M
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ─────────────────────────────────────────
+  # Django / Gunicorn — backend
+  # ─────────────────────────────────────────
+  luxe-service:
+    image: luxe-service:${APP_VERSION:-1.0.0}   # Tag semántico, NUNCA :latest
+    container_name: luxe_service
+    build:
+      context: ./luxe-service
+      dockerfile: Dockerfile
+      target: production
+    command: >-
+          sh -c "python manage.py migrate --noinput &&
+          python manage.py collectstatic --noinput &&
+          exec gunicorn
+          --bind 0.0.0.0:8000
+          --workers 3
+          --timeout 120
+          --max-requests 1000
+          --max-requests-jitter 100
+          --limit-request-line 4094
+          --limit-request-fields 100
+          --access-logfile -
+          --error-logfile -
+          luxe_service.wsgi:application"
     volumes:
-      - ./luxe-service/media:/app/media
       - luxe-static:/app/staticfiles
+      - media-volume:/app/media
+      - logs-volume:/app/logs
     env_file:
       - .env
     environment:
-      - ALLOWED_HOSTS=luxury.fronteratech.ec,luxe-service
-      - CORS_ALLOWED_ORIGINS=https://luxury.fronteratech.ec
-      - CSRF_TRUSTED_ORIGINS=https://luxury.fronteratech.ec
-      - DEBUG=False
-      - PYTHONUNBUFFERED=1
-      - TZ=America/Guayaquil
+      # Aplicación
+      DEBUG:                          "False"
+      PYTHONUNBUFFERED:               "1"
+      ALLOWED_HOSTS:                  ${ALLOWED_HOSTS:-luxury.fronteratech.ec,luxe-service}
+      CORS_ALLOWED_ORIGINS:           ${CORS_ALLOWED_ORIGINS:-https://luxury.fronteratech.ec}
+      CSRF_TRUSTED_ORIGINS:           ${CSRF_TRUSTED_ORIGINS:-https://luxury.fronteratech.ec}
+      TZ:                             ${TIME_ZONE:-America/Guayaquil}
+      LOG_LEVEL:                      ${LOG_LEVEL:-INFO}
+      # Seguridad SSL/HTTP
+      SECURE_SSL_REDIRECT:            ${SECURE_SSL_REDIRECT:-True}
+      SESSION_COOKIE_SECURE:          ${SESSION_COOKIE_SECURE:-True}
+      CSRF_COOKIE_SECURE:             ${CSRF_COOKIE_SECURE:-True}
+      SECURE_BROWSER_XSS_FILTER:      "True"
+      SECURE_CONTENT_TYPE_NOSNIFF:    "True"
+      SECURE_HSTS_SECONDS:            "31536000"   # HSTS por 1 año
+      SECURE_HSTS_INCLUDE_SUBDOMAINS: "True"
+      SECURE_HSTS_PRELOAD:            "True"
+      X_FRAME_OPTIONS:                "DENY"       # Previene clickjacking
+      # DigitalOcean Spaces — almacenamiento de archivos media
+      USE_SPACES:                     ${USE_SPACES:-True}
+      AWS_ACCESS_KEY_ID:              ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY:          ${AWS_SECRET_ACCESS_KEY}
+      AWS_STORAGE_BUCKET_NAME:        ${AWS_STORAGE_BUCKET_NAME:-fronteratech}
+      AWS_S3_ENDPOINT_URL:            ${AWS_S3_ENDPOINT_URL:-https://nyc3.digitaloceanspaces.com}
+      AWS_S3_REGION_NAME:             ${AWS_S3_REGION_NAME:-nyc3}
+      AWS_LOCATION:                   ${AWS_LOCATION:-media-luxury}
+      AWS_DEFAULT_ACL:                ${AWS_DEFAULT_ACL:-public-read}
     expose:
       - "8000"
     depends_on:
@@ -97,77 +173,129 @@ services:
     networks:
       - luxe-network
       - proxy-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - general-net          # ← NPM usa esta red para enrutar tráfico
     restart: unless-stopped
-    cpus: 0.5
-    mem_limit: 1G
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  frontend:
-    image: luxe-frontend:1.0.0
-    build: 
-      context: ./frontend
-      dockerfile: Dockerfile.prod
-    container_name: luxe_frontend
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
     read_only: true
-    volumes:
-      - type: tmpfs
-        target: /tmp
-      - type: tmpfs
-        target: /var/run
-        tmpfs:
-          mode: 0777
-      - type: tmpfs
-        target: /var/cache/nginx
-        tmpfs:
-          mode: 0777
-    environment:
-      - NODE_ENV=production
-      - REACT_APP_API_BASE_URL=https://luxury.fronteratech.ec
-      - REACT_APP_AUTH_SERVICE=https://luxury.fronteratech.ec
-      - REACT_APP_LUXE_SERVICE=https://luxury.fronteratech.ec/api/luxe
-    expose:
-      - "8080"
-    networks:
-      - luxe-network
-      - proxy-network
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /var/cache:size=32m
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc:
+        soft: 100
+        hard: 200
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 768M
+        reservations:
+          cpus:   '0.25'
+          memory: 256M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/luxe/api/orders/health/ | grep -qE '200|401'"]
       interval: 30s
       timeout: 10s
       retries: 3
-    restart: unless-stopped
-    cpus: 0.5
-    mem_limit: 1G
+      start_period: 60s
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
 
-networks:
-  luxe-network:
-    driver: bridge
-    name: luxe_network
-  proxy-network:
-    external: true
-    name: proxy-network
+  # ─────────────────────────────────────────
+  # React / Nginx — frontend
+  # ─────────────────────────────────────────
+  frontend:
+    image: luxe-frontend:${APP_VERSION:-1.0.0}   # Tag semántico, NUNCA :latest
+    container_name: luxe_frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    environment:
+      NODE_ENV:                   production
+      REACT_APP_API_BASE_URL:     ${REACT_APP_API_BASE_URL:-https://luxury.fronteratech.ec}
+      REACT_APP_AUTH_SERVICE:     ${REACT_APP_AUTH_SERVICE:-https://luxury.fronteratech.ec}
+      REACT_APP_LUXE_SERVICE:     ${REACT_APP_LUXE_SERVICE:-https://luxury.fronteratech.ec/api/luxe}
+    expose:
+      - "8080"
+    depends_on:
+      - luxe-service
+    networks:
+      - luxe-network
+      - proxy-network
+      - general-net          # ← NPM usa esta red para enrutar tráfico
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+      - /var/run:size=8m,mode=0777
+      - /var/cache/nginx:size=64m,mode=0777
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus:   '0.10'
+          memory: 64M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+# ─────────────────────────────────────────────────────────────
+# Volúmenes
+# ─────────────────────────────────────────────────────────────
 volumes:
   postgres-data:
     name: luxe_postgres_data
+    driver: local
   luxe-static:
     name: luxe_service_static
+    driver: local
+  media-volume:
+    name: luxe_service_media
+    driver: local
+  # logs como volumen nombrado en vez de bind mount ./logs
+  # El bind mount rompería read_only:true porque montaría desde el host
+  logs-volume:
+    name: luxe_service_logs
+    driver: local
+
+# ─────────────────────────────────────────────────────────────
+# Redes
+# ─────────────────────────────────────────────────────────────
+networks:
+  # Red interna Docker: postgres y redis NO están expuestos al proxy
+  luxe-network:
+    driver: bridge
+    name: luxe_network
+  # Red externa donde vive el reverse proxy (Traefik / Nginx Proxy Manager)
+  # Crear manualmente: docker network create proxy-network
+  proxy-network:
+    external: true
+    name: proxy-network
+  # Red de Nginx Proxy Manager — necesaria para que NPM enrute el tráfico
+  # Crear manualmente: docker network create general-net
+  general-net:
+    external: true
+    name: general-net

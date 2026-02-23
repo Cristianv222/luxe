@@ -309,6 +309,12 @@ class OrderCreateSerializer(serializers.Serializer):
         required=False,
         default=0
     )
+    manual_discount = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        default=0
+    )
     tip_amount = serializers.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -363,6 +369,7 @@ class OrderCreateSerializer(serializers.Serializer):
         delivery_info_data = validated_data.pop('delivery_info', None)
         customer_email = validated_data.pop('customer_email', None)
         payment_method_name = validated_data.pop('payment_method_name', None)
+        manual_discount = validated_data.pop('manual_discount', Decimal('0.00'))
         
         # 1. Lógica de Cliente y SNAPSHOT (Inmortal)
         customer = None
@@ -507,6 +514,8 @@ class OrderCreateSerializer(serializers.Serializer):
         order.calculate_totals()
 
         # APLICAR VALOR DEL DESCUENTO
+        total_discount = manual_discount
+
         if applied_discount_object:
             calculated_discount = 0
             # Si es Cupón de Usuario (Loyalty)
@@ -528,7 +537,7 @@ class OrderCreateSerializer(serializers.Serializer):
                 if calculated_discount > order.subtotal:
                     calculated_discount = order.subtotal
                 
-                order.discount_amount = calculated_discount
+                total_discount += calculated_discount
                 # Crear registro de uso si es Descuento estándar (para auditoría)
                 if not is_user_coupon:
                     from apps.pos.models import DiscountUsage
@@ -539,6 +548,9 @@ class OrderCreateSerializer(serializers.Serializer):
                         original_amount=order.subtotal,
                         applied_by="SYSTEM" # O el usuario si lo tuviéramos
                     )
+
+        # Asignar el descuento total (manual + cupón)
+        order.discount_amount = total_discount
 
         # Recalcular totales finales con el descuento aplicado
         order.calculate_totals()

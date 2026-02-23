@@ -11,6 +11,7 @@ const Clientes = () => {
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [pagination, setPagination] = useState({ page: 1, total_pages: 1, total: 0 });
+    const [birthdayFilter, setBirthdayFilter] = useState(false);
 
     // Modals
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -48,7 +49,12 @@ const Clientes = () => {
         try {
             const response = await api.get('/api/customers/admin/list/', {
                 baseURL: process.env.REACT_APP_LUXE_SERVICE,
-                params: { page, search, page_size: 15 }
+                params: {
+                    page,
+                    search,
+                    page_size: 15,
+                    birthday_today: birthdayFilter ? 'true' : 'false'
+                }
             });
 
             if (response.data.status === 'success') {
@@ -61,11 +67,11 @@ const Clientes = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [birthdayFilter]);
 
     useEffect(() => {
-        fetchCustomers();
-    }, [fetchCustomers]);
+        fetchCustomers(1, searchTerm);
+    }, [fetchCustomers, birthdayFilter]);
 
     // --- Handlers ---
     const handleSearch = (e) => {
@@ -160,7 +166,6 @@ const Clientes = () => {
             }
 
             setIsFormModalOpen(false);
-            fetchCustomers(pagination.page, searchTerm);
             fetchCustomers(pagination.page, searchTerm);
         } catch (err) {
             console.error(err);
@@ -304,6 +309,19 @@ const Clientes = () => {
                             />
                         </div>
                         <button type="submit" className="btn-boutique dark">Buscar</button>
+
+                        <button
+                            type="button"
+                            className={`btn-boutique ${birthdayFilter ? 'success' : 'outline'}`}
+                            onClick={() => {
+                                setBirthdayFilter(!birthdayFilter);
+                                if (!birthdayFilter) setSearchTerm(''); // Limpiar búsqueda al activar
+                            }}
+                            title="Filtrar cumpleañeros de hoy"
+                        >
+                            <i className="bi bi-cake2"></i> {birthdayFilter ? 'Viendo Cumpleaños' : 'Cumples de Hoy'}
+                        </button>
+
                         <button type="button" className="btn-boutique danger" onClick={handleResetStats} title="Desarrollo: Poner gastos a 0">
                             <i className="bi bi-trash"></i> Vaciar Gastos
                         </button>
