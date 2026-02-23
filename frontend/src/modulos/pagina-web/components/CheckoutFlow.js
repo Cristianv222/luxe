@@ -272,7 +272,7 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
         // IVA
         const taxVal = parseFloat(createdOrder.tax_amount || 0);
         if (taxVal > 0) {
-            msg += `*IVA:* $${taxVal.toFixed(2)}\n`;
+            msg += `*IVA (incluido):* $${taxVal.toFixed(2)}\n`;
         }
 
         // Descuento
@@ -502,9 +502,9 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
                         </div>
 
                         <div className="checkout-totals">
-                            <div className="total-row"><span>Subtotal (sin IVA)</span><span>${subtotal.toFixed(2)}</span></div>
+                            <div className="total-row"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
                             {taxAmount > 0 && (
-                                <div className="total-row"><span>IVA</span><span>${taxAmount.toFixed(2)}</span></div>
+                                <div className="total-row"><span>IVA (incluido)</span><span>${taxAmount.toFixed(2)}</span></div>
                             )}
                             {discountInfo && (
                                 <div className="total-row" style={{ color: 'green' }}>

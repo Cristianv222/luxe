@@ -815,7 +815,7 @@ const PuntosVenta = () => {
                                         {formatCurrency(product.price)}
                                         {product.tax_rate > 0 && (
                                             <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 'normal' }}>
-                                                + {product.tax_rate}% IVA
+                                                (incluido el IVA)
                                             </div>
                                         )}
                                     </div>
@@ -922,7 +922,7 @@ const PuntosVenta = () => {
 
                     <div style={{ padding: '1.5rem', borderTop: '1px solid #e2e8f0', backgroundColor: '#fff' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#64748b' }}>
-                            <span>Subtotal (sin IVA)</span>
+                            <span>Subtotal</span>
                             <span>{formatCurrency(calculateSubtotal)}</span>
                         </div>
                         {appliedDiscount && (
@@ -933,7 +933,7 @@ const PuntosVenta = () => {
                         )}
                         {calculateTax > 0 && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#64748b' }}>
-                                <span>IVA</span>
+                                <span>IVA (incluido)</span>
                                 <span>{formatCurrency(calculateTax)}</span>
                             </div>
                         )}
@@ -980,7 +980,7 @@ const PuntosVenta = () => {
                                                 {item.quantity} x {item.name}
                                                 {item.tax_rate > 0 && (
                                                     <span style={{ marginLeft: '0.5rem', color: '#059669', fontSize: '0.75rem' }}>
-                                                        (IVA {item.tax_rate < 1 ? item.tax_rate * 100 : item.tax_rate}%)
+                                                        (incluido el IVA)
                                                     </span>
                                                 )}
                                             </div>
@@ -992,7 +992,7 @@ const PuntosVenta = () => {
                             </div>
                             <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '1rem', marginTop: 'auto' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                    <span style={{ color: '#64748b' }}>Subtotal (sin IVA)</span>
+                                    <span style={{ color: '#64748b' }}>Subtotal</span>
                                     <span>{formatCurrency(calculateSubtotal)}</span>
                                 </div>
                                 {appliedDiscount && (
@@ -1003,7 +1003,7 @@ const PuntosVenta = () => {
                                 )}
                                 {calculateTax > 0 && (
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#64748b' }}>
-                                        <span>IVA</span>
+                                        <span>IVA (incluido)</span>
                                         <span>{formatCurrency(calculateTax)}</span>
                                     </div>
                                 )}

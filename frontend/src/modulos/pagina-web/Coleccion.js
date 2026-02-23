@@ -370,7 +370,7 @@ const Coleccion = () => {
                                                         {product.available_sizes && <p style={{ fontSize: '0.8rem', color: '#666', margin: '0 0 8px 0' }}>Tallas: <span style={{ fontWeight: '500' }}>{product.available_sizes}</span></p>}
                                                         <p className="product-price">
                                                             ${parseFloat(product.price).toFixed(2)}
-                                                            {product.tax_rate > 0 && <span style={{ fontSize: '0.75rem', color: '#888', marginLeft: '5px' }}>+ {product.tax_rate}% IVA</span>}
+                                                            {product.tax_rate > 0 && <span style={{ fontSize: '0.75rem', color: '#888', marginLeft: '5px' }}>(incluido el IVA)</span>}
                                                         </p>
                                                         {product.track_stock && (
                                                             <p className={`product-stock ${outOfStock ? 'out-of-stock' : ''}`}>
@@ -535,7 +535,7 @@ const Coleccion = () => {
                                     return (
                                         <p className="modal-product-price">
                                             ${displayPrice.toFixed(2)}
-                                            {selectedProduct.tax_rate > 0 && <span style={{ fontSize: '0.9rem', color: '#888', marginLeft: '10px' }}>+ {selectedProduct.tax_rate}% IVA</span>}
+                                            {selectedProduct.tax_rate > 0 && <span style={{ fontSize: '0.9rem', color: '#888', marginLeft: '10px' }}>(incluido el IVA)</span>}
                                         </p>
                                     );
                                 })()}
