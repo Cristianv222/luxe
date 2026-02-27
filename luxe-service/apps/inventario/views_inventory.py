@@ -23,7 +23,7 @@ class InventoryExportExcelView(APIView):
         # Headers completos
         headers = [
             'ID', 'Código', 'Código de Barras', 'Nombre', 'Descripción', 'Línea (Category)', 
-            'Categoría (Subgroup)', 'Marca', 'Tallas Dispo.', 'Costo Actual', 
+            'Categoría (Subgroup)', 'Marca', 'Variantes (Ej: S-Rojo:2)', 'Costo Actual', 
             'Último Costo', 'Precio Venta', 'Impuesto (%)', 'Stock Actual', 
             'Mínimo Stock', 'Activo', 'Disponible',
             'Cta. Ventas', 'Cta. Costos', 'Cta. Inventario'
@@ -115,6 +115,7 @@ class InventoryImportExcelView(APIView):
     
 
     def post(self, request):
+        from .views import parse_and_create_variants
         file = request.FILES.get('file')
         if not file:
             return Response({'error': 'No se proporcionó archivo'}, status=status.HTTP_400_BAD_REQUEST)
@@ -314,6 +315,7 @@ class InventoryImportExcelView(APIView):
                             product.is_available = True
                     
                     product.save()
+                    parse_and_create_variants(product, product.available_sizes)
                     
                     if is_new:
                         count_created += 1

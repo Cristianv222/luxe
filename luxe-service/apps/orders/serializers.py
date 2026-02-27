@@ -34,6 +34,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
     variant_details = ProductVariantSerializer(source='variant', read_only=True)
     extras = OrderItemExtraSerializer(many=True, read_only=True)
     total_with_extras = serializers.SerializerMethodField()
+    variant_name = serializers.SerializerMethodField()
     
     class Meta:
         model = OrderItem
@@ -41,12 +42,24 @@ class OrderItemSerializer(serializers.ModelSerializer):
             'id', 'product', 'product_details', 'size', 'size_details',
             'color', 'color_details', 'variant', 'variant_details',
             'quantity', 'unit_price', 'line_total', 'notes',
-            'extras', 'total_with_extras', 'created_at', 'updated_at'
+            'extras', 'total_with_extras', 'created_at', 'updated_at', 'variant_name'
         ]
         read_only_fields = ['id', 'unit_price', 'line_total', 'created_at', 'updated_at']
     
     def get_total_with_extras(self, obj):
         return float(obj.get_total_with_extras())
+
+    def get_variant_name(self, obj):
+        if obj.variant:
+            if obj.variant.size and obj.variant.color:
+                return f"{obj.variant.size.name} | {obj.variant.color.name}"
+            elif obj.variant.size:
+                return obj.variant.size.name
+            elif obj.variant.color:
+                return obj.variant.color.name
+        elif obj.size:
+             return obj.size.name
+        return ""
 
 
 class OrderItemCreateSerializer(serializers.Serializer):
@@ -473,9 +486,8 @@ class OrderCreateSerializer(serializers.Serializer):
             if item_data.get('variant_id'):
                 variant = ProductVariant.objects.get(id=item_data['variant_id'])
                 # Si se selecciona variante, descontar stock de la variante también
-                if variant.stock_quantity >= item_data['quantity']:
-                    variant.stock_quantity -= item_data['quantity']
-                    variant.save()
+                variant.stock_quantity -= item_data['quantity']
+                variant.save()
             
             extra_ids = item_data.pop('extra_ids', [])
             
@@ -636,8 +648,19 @@ class OrderCreateSerializer(serializers.Serializer):
             # Preparar items en el formato esperado por el printer
             items = []
             for item in order.items.all():
+                variant_str = ''
+                if item.variant:
+                    if item.variant.size and item.variant.color:
+                        variant_str = f" ({item.variant.size.name} | {item.variant.color.name})"
+                    elif item.variant.size:
+                        variant_str = f" ({item.variant.size.name})"
+                    elif item.variant.color:
+                        variant_str = f" ({item.variant.color.name})"
+                elif item.size:
+                    variant_str = f" ({item.size.name})"
+
                 items.append({
-                    'name': item.product.name,
+                    'name': f"{item.product.name}{variant_str}",
                     'quantity': item.quantity,
                     'price': float(item.unit_price),
                     'total': float(item.line_total)

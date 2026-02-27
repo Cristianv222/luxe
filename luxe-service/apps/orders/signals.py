@@ -65,13 +65,25 @@ def restore_stock_on_delete(sender, instance, **kwargs):
             old_stock = product.stock_quantity
             product.stock_quantity += instance.quantity
             product.save()
-            
+
             logger.info(
                 f"Stock restaurado por eliminación de orden/ item: "
                 f"Producto '{product.name}' ({product.id}) "
                 f"Stock: {old_stock} -> {product.stock_quantity} "
                 f"(+{instance.quantity})"
             )
+
+            # Restaurar también el stock de la variante si existe
+            if instance.variant:
+                old_var_stock = instance.variant.stock_quantity
+                instance.variant.stock_quantity += instance.quantity
+                instance.variant.save()
+                logger.info(
+                    f"Stock de variante restaurado: "
+                    f"Variante ID ({instance.variant.id}) "
+                    f"Stock: {old_var_stock} -> {instance.variant.stock_quantity} "
+                    f"(+{instance.quantity})"
+                )
             
     except Exception as e:
         logger.error(f"Error al restaurar stock para item eliminado {instance.id}: {str(e)}")

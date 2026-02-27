@@ -13,6 +13,10 @@ const Ordenes = () => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [sriLoading, setSriLoading] = useState(false);
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [ordersPerPage, setOrdersPerPage] = useState(20);
+
     useEffect(() => {
         const fetchOrders = async () => {
             try {
@@ -236,6 +240,21 @@ const Ordenes = () => {
             return aCompleted ? new Date(b.created_at) - new Date(a.created_at) : new Date(a.created_at) - new Date(b.created_at);
         });
 
+    // Pagination logic
+    const indexOfLastOrder = currentPage * ordersPerPage;
+    const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
+    const currentOrders = sortedAndFilteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+    const totalPages = Math.ceil(sortedAndFilteredOrders.length / ordersPerPage);
+
+    const handlePageChange = (pageNumber) => {
+        setCurrentPage(pageNumber);
+    };
+
+    // Reset page to 1 on search
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
+
     if (loading) return <div className="text-center p-5">Cargando órdenes...</div>;
     if (error) return <div className="text-center p-5 text-red-500">{error}</div>;
 
@@ -246,15 +265,43 @@ const Ordenes = () => {
                 <p>Gestiona y visualiza todas las órdenes de la tienda</p>
             </div>
 
-            {/* Search Bar */}
-            <div style={{ marginBottom: '2rem' }}>
-                <input
-                    type="text"
-                    className="ff-search-input"
-                    placeholder="Buscar por número de orden o cliente..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
+            {/* Search Bar & Pagination Select */}
+            <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ flex: '1 1 300px' }}>
+                    <input
+                        type="text"
+                        className="ff-search-input"
+                        placeholder="Buscar por número de orden o cliente..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <label style={{ fontWeight: '600', color: 'var(--color-latte)', fontSize: '0.95rem' }}>Mostrar:</label>
+                    <select
+                        value={ordersPerPage}
+                        onChange={(e) => {
+                            setOrdersPerPage(parseInt(e.target.value, 10));
+                            setCurrentPage(1);
+                        }}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            borderRadius: '4px',
+                            border: '1px solid var(--color-chai)',
+                            fontFamily: 'var(--font-sans)',
+                            backgroundColor: 'white',
+                            color: 'var(--color-dark)',
+                            outline: 'none',
+                            fontSize: '0.95rem',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <option value={10}>10 órdenes</option>
+                        <option value={20}>20 órdenes</option>
+                        <option value={50}>50 órdenes</option>
+                        <option value={100}>100 órdenes</option>
+                    </select>
+                </div>
             </div>
 
             {/* Orders Table */}
@@ -272,14 +319,14 @@ const Ordenes = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {sortedAndFilteredOrders.length === 0 ? (
+                        {currentOrders.length === 0 ? (
                             <tr>
                                 <td colSpan="7" style={{ textAlign: 'center', padding: '3rem' }}>
                                     No se encontraron órdenes
                                 </td>
                             </tr>
                         ) : (
-                            sortedAndFilteredOrders.map(order => (
+                            currentOrders.map(order => (
                                 <tr key={order.id} onClick={() => handleRowClick(order)} style={{ cursor: 'pointer' }}>
                                     <td>
                                         <span style={{ fontWeight: '700', color: 'var(--color-latte)' }}>#{order.order_number}</span>
@@ -321,6 +368,31 @@ const Ordenes = () => {
                     </tbody>
                 </table>
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', marginTop: '1.5rem', gap: '8px' }}>
+                    <button
+                        onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                        className="ff-button ff-button-secondary"
+                        style={{ padding: '0.5rem 1rem', minWidth: '100px' }}
+                    >
+                        Anterior
+                    </button>
+                    <span style={{ margin: '0 15px', fontWeight: 'bold', minWidth: '120px', textAlign: 'center' }}>
+                        Página {currentPage} de {totalPages}
+                    </span>
+                    <button
+                        onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                        disabled={currentPage === totalPages}
+                        className="ff-button ff-button-secondary"
+                        style={{ padding: '0.5rem 1rem', minWidth: '100px' }}
+                    >
+                        Siguiente
+                    </button>
+                </div>
+            )}
 
             {/* Modal */}
             {showModal && selectedOrder && (
@@ -454,6 +526,7 @@ const Ordenes = () => {
                                                 <tr key={idx}>
                                                     <td>
                                                         {item.product_details?.name || item.product_name}
+                                                        {item.variant_name && <span style={{ marginLeft: '5px', fontSize: '0.9em', color: '#666' }}>({item.variant_name})</span>}
                                                         {item.notes && <div style={{ fontSize: '0.8rem', color: 'var(--color-latte)', marginTop: '4px' }}>Nota: {item.notes}</div>}
                                                     </td>
                                                     <td>{item.quantity} x ${item.unit_price}</td>

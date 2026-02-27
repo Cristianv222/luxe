@@ -160,6 +160,74 @@ from .serializers import (
 
 # ... (Previous imports remain same)
 
+def parse_and_create_variants(product, available_sizes_str):
+    import re
+    from .models import Size, Color, ProductVariant
+    if not available_sizes_str:
+        return
+    
+    items = [x.strip() for x in available_sizes_str.split(',') if x.strip()]
+    if not items:
+        return
+        
+    pattern = re.compile(r'^([^-:]+)(?:-([^:]+))?(?::(\d+))?$')
+    
+    total_stock = 0
+    has_stock = False
+    
+    processed_variants = []
+    
+    display_order = 0
+    for item in items:
+        match = pattern.match(item)
+        if not match:
+            continue
+            
+        size_str, color_str, stock_str = match.groups()
+        
+        size_obj = None
+        if size_str:
+            size_name = size_str.strip()[:50].title()
+            size_obj, _ = Size.objects.get_or_create(
+                product=product, name=size_name,
+                defaults={'display_order': display_order}
+            )
+            
+        color_obj = None
+        if color_str:
+            color_name = color_str.strip()[:50].title()
+            color_obj, _ = Color.objects.get_or_create(
+                name=color_name,
+                defaults={'hex_code': '#CCCCCC'}
+            )
+            
+        stock_val = int(stock_str) if stock_str else 0
+        if stock_str is not None:
+            has_stock = True
+            total_stock += stock_val
+            
+        variant, created = ProductVariant.objects.get_or_create(
+            product=product,
+            size=size_obj,
+            color=color_obj,
+            defaults={'stock_quantity': stock_val}
+        )
+        if not created:
+            variant.stock_quantity = stock_val
+            variant.save()
+            
+        processed_variants.append(variant.id)
+        display_order += 1
+        
+    ProductVariant.objects.filter(product=product).exclude(id__in=processed_variants).delete()
+    
+    if has_stock:
+        product.track_stock = True
+        product.stock_quantity = total_stock
+        product.save(update_fields=['track_stock', 'stock_quantity'])
+
+
+
 class ProductViewSet(viewsets.ModelViewSet):
     """
     ViewSet para productos del menú
@@ -213,6 +281,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         for image in images:
             ProductImage.objects.create(product=product, image=image)
             
+        parse_and_create_variants(product, product.available_sizes)
+            
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
@@ -227,6 +297,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         images = request.FILES.getlist('gallery_images')
         for image in images:
             ProductImage.objects.create(product=instance, image=image)
+
+        parse_and_create_variants(instance, instance.available_sizes)
 
         if getattr(instance, '_prefetched_objects_cache', None):
             instance._prefetched_objects_cache = {}

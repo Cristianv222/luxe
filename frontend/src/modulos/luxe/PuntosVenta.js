@@ -109,6 +109,11 @@ const PuntosVenta = () => {
     const [paymentMethods, setPaymentMethods] = useState([]);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
 
+    // Variant Selection State
+    const [selectedProductForVariant, setSelectedProductForVariant] = useState(null);
+    const [selectedSizeId, setSelectedSizeId] = useState('');
+    const [selectedColorId, setSelectedColorId] = useState('');
+
     // =====================================
     // 4. EFECTOS - CARGA INICIAL Y ESCÁNER
     // =====================================
@@ -229,7 +234,7 @@ const PuntosVenta = () => {
     const handleBarcodeScan = useCallback((code) => {
         const product = products.find(p => p.code === code);
         if (product) {
-            addToCart(product);
+            handleProductClick(product);
             console.log("✅ Producto agregado por escáner:", product.name, "- Código:", code);
             if (searchTerm === code) {
                 setSearchTerm('');
@@ -298,16 +303,69 @@ const PuntosVenta = () => {
     // =====================================
     // 5. LÓGICA DEL CARRITO
     // =====================================
-    const addToCart = useCallback((product) => {
-        if (product.track_stock && product.stock_quantity <= 0) {
-            showAlert('warning', 'Producto Agotado', "Este producto no tiene stock disponible.");
+    const handleProductClick = useCallback((product) => {
+        if (product.variants && product.variants.length > 0) {
+            setSelectedProductForVariant(product);
+            // Preseleccionar si solo hay una opción
+            const uniqueSizes = [...new Set(product.variants.map(v => v.size?.id).filter(Boolean))];
+            const uniqueColors = [...new Set(product.variants.map(v => v.color?.id).filter(Boolean))];
+            if (uniqueSizes.length === 1) setSelectedSizeId(uniqueSizes[0]);
+            else setSelectedSizeId('');
+            if (uniqueColors.length === 1) setSelectedColorId(uniqueColors[0]);
+            else setSelectedColorId('');
+        } else {
+            addToCart(product);
+        }
+    }, []);
+
+    const confirmVariantSelection = () => {
+        if (!selectedProductForVariant) return;
+
+        const productToAdd = { ...selectedProductForVariant };
+        const exactVariant = selectedProductForVariant.variants.find(v =>
+            (!selectedSizeId || String(v.size?.id) === String(selectedSizeId)) &&
+            (!selectedColorId || String(v.color?.id) === String(selectedColorId))
+        );
+
+        if (exactVariant) {
+            if (exactVariant.stock_quantity <= 0) {
+                showAlert('warning', 'Agotado', 'La variante seleccionada no cuenta con stock.');
+                return;
+            }
+            productToAdd.variant_id = exactVariant.id;
+            productToAdd.size_id = exactVariant.size?.id;
+            productToAdd.color_id = exactVariant.color?.id;
+            productToAdd.cart_name_suffix = [exactVariant.size?.name, exactVariant.color?.name].filter(Boolean).join(' | ');
+            if (exactVariant.price) productToAdd.price = exactVariant.price;
+        } else {
+            showAlert('warning', 'Variante no encontrada', 'Seleccione una combinación válida.');
             return;
         }
 
+        addToCart(productToAdd);
+        closeVariantModal();
+    };
+
+    const closeVariantModal = () => {
+        setSelectedProductForVariant(null);
+        setSelectedSizeId('');
+        setSelectedColorId('');
+    };
+
+    const addToCart = useCallback((product) => {
+        // ... (resto de la lógica original, asegurando que use varianId para el tempId)
+
+        let targetStock = product.track_stock ? product.stock_quantity : Infinity;
+        // Si fue una variante que sobreescribió precio y demás, su stock está en la variante original 
+        // pero preferimos confiar en el quantity original si no tenemos el objeto entero.
+        // Asume que la validación de stock inicial ya pasó.
+
         setCart(prevCart => {
-            const existingItemIndex = prevCart.findIndex(item => item.product_id === product.id);
+            // Usa suffix como ID adicional si existe
+            const uniqueId = `${product.id}-${product.variant_id || 'std'}`;
+            const existingItemIndex = prevCart.findIndex(item => item.uniqueId === uniqueId);
             if (existingItemIndex >= 0) {
-                if (product.track_stock && prevCart[existingItemIndex].quantity >= product.stock_quantity) {
+                if (product.track_stock && prevCart[existingItemIndex].quantity >= targetStock) {
                     showAlert('warning', 'Stock Insuficiente', "No hay suficiente stock disponible para agregar más unidades.");
                     return prevCart;
                 }
@@ -320,25 +378,29 @@ const PuntosVenta = () => {
             } else {
                 return [...prevCart, {
                     product_id: product.id,
-                    name: product.name,
+                    uniqueId: uniqueId,
+                    name: product.cart_name_suffix ? `${product.name} (${product.cart_name_suffix})` : product.name,
                     price: parseFloat(product.price),
                     quantity: 1,
                     image: product.image,
                     note: '',
                     code: product.code,
-                    tax_rate: parseFloat(product.tax_rate || 0)
+                    tax_rate: parseFloat(product.tax_rate || 0),
+                    variant_id: product.variant_id,
+                    size_id: product.size_id,
+                    color_id: product.color_id
                 }];
             }
         });
-    }, []);
+    }, [showAlert]);
 
-    const removeFromCart = useCallback((productId) => setCart(prev => prev.filter(i => i.product_id !== productId)), []);
+    const removeFromCart = useCallback((uniqueId) => setCart(prev => prev.filter(i => i.uniqueId !== uniqueId)), []);
 
-    const updateQuantity = useCallback((productId, delta) => {
+    const updateQuantity = useCallback((uniqueId, delta) => {
         setCart(prevCart => {
             return prevCart.map(item => {
-                if (item.product_id === productId) {
-                    const product = products.find(p => p.id === productId);
+                if (item.uniqueId === uniqueId) {
+                    const product = products.find(p => p.id === item.product_id);
                     const newQuantity = Math.max(1, item.quantity + delta);
 
                     if (delta > 0 && product && product.track_stock && newQuantity > product.stock_quantity) {
@@ -352,14 +414,14 @@ const PuntosVenta = () => {
         });
     }, [products]);
 
-    const handleAddNote = (productId) => {
-        const item = cart.find(i => i.product_id === productId);
-        setEditingNoteForItem(productId);
+    const handleAddNote = (uniqueId) => {
+        const item = cart.find(i => i.uniqueId === uniqueId);
+        setEditingNoteForItem(uniqueId);
         setNoteText(item?.note || '');
     };
 
     const saveNote = () => {
-        setCart(prev => prev.map(item => item.product_id === editingNoteForItem ? { ...item, note: noteText.trim() } : item));
+        setCart(prev => prev.map(item => item.uniqueId === editingNoteForItem ? { ...item, note: noteText.trim() } : item));
         setEditingNoteForItem(null);
         setNoteText('');
     };
@@ -547,7 +609,7 @@ const PuntosVenta = () => {
             order_type: selectedDeliveryMethod,
             table_number: tableNumber,
             notes: orderNotes,
-            items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity, notes: i.note || '' })),
+            items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity, notes: i.note || '', variant_id: i.variant_id, size_id: i.size_id, color_id: i.color_id })),
             discount_code: appliedDiscount?.code || null,
             manual_discount: parseFloat(manualDiscount) || 0,
             customer_id: (selectedCustomer && !selectedCustomer.is_external_only) ? selectedCustomer.id : null,
@@ -785,7 +847,7 @@ const PuntosVenta = () => {
                                     cursor: 'pointer',
                                     gap: '10px',
                                     ':hover': { backgroundColor: '#f8fafc' }
-                                }} onClick={() => addToCart(product)}>
+                                }} onClick={() => handleProductClick(product)}>
 
                                     {/* COLUMNA FOTO */}
                                     <div style={{ width: '60px', height: '60px', borderRadius: '4px', overflow: 'hidden', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -910,10 +972,10 @@ const PuntosVenta = () => {
                                         )}
                                     </div>
                                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                        <button onClick={() => updateQuantity(item.product_id, -1)} style={{ width: '28px', height: '28px', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white' }}>-</button>
+                                        <button onClick={() => updateQuantity(item.uniqueId, -1)} style={{ width: '28px', height: '28px', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white' }}>-</button>
                                         <span style={{ fontWeight: '600' }}>{item.quantity}</span>
-                                        <button onClick={() => updateQuantity(item.product_id, 1)} style={{ width: '28px', height: '28px', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white' }}>+</button>
-                                        <button onClick={() => removeFromCart(item.product_id)} style={{ marginLeft: '0.5rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+                                        <button onClick={() => updateQuantity(item.uniqueId, 1)} style={{ width: '28px', height: '28px', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white' }}>+</button>
+                                        <button onClick={() => removeFromCart(item.uniqueId)} style={{ marginLeft: '0.5rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
                                     </div>
                                 </div>
                             </div>
@@ -1420,6 +1482,63 @@ const PuntosVenta = () => {
                                     {alertModal.confirmText}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal para Selección de Variante */}
+            {selectedProductForVariant && selectedProductForVariant.variants && selectedProductForVariant.variants.length > 0 && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, animation: 'fadeIn 0.2s ease-out' }}>
+                    <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', maxWidth: '450px', width: '90%', boxShadow: '0 25px 50px rgba(0,0,0,0.3)', animation: 'slideUp 0.3s ease-out' }}>
+                        <h3 style={{ margin: '0 0 20px', color: '#1e293b', fontSize: '1.25rem' }}>Seleccionar Variante: {selectedProductForVariant.name}</h3>
+
+                        {/* Selector Talla */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Talla:</label>
+                            <select
+                                value={selectedSizeId}
+                                onChange={(e) => setSelectedSizeId(e.target.value)}
+                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                            >
+                                <option value="">Seleccione una talla</option>
+                                {[...new Set(selectedProductForVariant.variants.map(v => v.size?.id).filter(Boolean))].map(sizeId => {
+                                    const sizeName = selectedProductForVariant.variants.find(v => v.size?.id === sizeId).size.name;
+                                    return <option key={sizeId} value={sizeId}>{sizeName}</option>
+                                })}
+                            </select>
+                        </div>
+
+                        {/* Selector Color */}
+                        <div style={{ marginBottom: '25px' }}>
+                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Color:</label>
+                            <select
+                                value={selectedColorId}
+                                onChange={(e) => setSelectedColorId(e.target.value)}
+                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                            >
+                                <option value="">Seleccione un color</option>
+                                {[...new Set(selectedProductForVariant.variants.map(v => v.color?.id).filter(Boolean))].map(colorId => {
+                                    const colorName = selectedProductForVariant.variants.find(v => v.color?.id === colorId).color.name;
+                                    return <option key={colorId} value={colorId}>{colorName}</option>
+                                })}
+                            </select>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={closeVariantModal}
+                                style={{ padding: '10px 20px', backgroundColor: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                            >
+                                CANCELAR
+                            </button>
+                            <button
+                                onClick={confirmVariantSelection}
+                                style={{ padding: '10px 20px', backgroundColor: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                                disabled={!selectedSizeId && !selectedColorId}
+                            >
+                                AGREGAR AL CARRITO
+                            </button>
                         </div>
                     </div>
                 </div>

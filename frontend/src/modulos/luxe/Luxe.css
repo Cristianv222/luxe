@@ -23,7 +23,8 @@
     font-family: var(--font-sans);
     background-color: var(--color-creme);
     color: var(--color-dark);
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
 }
@@ -31,6 +32,8 @@
 .luxe-layout .layout-body {
     display: flex;
     flex: 1;
+    height: 100%;
+    overflow: hidden;
 }
 
 .luxe-layout .main-content {
@@ -51,6 +54,7 @@
     flex-direction: column;
     box-shadow: 2px 0 20px rgba(0, 0, 0, 0.02);
     z-index: 10;
+    overflow-y: auto;
 }
 
 .sidebar-header {
@@ -315,7 +319,8 @@
     border-radius: 8px;
     box-shadow: var(--shadow-soft);
     border: 1px solid var(--color-froth);
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
     margin-bottom: 2rem;
 }
 

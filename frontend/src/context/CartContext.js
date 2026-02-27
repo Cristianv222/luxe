@@ -36,7 +36,7 @@ export const CartProvider = ({ children }) => {
         setCart(prevCart => {
             // Generar un ID único para el item en el carrito basado en sus propiedades
             // Esto permite tener el mismo producto con diferentes tallas/extras como items separados
-            const tempId = `${product.id}-${selectedSize ? selectedSize.id : 'std'}-${selectedExtras.map(e => e.id).sort().join('-')}`;
+            const tempId = `${product.id}-${selectedSize ? selectedSize.id : 'std'}-${selectedExtras.map(e => e.id).sort().join('-')}-${product.cart_name_suffix || 'none'}`;
 
             const existingItemIndex = prevCart.findIndex(item => item.tempId === tempId);
 

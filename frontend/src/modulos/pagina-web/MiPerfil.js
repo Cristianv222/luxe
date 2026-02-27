@@ -350,7 +350,10 @@ const MiPerfil = () => {
                                             {selectedOrder.items && selectedOrder.items.map((item, idx) => (
                                                 <tr key={idx}>
                                                     <td>
-                                                        <div className="item-name">{item.product_details?.name || 'Producto'}</div>
+                                                        <div className="item-name">
+                                                            {item.product_details?.name || 'Producto'}
+                                                            {item.variant_name && <span style={{ marginLeft: '5px', fontSize: '0.9em', color: '#666' }}>({item.variant_name})</span>}
+                                                        </div>
                                                         {item.notes && <div className="item-note">{item.notes}</div>}
                                                     </td>
                                                     <td>{item.quantity}</td>

@@ -694,8 +694,8 @@ const Inventario = () => {
                                             <th>Descripción (Web)</th>
                                             <th>Categoría</th>
                                             <th>Marca</th>
-                                            <th>Tallas</th>
-                                            <th>Stock (Existencias)</th>
+                                            <th>S/C/Stock (Variantes)</th>
+                                            <th>Stock Total</th>
                                             <th>Precio Venta</th>
                                             <th>Costo Actual</th>
                                             <th>IVA %</th>
@@ -923,8 +923,8 @@ const Inventario = () => {
                                     <input type="text" name="unit_measure" value={newProduct.unit_measure} onChange={handleInputChange} />
                                 </div>
                                 <div className="form-group-boutique" style={{ gridColumn: 'span 2' }}>
-                                    <label>Tallas Disponibles (Separadas por comas)</label>
-                                    <input type="text" name="available_sizes" value={newProduct.available_sizes} onChange={handleInputChange} placeholder="Ej: S, M, L, XL" />
+                                    <label>Tallas/Colores/Stock (Ej: S-Rojo:2, M-Azul:3, L:1)</label>
+                                    <input type="text" name="available_sizes" value={newProduct.available_sizes} onChange={handleInputChange} placeholder="Formato: Talla-Color:Stock (separado por comas)" />
                                 </div>
                             </div>
 
@@ -1016,7 +1016,7 @@ const Inventario = () => {
                                         <h4 style={{ margin: '0 0 10px', fontSize: '1rem', color: '#2C2C2C' }}>Inventario por Variantes</h4>
                                         <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '15px' }}>
                                             Este producto tiene control de inventario específico por talla y color.
-                                            Para modificar el stock de las variantes, por favor <a href="http://localhost:8000/admin/inventario/productvariant/" target="_blank" rel="noreferrer" style={{ color: '#8B7E74', fontWeight: 'bold' }}>ingrese al Panel Avanzado</a>.
+                                            Puede actualizarlo modificando el campo "Tallas/Colores/Stock" arriba, o para ajustes manuales <a href="http://localhost:8000/admin/inventario/productvariant/" target="_blank" rel="noreferrer" style={{ color: '#8B7E74', fontWeight: 'bold' }}>ingrese al Panel Avanzado</a>.
                                         </p>
                                         <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
                                             <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>

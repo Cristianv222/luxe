@@ -195,7 +195,9 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
                 items: cart.map(item => ({
                     product_id: item.id,
                     quantity: item.quantity,
-                    size_id: item.selectedSize?.id,
+                    size_id: item.size_id || item.selectedSize?.id,
+                    color_id: item.color_id,
+                    variant_id: item.variant_id,
                     extra_ids: item.selectedExtras?.map(e => e.id)
                 })),
                 order_type: 'delivery',
@@ -253,6 +255,12 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
         if (createdOrder.items && createdOrder.items.length > 0) {
             createdOrder.items.forEach(item => {
                 const pName = item.product_details?.name || item.product_name || item.product?.name || "Producto";
+
+                // Extraer el nombre de la variante desde la respuesta si existe (el backend suele mandar 'size_name' o 'variant_name')
+                // Como no estamos seguros de si el backend manda el sufijo, vamos a dejar un espacio para el sufijo.
+                const variantInfo = item.product_details?.variant_name || item.variant_name || "";
+                const finalName = variantInfo ? `${pName} (${variantInfo})` : pName;
+
                 const qty = item.quantity;
                 // Backend uses 'unit_price' and 'line_total'
                 const rawPrice = item.unit_price || item.price || 0;
@@ -261,7 +269,7 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
                 const rawTotal = item.line_total || item.total || (price * qty);
                 const lineTotal = typeof rawTotal === 'string' ? parseFloat(rawTotal) : rawTotal;
 
-                msg += `- ${qty}x ${pName}: $${lineTotal.toFixed(2)}\n`;
+                msg += `- ${qty}x ${finalName}: $${lineTotal.toFixed(2)}\n`;
             });
         } else {
             msg += `(Detalle de productos en sistema)\n`;
@@ -440,8 +448,12 @@ const CheckoutFlow = ({ isOpen, onClose }) => {
                                 <div key={index} className="summary-item" style={{ position: 'relative' }}>
                                     <div className="summary-item-info" style={{ paddingRight: '20px' }}>
                                         <span className="summary-p-name">{item.name}</span>
-                                        {item.selectedSize && <small> ({item.selectedSize.name})</small>}
-                                        <div className="summary-p-qty">Cant: {item.quantity}</div>
+                                        {(item.selectedSize || item.cart_name_suffix) && (
+                                            <small style={{ display: 'block', color: '#666', marginTop: '2px' }}>
+                                                ({item.cart_name_suffix ? item.cart_name_suffix : item.selectedSize.name})
+                                            </small>
+                                        )}
+                                        <div className="summary-p-qty" style={{ marginTop: '4px' }}>Cant: {item.quantity}</div>
                                     </div>
 
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
