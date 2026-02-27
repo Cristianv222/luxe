@@ -20,34 +20,12 @@ const Ordenes = () => {
     useEffect(() => {
         const fetchOrders = async () => {
             try {
-                // The backend paginates results — fetch ALL pages
-                let allOrders = [];
-                let url = '/api/orders/orders/?page_size=100';
-
-                while (url) {
-                    const response = await api.get(url, {
-                        baseURL: process.env.REACT_APP_LUXE_SERVICE
-                    });
-                    const data = response.data;
-
-                    if (data.results) {
-                        // Paginated response
-                        allOrders = [...allOrders, ...data.results];
-                        // Get the relative path of the next page URL (strip base URL)
-                        if (data.next) {
-                            const nextUrl = new URL(data.next);
-                            url = nextUrl.pathname + nextUrl.search;
-                        } else {
-                            url = null;
-                        }
-                    } else {
-                        // Non-paginated response (array directly)
-                        allOrders = data;
-                        url = null;
-                    }
-                }
-
-                setOrders(allOrders);
+                const response = await api.get('/api/orders/orders/', {
+                    baseURL: process.env.REACT_APP_LUXE_SERVICE
+                });
+                const data = response.data;
+                // Backend has pagination_class=None so returns plain array
+                setOrders(Array.isArray(data) ? data : (data.results || []));
             } catch (err) {
                 console.error('Error fetching orders:', err);
                 setError('Error al cargar las órdenes');
@@ -58,6 +36,8 @@ const Ordenes = () => {
 
         fetchOrders();
     }, []);
+
+
 
 
     useEffect(() => {

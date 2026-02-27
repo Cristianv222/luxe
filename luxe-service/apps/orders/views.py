@@ -61,6 +61,8 @@ class OrderViewSet(viewsets.ModelViewSet):
     ordering_fields = ['created_at', 'total', 'status']
     ordering = ['-created_at']
     lookup_field = 'order_number'
+    pagination_class = None  # Frontend handles pagination; return all orders at once
+
     
     def get_queryset(self):
         """Optimiza queries con prefetch y filtros adicionales"""
