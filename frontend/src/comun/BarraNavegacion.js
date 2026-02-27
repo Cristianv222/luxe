@@ -91,6 +91,11 @@ const BarraNavegacion = () => {
                     </button>
 
                     <nav className={`main-nav ${isMenuOpen ? 'open' : ''}`}>
+                        {/* Header inside mobile drawer */}
+                        <div className="mobile-nav-header">
+                            <img src={logo} alt="Luxury Boutique" className="mobile-nav-logo" />
+                            <p className="mobile-nav-tagline">Luxury Boutique</p>
+                        </div>
                         <Link to="/" className="nav-link" onClick={() => setIsMenuOpen(false)}>INICIO</Link>
                         {/* Botón de Puntos integrado en el menú */}
                         <button
@@ -113,12 +118,12 @@ const BarraNavegacion = () => {
                         <Link to="/contacto" className="nav-link" onClick={() => setIsMenuOpen(false)}>CONTACTO</Link>
 
                         {isAuthenticated ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginLeft: '20px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
                                 <Link to="/perfil" className="nav-link" onClick={() => setIsMenuOpen(false)}>MI PERFIL</Link>
                                 <button onClick={handleLogout} className="btn-logout">SALIR</button>
                             </div>
                         ) : (
-                            <Link to="/login" className="nav-link" onClick={() => setIsMenuOpen(false)} style={{ marginLeft: '10px' }}>LOGIN</Link>
+                            <Link to="/login" className="nav-link" onClick={() => setIsMenuOpen(false)}>LOGIN</Link>
                         )}
                     </nav>
                 </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import api from '../../services/api';
 import printerService from '../../services/printerService';
+import { useSidebar } from '../../context/SidebarContext';
 
 // ====================================================================
 // 1. Funciones de Ayuda
@@ -21,6 +22,7 @@ const formatCurrency = (amount) => {
 const TOUCH_MIN_SIZE = '44px';
 
 const PuntosVenta = () => {
+    const { openSidebar } = useSidebar();
     // =====================================
     // 1. ESTADO DE DATOS Y CARGA
     // =====================================
@@ -759,9 +761,21 @@ const PuntosVenta = () => {
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#f8fafc' }}>
             {/* Header Moderno */}
             <div style={{ backgroundColor: '#ffffff', padding: '1rem 2rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>
-                    BOUTIQUE POS
-                </h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    {/* Hamburger button — only visible on mobile via CSS */}
+                    <button
+                        className="pos-sidebar-hamburger"
+                        onClick={openSidebar}
+                        aria-label="Abrir menú"
+                    >
+                        <span className="sidebar-bar"></span>
+                        <span className="sidebar-bar"></span>
+                        <span className="sidebar-bar"></span>
+                    </button>
+                    <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>
+                        BOUTIQUE POS
+                    </h1>
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500' }}>
                         {cart.length} productos en carrito

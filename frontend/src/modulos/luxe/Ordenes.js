@@ -15,7 +15,7 @@ const Ordenes = () => {
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
-    const [ordersPerPage, setOrdersPerPage] = useState(20);
+    const ORDERS_PER_PAGE = 10;
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -241,10 +241,10 @@ const Ordenes = () => {
         });
 
     // Pagination logic
-    const indexOfLastOrder = currentPage * ordersPerPage;
-    const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
+    const indexOfLastOrder = currentPage * ORDERS_PER_PAGE;
+    const indexOfFirstOrder = indexOfLastOrder - ORDERS_PER_PAGE;
     const currentOrders = sortedAndFilteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
-    const totalPages = Math.ceil(sortedAndFilteredOrders.length / ordersPerPage);
+    const totalPages = Math.ceil(sortedAndFilteredOrders.length / ORDERS_PER_PAGE);
 
     const handlePageChange = (pageNumber) => {
         setCurrentPage(pageNumber);
@@ -265,43 +265,15 @@ const Ordenes = () => {
                 <p>Gestiona y visualiza todas las órdenes de la tienda</p>
             </div>
 
-            {/* Search Bar & Pagination Select */}
-            <div style={{ marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ flex: '1 1 300px' }}>
-                    <input
-                        type="text"
-                        className="ff-search-input"
-                        placeholder="Buscar por número de orden o cliente..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <label style={{ fontWeight: '600', color: 'var(--color-latte)', fontSize: '0.95rem' }}>Mostrar:</label>
-                    <select
-                        value={ordersPerPage}
-                        onChange={(e) => {
-                            setOrdersPerPage(parseInt(e.target.value, 10));
-                            setCurrentPage(1);
-                        }}
-                        style={{
-                            padding: '0.5rem 1rem',
-                            borderRadius: '4px',
-                            border: '1px solid var(--color-chai)',
-                            fontFamily: 'var(--font-sans)',
-                            backgroundColor: 'white',
-                            color: 'var(--color-dark)',
-                            outline: 'none',
-                            fontSize: '0.95rem',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        <option value={10}>10 órdenes</option>
-                        <option value={20}>20 órdenes</option>
-                        <option value={50}>50 órdenes</option>
-                        <option value={100}>100 órdenes</option>
-                    </select>
-                </div>
+            {/* Search Bar */}
+            <div style={{ marginBottom: '2rem' }}>
+                <input
+                    type="text"
+                    className="ff-search-input"
+                    placeholder="Buscar por número de orden o cliente..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
             </div>
 
             {/* Orders Table */}

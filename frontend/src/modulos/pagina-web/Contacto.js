@@ -58,42 +58,11 @@ const Contacto = () => {
             <BarraNavegacion />
 
             {/* HERO SECTION */}
-            <section style={{
-                width: '100%',
-                minHeight: '50vh',
-                background: 'linear-gradient(135deg, #CFB3A9 0%, #E8C4C4 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '100px 20px 60px',
-                marginTop: '80px'
-            }}>
-                <div style={{
-                    maxWidth: '800px',
-                    textAlign: 'center'
-                }}>
-                    <p style={{
-                        fontSize: '14px',
-                        letterSpacing: '5px',
-                        color: '#2C2C2C',
-                        marginBottom: '20px',
-                        textTransform: 'uppercase',
-                        fontWeight: '700'
-                    }}>Visítanos en Cuenca</p>
-                    <h1 style={{
-                        fontFamily: "'Cinzel', serif",
-                        fontSize: '3.5rem',
-                        color: '#2C2C2C',
-                        marginBottom: '30px',
-                        lineHeight: '1.2'
-                    }}>Contáctanos</h1>
-                    <p style={{
-                        fontSize: '1.1rem',
-                        color: '#666',
-                        lineHeight: '1.8',
-                        maxWidth: '700px',
-                        margin: '0 auto'
-                    }}>
+            <section className="page-hero-section" style={{ background: 'linear-gradient(135deg, #CFB3A9 0%, #E8C4C4 100%)' }}>
+                <div className="page-hero-card">
+                    <p className="page-hero-subtitle">Visítanos en Cuenca</p>
+                    <h1 className="page-hero-title">Contáctanos</h1>
+                    <p className="page-hero-desc">
                         ¿Tienes alguna pregunta? Nos encantaría escucharte
                     </p>
                 </div>

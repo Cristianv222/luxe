@@ -45,20 +45,31 @@ body {
 .layout {
   display: flex;
   flex-direction: row;
-  /* FIX: Side-by-side layout */
   height: 100vh;
+  position: relative;
+  /* needed for fixed children to work on mobile */
 }
 
 .layout-body {
   display: flex;
   flex: 1;
-  overflow: hidden;
+  min-height: 0;
 }
 
 .main-content {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
+}
+
+/* ─── Mobile: .layout responsive sidebar ─── */
+@media (max-width: 768px) {
+  .layout .main-content {
+    padding: 20px;
+    padding-top: 4.5rem;
+    /* room for the hamburger button */
+    width: 100%;
+  }
 }
 
 /* Navbar */

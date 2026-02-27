@@ -105,37 +105,13 @@ const BoutiqueLanding = () => {
             )}
 
             {/* HERO SECTION */}
-            <section style={{
-                width: '100%', minHeight: '85vh', backgroundImage: `url(${heroBg})`,
-                backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', padding: '60px 20px',
-                marginTop: '80px', position: 'relative'
-            }}>
-                <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.2)' }}></div>
-                <div style={{
-                    maxWidth: '800px', width: '100%', backgroundColor: 'rgba(241, 238, 235, 0.4)',
-                    backdropFilter: 'blur(5px)', WebkitBackdropFilter: 'blur(5px)', padding: '80px 60px',
-                    borderRadius: '4px', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
-                    position: 'relative', border: '1px solid rgba(255,255,255,0.3)'
-                }}>
-                    <p style={{
-                        fontSize: '14px', letterSpacing: '5px', color: '#2C2C2C',
-                        marginBottom: '20px', textTransform: 'uppercase', fontWeight: '700'
-                    }}>Luxury Boutique</p>
-                    <h2 style={{
-                        fontFamily: 'serif', fontSize: '56px', color: '#1a1a1a',
-                        margin: '0 0 30px 0', fontWeight: 600, letterSpacing: '2px', lineHeight: '1.2'
-                    }}>Colección Exclusiva</h2>
-                    <p style={{
-                        fontSize: '18px', lineHeight: '1.8', color: '#333333',
-                        marginBottom: '45px', maxWidth: '500px', margin: '0 auto 45px', fontWeight: '500'
-                    }}>Define tu estilo con piezas únicas y atemporales.</p>
-                    <a href="#collection" className="hero-btn-simple" style={{
-                        display: 'inline-block', padding: '16px 45px', backgroundColor: '#2C2C2C',
-                        color: '#FFFFFF', textDecoration: 'none', textTransform: 'uppercase',
-                        letterSpacing: '2px', fontSize: '13px', fontWeight: 600,
-                        transition: 'all 0.3s ease', border: '1px solid #2C2C2C'
-                    }}>Ver Colección</a>
+            <section className="hero-section-new" style={{ backgroundImage: `url(${heroBg})` }}>
+                <div className="hero-overlay"></div>
+                <div className="hero-card">
+                    <p className="hero-subtitle">Luxury Boutique</p>
+                    <h2 className="hero-title">Colección Exclusiva</h2>
+                    <p className="hero-desc">Define tu estilo con piezas únicas y atemporales.</p>
+                    <a href="#collection" className="hero-btn">Ver Colección</a>
                 </div>
             </section>
 

@@ -7,19 +7,17 @@ const BarraLateral = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { logout } = useContext(AuthContext);
-
-    // Keeping this state for structure, though the boutique design is fixed width
-    // You could expand this later if you want a collapsible boutique sidebar
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
 
     const handleLogout = () => {
         logout();
         navigate('/');
     };
 
-    const isActive = (path) => {
-        return location.pathname === path || location.pathname.startsWith(path) ? 'active' : '';
-    };
+    const isActive = (path) =>
+        location.pathname === path || location.pathname.startsWith(path) ? 'active' : '';
+
+    const closeSidebar = () => setIsOpen(false);
 
     const menuItems = [
         { path: '/luxe', icon: 'bi-grid', label: 'Inicio' },
@@ -30,10 +28,11 @@ const BarraLateral = () => {
         { path: '/luxe/labels', icon: 'bi-tags', label: 'Etiquetas' },
         { path: '/luxe/machines', icon: 'bi-gear-wide-connected', label: 'Sistema Máquinas' },
         { path: '/luxe/reports', icon: 'bi-graph-up', label: 'Reportes' },
+        { path: '/luxe/shift', icon: 'bi-cash-coin', label: 'Caja (Turnos)' },
+        { path: '/luxe/printers', icon: 'bi-printer', label: 'Impresoras' },
         { path: '/luxe/loyalty-config', icon: 'bi-gift', label: 'Config. Puntos' },
         { path: '/luxe/loyalty-management', icon: 'bi-star', label: 'Gestión Puntos' },
         { path: '/luxe/whatsapp-config', icon: 'bi-whatsapp', label: 'WhatsApp' },
-
         { path: '/luxe/sri-config', icon: 'bi-file-earmark-text', label: 'Facturación SRI' },
         { path: '/users', icon: 'bi-people', label: 'Usuarios del Sistema' },
     ];
@@ -46,7 +45,33 @@ const BarraLateral = () => {
                 href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
             />
 
-            <aside className="sidebar">
+            {/* ── Hamburger toggle button (mobile only) ── */}
+            <button
+                className="sidebar-hamburger"
+                onClick={() => setIsOpen(true)}
+                aria-label="Abrir menú"
+            >
+                <span className="sidebar-bar"></span>
+                <span className="sidebar-bar"></span>
+                <span className="sidebar-bar"></span>
+            </button>
+
+            {/* ── Dark overlay: click to close ── */}
+            {isOpen && (
+                <div className="sidebar-overlay" onClick={closeSidebar} />
+            )}
+
+            {/* ── Sidebar ── */}
+            <aside className={`sidebar ${isOpen ? 'sidebar-open' : ''}`}>
+                {/* Close button (mobile only) */}
+                <button
+                    className="sidebar-close-btn"
+                    onClick={closeSidebar}
+                    aria-label="Cerrar menú"
+                >
+                    ✕
+                </button>
+
                 {/* Header */}
                 <div className="sidebar-header">
                     LUXURY BOUTIQUE
@@ -56,7 +81,7 @@ const BarraLateral = () => {
                 <ul className="sidebar-nav">
                     {menuItems.map((item) => (
                         <li key={item.path} className={isActive(item.path)}>
-                            <Link to={item.path}>
+                            <Link to={item.path} onClick={closeSidebar}>
                                 <i className={`bi ${item.icon}`} style={{ marginRight: '10px', fontSize: '1.1rem' }}></i>
                                 {item.label}
                             </Link>
@@ -86,4 +111,3 @@ const BarraLateral = () => {
 };
 
 export default BarraLateral;
-

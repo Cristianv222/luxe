@@ -1,112 +1,91 @@
-
 import React, { useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import { useSidebar } from '../../context/SidebarContext';
 
 const BarraLateralLuxe = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { logout } = useContext(AuthContext);
+    const { isSidebarOpen, openSidebar, closeSidebar } = useSidebar();
 
-    const isActive = (path) => {
-        return location.pathname === path ? 'active' : '';
-    };
+    const isActive = (path) => location.pathname === path ? 'active' : '';
 
     const handleLogout = () => {
         logout();
         navigate('/');
     };
 
+    const navLinks = [
+        { path: '/luxe', icon: 'bi-grid', label: 'Panel Principal' },
+        { path: '/luxe/pos', icon: 'bi-shop', label: 'Punto de Venta' },
+        { path: '/luxe/orders', icon: 'bi-receipt', label: 'Órdenes' },
+        { path: '/luxe/inventory', icon: 'bi-box-seam', label: 'Inventario' },
+        { path: '/luxe/customers', icon: 'bi-people-fill', label: 'Clientes' },
+        { path: '/luxe/labels', icon: 'bi-tags', label: 'Etiquetas' },
+        { path: '/luxe/machines', icon: 'bi-gear-wide-connected', label: 'Sistema Máquinas' },
+        { path: '/luxe/reports', icon: 'bi-graph-up', label: 'Reportes' },
+        { path: '/luxe/shift', icon: 'bi-cash-coin', label: 'Caja (Turnos)' },
+        { path: '/luxe/printers', icon: 'bi-printer', label: 'Impresoras' },
+        { path: '/luxe/loyalty-config', icon: 'bi-gear', label: 'Config. Puntos' },
+        { path: '/luxe/loyalty-management', icon: 'bi-star', label: 'Gestión Puntos' },
+        { path: '/luxe/whatsapp-config', icon: 'bi-whatsapp', label: 'WhatsApp' },
+        { path: '/luxe/sri-config', icon: 'bi-file-earmark-text', label: 'Facturación SRI' },
+    ];
+
     return (
-        <aside className="sidebar">
-            <div className="sidebar-header">
-                LUXURY BOUTIQUE
-            </div>
-            <ul className="sidebar-nav">
-                <li className={isActive('/luxe')}>
-                    <Link to="/luxe">
-                        <i className="bi bi-grid" style={{ marginRight: '10px' }}></i>
-                        Panel Principal
-                    </Link>
-                </li>
-                <li className={isActive('/luxe/pos')}>
-                    <Link to="/luxe/pos">
-                        <i className="bi bi-shop" style={{ marginRight: '10px' }}></i>
-                        Punto de Venta
-                    </Link>
-                </li>
-                <li className={isActive('/luxe/orders')}>
-                    <Link to="/luxe/orders">
-                        <i className="bi bi-receipt" style={{ marginRight: '10px' }}></i>
-                        Órdenes
-                    </Link>
-                </li>
-                <li className={isActive('/luxe/inventory')}>
-                    <Link to="/luxe/inventory">
-                        <i className="bi bi-box-seam" style={{ marginRight: '10px' }}></i>
-                        Inventario
-                    </Link>
-                </li>
-                <li className={isActive('/luxe/customers')}>
-                    <Link to="/luxe/customers">
-                        <i className="bi bi-people-fill" style={{ marginRight: '10px' }}></i>
-                        Clientes
-                    </Link>
-                </li>
-                <li className={isActive('/luxe/reports')}>
-                    <Link to="/luxe/reports">
-                        <i className="bi bi-graph-up" style={{ marginRight: '10px' }}></i>
-                        Reportes
-                    </Link>
-                </li>
-                <li className={isActive('/luxe/shift')}>
-                    <Link to="/luxe/shift">
-                        <i className="bi bi-cash-coin" style={{ marginRight: '10px' }}></i>
-                        Caja (Turnos)
-                    </Link>
-                </li>
-                <li className={isActive('/luxe/printers')}>
-                    <Link to="/luxe/printers">
-                        <i className="bi bi-printer" style={{ marginRight: '10px' }}></i>
-                        Impresoras
-                    </Link>
-                </li>
-                <li className={isActive('/luxe/loyalty-config')}>
-                    <Link to="/luxe/loyalty-config">
-                        <i className="bi bi-gear" style={{ marginRight: '10px' }}></i>
-                        Config. Puntos
-                    </Link>
-                </li>
-                <li className={isActive('/luxe/loyalty-management')}>
-                    <Link to="/luxe/loyalty-management">
-                        <i className="bi bi-star" style={{ marginRight: '10px' }}></i>
-                        Gestión Puntos
-                    </Link>
-                </li>
-                <li className={isActive('/luxe/whatsapp-config')}>
-                    <Link to="/luxe/whatsapp-config">
-                        <i className="bi bi-whatsapp" style={{ marginRight: '10px' }}></i>
-                        WhatsApp
-                    </Link>
-                </li>
-                <li className={isActive('/luxe/sri-config')}>
-                    <Link to="/luxe/sri-config">
-                        <i className="bi bi-file-earmark-text" style={{ marginRight: '10px' }}></i>
-                        Facturación SRI
-                    </Link>
-                </li>
-            </ul>
-            <div className="sidebar-footer">
+        <>
+            {/* ── Hamburger button (mobile only) ── */}
+            <button
+                className="sidebar-hamburger"
+                onClick={openSidebar}
+                aria-label="Abrir menú"
+            >
+                <span className="sidebar-bar"></span>
+                <span className="sidebar-bar"></span>
+                <span className="sidebar-bar"></span>
+            </button>
+
+            {/* ── Dark overlay (mobile only, click to close) ── */}
+            {isSidebarOpen && (
+                <div className="sidebar-overlay" onClick={closeSidebar} />
+            )}
+
+            {/* ── Sidebar drawer ── */}
+            <aside className={`sidebar ${isSidebarOpen ? 'sidebar-open' : ''}`}>
+                {/* Close button inside drawer */}
                 <button
-                    onClick={handleLogout}
+                    className="sidebar-close-btn"
+                    onClick={closeSidebar}
+                    aria-label="Cerrar menú"
                 >
-                    <i className="bi bi-box-arrow-right"></i>
-                    Cerrar Sesión
+                    ✕
                 </button>
-            </div>
-        </aside>
+
+                <div className="sidebar-header">
+                    LUXURY BOUTIQUE
+                </div>
+
+                <ul className="sidebar-nav">
+                    {navLinks.map(({ path, icon, label }) => (
+                        <li key={path} className={isActive(path)}>
+                            <Link to={path} onClick={closeSidebar}>
+                                <i className={`bi ${icon}`} style={{ marginRight: '10px' }}></i>
+                                {label}
+                            </Link>
+                        </li>
+                    ))}
+                </ul>
+
+                <div className="sidebar-footer">
+                    <button onClick={handleLogout}>
+                        <i className="bi bi-box-arrow-right"></i>
+                        Cerrar Sesión
+                    </button>
+                </div>
+            </aside>
+        </>
     );
 };
 
 export default BarraLateralLuxe;
-

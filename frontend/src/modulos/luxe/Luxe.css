@@ -24,16 +24,16 @@
     background-color: var(--color-creme);
     color: var(--color-dark);
     height: 100vh;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
+    position: relative;
 }
 
 .luxe-layout .layout-body {
     display: flex;
     flex: 1;
     height: 100%;
-    overflow: hidden;
+    min-height: 0;
 }
 
 .luxe-layout .main-content {
@@ -615,4 +615,153 @@
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 1rem;
     padding: 0.5rem;
+}
+
+/* ============================================
+   RESPONSIVE SIDEBAR — MOBILE
+   ============================================ */
+
+/* Hamburger button — hidden on desktop, shown on mobile */
+.sidebar-hamburger {
+    display: none;
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1100;
+    background-color: var(--color-creme);
+    border: 1px solid rgba(160, 144, 134, 0.3);
+    border-radius: 8px;
+    padding: 0.6rem 0.7rem;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    flex-direction: column;
+    gap: 5px;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar-bar {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background-color: var(--color-dark);
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+/* Dark overlay when sidebar is open */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.45);
+    z-index: 1099;
+    animation: fadeInOverlay 0.25s ease;
+}
+
+@keyframes fadeInOverlay {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Close button — only visible on mobile */
+.sidebar-close-btn {
+    display: none;
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    color: var(--color-latte);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    transition: color 0.2s, background 0.2s;
+}
+
+.sidebar-close-btn:hover {
+    color: var(--color-dark);
+    background-color: var(--color-froth);
+}
+
+/* ─── Mobile breakpoint ─── */
+@media (max-width: 768px) {
+
+    /* Show hamburger button */
+    .sidebar-hamburger {
+        display: flex;
+    }
+
+    /* Show overlay when sidebar is open */
+    .sidebar-overlay {
+        display: block;
+    }
+
+    /* Show close button inside sidebar */
+    .sidebar-close-btn {
+        display: block;
+    }
+
+    /* Sidebar slides in from the left as a fixed drawer */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: -290px;
+        width: 280px;
+        height: 100vh;
+        z-index: 1100;
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: none;
+        padding-top: 0;
+    }
+
+    /* Sidebar open state */
+    .sidebar.sidebar-open {
+        left: 0;
+        box-shadow: 5px 0 40px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Main content takes full width on mobile */
+    .luxe-layout .main-content {
+        padding: 1rem;
+        padding-top: 4.5rem;
+        /* space for the fixed hamburger button */
+    }
+
+    /* Reduce sidebar header padding when in mobile drawer mode */
+    .sidebar-header {
+        padding: 3rem 2rem 2rem;
+        font-size: 1.2rem;
+        letter-spacing: 3px;
+    }
+}
+
+/* POS inline hamburger — hidden on desktop, shown on mobile */
+.pos-sidebar-hamburger {
+    display: none;
+    background: none;
+    border: 1px solid rgba(160, 144, 134, 0.3);
+    border-radius: 6px;
+    padding: 0.5rem 0.6rem;
+    cursor: pointer;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+
+    /* Show the inline hamburger inside POS header on mobile */
+    .pos-sidebar-hamburger {
+        display: flex;
+    }
 }
