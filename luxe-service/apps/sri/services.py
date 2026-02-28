@@ -75,10 +75,6 @@ class SRIIntegrationService:
         # Sumamos los line_total de todos los items para tener la base del total
         total_lines_with_tax = sum(float(item.line_total) for item in order.items.all())
         
-        discount_factor = 0
-        if total_order_discount > 0 and total_lines_with_tax > 0:
-            discount_factor = total_order_discount / total_lines_with_tax
-
         for item in order.items.all():
             # Obtener tax_rate del producto
             tax_rate = float(item.product.tax_rate) if item.product.tax_rate else 0.0
@@ -105,32 +101,42 @@ class SRIIntegrationService:
             else:
                 unit_price_without_tax = unit_price_with_tax
             
-            # Calcular descuento por item
-            # 1. Descuento específico del item (si existiera en el futuro)
-            item_specific_discount = float(item.discount) if hasattr(item, 'discount') and item.discount else 0.00
+            # ---------------------------------------------------------------
+            # CORRECCIÓN ERROR 52 DEL SRI: "ERROR EN DIFERENCIAS"
+            # ---------------------------------------------------------------
+            # Problema anterior: se enviaba el descuento como campo 'discount'
+            # separado por ítem. APIVendo lo colocaba en descuentoAdicional del
+            # XML PERO no lo sumaba al campo totalDescuento del header.
+            # El SRI detectaba la diferencia (header=0, ítems=12.17) → Error 52.
+            #
+            # Solución: Pre-aplicar el descuento directamente al unit_price.
+            # Así discount=0 en todos los ítems, el XML no tiene descuentos
+            # separados, y el SRI calcula totalDescuento=0 == header=0. ✅
+            # ---------------------------------------------------------------
             
-            # 2. Distribuir el descuento global de la orden proporcionalmente
-            # El descuento global se aplica sobre el total base (sin IVA)
-            # proporcional al peso de este item en el total.
+            # Calcular el descuento proporcional de este ítem (sobre base sin IVA)
             item_proportion = float(item.line_total) / total_lines_with_tax if total_lines_with_tax > 0 else 0
             global_discount_for_item_with_tax = total_order_discount * item_proportion
             
-            # Desglosar el descuento para que sea sobre Base Imponible (como pide SRI)
             if tax_rate > 0:
                 divisor = 1 + (tax_rate / 100)
                 item_discount_base = global_discount_for_item_with_tax / divisor
             else:
                 item_discount_base = global_discount_for_item_with_tax
             
-            total_item_discount = item_specific_discount + item_discount_base
+            # Absorber el descuento en el unit_price (por unidad)
+            qty = float(item.quantity)
+            discount_per_unit = item_discount_base / qty if qty > 0 else 0
+            effective_unit_price = unit_price_without_tax - discount_per_unit
+            effective_unit_price = max(0, effective_unit_price)  # Nunca precio negativo
             
             item_data = {
                 "main_code": item.product.code or f"PROD{item.product.id}",
                 "auxiliary_code": "",
                 "description": item.product.name[:300],
-                "quantity": float(item.quantity),
-                "unit_price": round(unit_price_without_tax, 2),
-                "discount": round(total_item_discount, 2),
+                "quantity": qty,
+                "unit_price": round(effective_unit_price, 6),  # Precio ya con descuento
+                "discount": 0,  # Siempre 0: descuento absorbido en unit_price
                 "tax_code": tax_code
             }
             items.append(item_data)
