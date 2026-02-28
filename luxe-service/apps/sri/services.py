@@ -193,7 +193,7 @@ class SRIIntegrationService:
                 url,
                 json=payload,  # Enviamos JSON
                 headers=headers,
-                timeout=30  # Aumentado timeout para procesamiento completo
+                timeout=90  # 90s: margen para SRI lento (PPR) sin saturar el sistema
             )
             
             # Intentar decodificar respuesta JSON
