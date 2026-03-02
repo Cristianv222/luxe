@@ -63,20 +63,27 @@ class LoyaltyService:
         
         logger.info(f"Applying best rule: {best_rule.name} (Source: {best_rule.order_source}, Threshold: {best_rule.min_order_value}) for amount {amount}")
 
-        # 3. Calcular puntos según el tipo de esa única regla
+        # 3. Calcular puntos según el tipo de esa única regla (Hardcodeado a petición)
         points_to_earn = 0
-        if not best_rule.rule_type:
-            return best_rule.points_to_award
-            
-        code = best_rule.rule_type.code
         
-        if code == 'PER_AMOUNT':
-            # Si es por monto, se multiplica (ej: 10 puntos por cada $1)
-            step = float(best_rule.amount_step) if best_rule.amount_step and best_rule.amount_step > 0 else 1.0
+        code = best_rule.rule_type.code.upper() if best_rule.rule_type and best_rule.rule_type.code else ''
+        nombre = best_rule.rule_type.name.upper() if best_rule.rule_type and best_rule.rule_type.name else ''
+        
+        # Hardcodeamos dos lógicas principales: "Por Monto" (acumulable por cada X dolares) y "Por Factura Total" (fijo)
+        # Determinamos si es por monto verificando si el nombre o código hace referencia, o si configuró el amount_step en la BD.
+        es_por_monto = (
+            'MONTO' in code or 'AMOUNT' in code or 
+            'MONTO' in nombre or 
+            (best_rule.amount_step and best_rule.amount_step > 0)
+        )
+
+        if es_por_monto:
+            # REGLA 1: POR MONTO (ej: 1 punto por cada $15)
+            step = float(best_rule.amount_step) if best_rule.amount_step and best_rule.amount_step > 0 else 15.0
             multiplier = int(amount / step)
             points_to_earn = (multiplier * best_rule.points_to_award)
         else:
-            # FIXED_MIN_ORDER u otros: Solo el valor fijo de la regla
+            # REGLA 2: POR FACTURA TOTAL (ej: un puntaje fijo solo por enviar la factura mayor al min_order_value)
             points_to_earn = best_rule.points_to_award
         
         return points_to_earn

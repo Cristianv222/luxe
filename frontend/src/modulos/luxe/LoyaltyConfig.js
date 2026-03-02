@@ -451,6 +451,14 @@ const LoyaltyConfig = () => {
                             </table>
                         </div>
                         <h4 style={{ marginBottom: '10px', fontWeight: 700 }}>Agregar Nuevo</h4>
+                        <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                            <button type="button" className="btn-boutique outline" onClick={() => setTypeForm({ ...typeForm, name: 'Por Monto', code: 'POR_MONTO' })} style={{ fontSize: '12px', padding: '5px 10px', flex: 1 }}>
+                                + Regla Por Monto
+                            </button>
+                            <button type="button" className="btn-boutique outline" onClick={() => setTypeForm({ ...typeForm, name: 'Por Factura Total', code: 'POR_FACTURA_TOTAL' })} style={{ fontSize: '12px', padding: '5px 10px', flex: 1 }}>
+                                + Regla Por Factura Total
+                            </button>
+                        </div>
                         <form onSubmit={handleSaveType} className="boutique-form">
                             <input value={typeForm.name} onChange={e => setTypeForm({ ...typeForm, name: e.target.value })} placeholder="Nombre" required style={{ marginBottom: '10px', width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
                             <input value={typeForm.code} onChange={e => setTypeForm({ ...typeForm, code: e.target.value.toUpperCase().replace(/\s/g, '_') })} placeholder="CÓDIGO_ÚNICO" required style={{ marginBottom: '10px', width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }} />
