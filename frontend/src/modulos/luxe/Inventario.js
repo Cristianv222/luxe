@@ -696,7 +696,7 @@ const Inventario = () => {
                                             <th>Marca</th>
                                             <th>S/C/Stock (Variantes)</th>
                                             <th>Stock Total</th>
-                                            <th>Precio Venta</th>
+                                            <th>Precio Venta (IVA Inc)</th>
                                             <th>Costo Actual</th>
                                             <th>IVA %</th>
                                             <th>Cta. Ventas</th>
@@ -932,7 +932,7 @@ const Inventario = () => {
                             <h4 style={{ margin: '15px 0 10px', color: '#8b7e74' }}>Precios y Costos</h4>
                             <div className="form-grid-2">
                                 <div className="form-group-boutique">
-                                    <label>Precio Venta ($)</label>
+                                    <label>Precio Venta (IVA Incluido) ($)</label>
                                     <input
                                         type="number"
                                         name="price"

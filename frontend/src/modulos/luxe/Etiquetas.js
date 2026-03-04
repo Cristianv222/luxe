@@ -216,12 +216,10 @@ const Etiquetas = () => {
         setPrinting(true);
         try {
             const productsToSend = selectedProducts.map(p => {
-                const taxRate = p.tax_rate ? parseFloat(p.tax_rate) : 0;
-                const finalPrice = parseFloat(p.price) * (1 + taxRate / 100);
                 return {
                     name: p.name,
                     code: p.code,
-                    price: finalPrice.toFixed(2)
+                    price: parseFloat(p.price).toFixed(2)
                 };
             });
 
@@ -412,7 +410,7 @@ const Etiquetas = () => {
                                 />
                             </div>
 
-                            {/* Precio con IVA */}
+                            {/* Precio con IVA (Ya incluido en product.price) */}
                             <div style={{
                                 textAlign: 'center',
                                 fontWeight: '700',
@@ -420,11 +418,7 @@ const Etiquetas = () => {
                                 color: 'var(--color-cinna)',
                                 marginTop: '0.5rem'
                             }}>
-                                ${(() => {
-                                    const tax = product.tax_rate ? parseFloat(product.tax_rate) : 0;
-                                    const final = parseFloat(product.price) * (1 + tax / 100);
-                                    return final.toFixed(2);
-                                })()}
+                                ${parseFloat(product.price).toFixed(2)}
                             </div>
                         </div>
                     );
