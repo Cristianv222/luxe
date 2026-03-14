@@ -768,8 +768,8 @@ class PrintReceiptView(APIView):
             return f"{label}{' ' * padding}{val_str}"
 
         # --- ENCABEZADO ---
-        lines.append(center(settings.get_company_name()))
-        lines.append(center(f"RUC: {settings.get_tax_id()}"))
+        lines.append(center(settings.resolved_company_name))
+        lines.append(center(f"RUC: {settings.resolved_tax_id}"))
         
         # Información SRI
         sri_info = order_data.get('sri_info', {})
@@ -816,10 +816,10 @@ class PrintReceiptView(APIView):
         lines.append("=" * chars_per_line)
         
         # --- INFO EMPRESA DETALLADA (como en la foto) ---
-        lines.append(center(settings.get_company_name()))
-        lines.append(f"Dirección Matriz: {settings.get_company_address()}")
-        lines.append(f"Teléfono: {settings.get_company_phone()}")
-        lines.append(f"Correo: {settings.get_company_email()}")
+        lines.append(center(settings.resolved_company_name))
+        lines.append(f"Dirección Matriz: {settings.resolved_company_address}")
+        lines.append(f"Teléfono: {settings.resolved_company_phone}")
+        lines.append(f"Correo: {settings.resolved_company_email}")
         lines.append("Obligado a Llevar Contabilidad: NO")  # Configurable en futuro
         lines.append("Contribuyente Régimen RIMPE")         # Configurable en futuro
         
@@ -893,7 +893,7 @@ class PrintReceiptView(APIView):
         # --- PIE DE PAGINA / INFO ADICIONAL ---
         lines.append("INFORMACION ADICIONAL")
         lines.append(f"vendedor: Vendedor") # Podría venir en order_data
-        lines.append(f"correo: {settings.get_company_email()}")
+        lines.append(f"correo: {settings.resolved_company_email}")
         
         lines.append("\n\n")
         

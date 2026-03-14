@@ -593,7 +593,7 @@ class PrinterSettings(models.Model):
         verbose_name_plural = 'Configuraciones de Impresión'
     
     def __str__(self):
-        return f'Configuración de {self.get_company_name()}'
+        return f'Configuración de {self.resolved_company_name}'
     
     def save(self, *args, **kwargs):
         # Forzar singleton
