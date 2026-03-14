@@ -30,42 +30,23 @@ class LoyaltyAdminViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['POST'])
     def reprocess_past_orders(self, request):
         """
-        REINICIA Y RECALCULA todos los puntos desde cero basados en las órdenes pagadas.
+        REINICIA Y RECALCULA todos los puntos desde cero basados en el GASTO TOTAL acumulado.
+        SIGUE EL REQUERIMIENTO DEL USUARIO: No importa el mínimo por orden, se usa la suma global.
         """
-        from apps.orders.models import Order
-        from django.db.models import Sum
+        from apps.customers.models import Customer
+        from apps.loyalty.sync_logic import sync_loyalty_cumulative
         
         try:
-            with transaction.atomic():
-                # 1. Eliminar todas las transacciones de tipo 'EARN' (Ganancia)
-                PointTransaction.objects.filter(transaction_type='EARN').delete()
-
-                # 2. Resetear todas las cuentas
-                # Para cada cuenta, recalculamos el balance basado en lo que queda (canjes, etc)
-                # y reseteamos el total ganado.
-                accounts = LoyaltyAccount.objects.all()
-                for account in accounts:
-                    # El balance actual es la suma de transacciones que NO son EARN (ajustes manuales, canjes)
-                    other_tx_sum = PointTransaction.objects.filter(
-                        account=account
-                    ).exclude(transaction_type='EARN').aggregate(total=Sum('points'))['total'] or 0
-                    
-                    account.points_balance = other_tx_sum
-                    account.total_points_earned = 0
-                    account.save()
-
-                # 3. Reprocesar todas las órdenes pagadas
-                paid_orders = Order.objects.filter(payment_status='paid').order_by('created_at')
-                
-                processed_count = 0
-                for order in paid_orders:
-                    LoyaltyService.award_points_for_order(order)
-                    processed_count += 1
+            customers = Customer.objects.all()
+            updated_count = 0
+            
+            for c in customers:
+                sync_loyalty_cumulative(c)
+                updated_count += 1
                 
             return Response({
-                "message": "Sincronización completa: Puntos reiniciados y recalculados",
-                "orders_processed": processed_count,
-                "accounts_updated": accounts.count()
+                "message": "Sincronización FINALizada: Puntos recalculados según Gasto Total.",
+                "customers_synced": updated_count
             })
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -89,8 +70,23 @@ class LoyaltyAccountViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = LoyaltyAccount.objects.all().select_related('customer')
     
     def get_queryset(self):
-        return self.queryset.all()
-    
+        queryset = self.queryset.all()
+        search = self.request.query_params.get('search')
+        
+        if search:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(customer__first_name__icontains=search) |
+                Q(customer__last_name__icontains=search) |
+                Q(customer__cedula__icontains=search) |
+                Q(customer__email__icontains=search)
+            )
+            
+        # Ordenar por defecto de mayor a menor puntaje
+        queryset = queryset.order_by('-points_balance')
+        
+        return queryset
+
     def get_serializer_class(self):
         if self.action == 'retrieve':
             return LoyaltyAccountDetailSerializer

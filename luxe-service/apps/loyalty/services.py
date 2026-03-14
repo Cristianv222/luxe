@@ -86,45 +86,58 @@ class LoyaltyService:
             # REGLA 2: POR FACTURA TOTAL (ej: un puntaje fijo solo por enviar la factura mayor al min_order_value)
             points_to_earn = best_rule.points_to_award
         
-        return points_to_earn
 
     @staticmethod
     def award_points_for_order(order):
         """
         Otorga puntos a un usuario cuando una orden es pagada.
+        LÓGICA CUMULATIVA: Se calcula cuánto debería tener el cliente según su gasto total
+        y se otorga la diferencia. Esto asegura que cada dólar cuente.
         """
-        if not order or not order.customer:
+        if not (order and order.customer and order.payment_status == 'paid'):
             return
             
-        # Check if points already awarded for this order
-        if PointTransaction.objects.filter(related_order_id=str(order.id), transaction_type='EARN').exists():
-            return
-
-        # Ensure order total is refreshed/correct
-        points_to_earn = LoyaltyService.calculate_points_to_earn(order)
+        customer = order.customer
         
-        if points_to_earn <= 0:
+        # 1. Buscar regla activa de monto (ej: 1 punto por cada $15)
+        monto_rule = EarningRule.objects.filter(is_active=True, amount_step__gt=0).first()
+        if not monto_rule:
             return
 
+        step = float(monto_rule.amount_step)
+        award = monto_rule.points_to_award
+        
+        # El total_spent ya debería estar actualizado por el signal de la orden
+        total_spent = float(customer.total_spent or 0)
+        
         try:
             with transaction.atomic():
                 # Get or Create Loyalty Account linked to Customer
-                account, created = LoyaltyAccount.objects.get_or_create(customer=order.customer)
+                account, _ = LoyaltyAccount.objects.get_or_create(customer=customer)
                 
-                # Update balance
-                account.points_balance += points_to_earn
-                account.total_points_earned += points_to_earn
-                account.save()
+                # 2. Calcular cuántos puntos totales debería haber ganado históricamente
+                total_should_have_earned = int(total_spent / step) * award
                 
-                # Record transaction
-                PointTransaction.objects.create(
-                    account=account,
-                    transaction_type='EARN',
-                    points=points_to_earn,
-                    description=f"Ganancia por Orden #{order.order_number}",
-                    related_order_id=str(order.id)
-                )
-                logger.info(f"Awarded {points_to_earn} points to {order.customer} for order {order.order_number}")
-        except Exception as e:
-            logger.error(f"Error awarding loyalty points: {str(e)}")
+                # 3. Determinar la diferencia a otorgar
+                points_to_award = total_should_have_earned - account.total_points_earned
+                
+                if points_to_award > 0:
+                    # Update balance and total earned
+                    account.points_balance += points_to_award
+                    account.total_points_earned += points_to_award
+                    account.save()
+                    
+                    # Record transaction
+                    PointTransaction.objects.create(
+                        account=account,
+                        transaction_type='EARN',
+                        points=points_to_award,
+                        description=f"Ganancia por Orden #{order.order_number} (Cálculo Cumulativo)",
+                        related_order_id=str(order.id)
+                    )
+                    logger.info(f"Awarded {points_to_award} points to {customer} for total spent ${total_spent}")
+                else:
+                    logger.info(f"No points awarded to {customer}: total earned {account.total_points_earned} already covers spent ${total_spent}")
 
+        except Exception as e:
+            logger.error(f"Error awarding cumulative loyalty points: {str(e)}")

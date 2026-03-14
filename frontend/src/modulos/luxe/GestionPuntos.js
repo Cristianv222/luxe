@@ -8,16 +8,21 @@ const GestionPuntos = () => {
     const [loading, setLoading] = useState(true);
     const [selectedAccount, setSelectedAccount] = useState(null);
     const [isRedeeming, setIsRedeeming] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
 
     useEffect(() => {
         loadData();
     }, []);
 
-    const loadData = async () => {
+    const loadData = async (search = '') => {
         try {
-            setLoading(true);
+            setLoading(!isSearching); // Only full loading state if not searching
             const [accountsRes, rewardsRes] = await Promise.all([
-                api.get('/api/loyalty/accounts/', { baseURL: '/api/luxe' }),
+                api.get('/api/loyalty/accounts/', { 
+                    baseURL: '/api/luxe',
+                    params: { search }
+                }),
                 api.get('/api/loyalty/config/reward-rules/', { baseURL: '/api/luxe' })
             ]);
             setLoyaltyAccounts(accountsRes.data.results || accountsRes.data);
@@ -26,7 +31,14 @@ const GestionPuntos = () => {
             console.error("Error loading loyalty data", error);
         } finally {
             setLoading(false);
+            setIsSearching(false);
         }
+    };
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        setIsSearching(true);
+        loadData(searchTerm);
     };
 
     const handleViewDetail = async (id) => {
@@ -101,9 +113,26 @@ const GestionPuntos = () => {
                         <p className="subtitle">Saldos, canjes e historial de clientes</p>
                     </div>
                 </div>
-                <div className="header-actions" style={{ display: 'flex', gap: '10px' }}>
-                    <button className="btn-boutique outline" onClick={handleReprocess}>⚡ Sincronizar</button>
-                    <button className="btn-boutique primary" onClick={loadData}><i className="bi bi-arrow-clockwise"></i></button>
+                <div className="header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px' }}>
+                        <div className="search-wrapper-boutique" style={{ position: 'relative' }}>
+                            <i className="bi bi-search" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }}></i>
+                            <input
+                                type="text"
+                                className="search-input-boutique"
+                                placeholder="Buscar por nombre o cédula..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                style={{ paddingLeft: '35px', width: '280px' }}
+                            />
+                        </div>
+                        <button type="submit" className="btn-boutique dark" disabled={isSearching}>
+                            {isSearching ? <i className="bi bi-arrow-repeat fa-spin"></i> : 'Buscar'}
+                        </button>
+                    </form>
+
+                    <button className="btn-boutique outline" onClick={handleReprocess} title="Reprocesar todo el historial">⚡ Sincronizar</button>
+                    <button className="btn-boutique primary" onClick={() => loadData(searchTerm)}><i className="bi bi-arrow-clockwise"></i></button>
                 </div>
             </div>
 
