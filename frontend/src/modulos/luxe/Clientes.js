@@ -12,6 +12,7 @@ const Clientes = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [pagination, setPagination] = useState({ page: 1, total_pages: 1, total: 0 });
     const [birthdayFilter, setBirthdayFilter] = useState(false);
+    const [syncing, setSyncing] = useState(false);
 
     // Modals
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -260,6 +261,25 @@ const Clientes = () => {
         }
     };
 
+    const handleSyncStats = async () => {
+        if (!window.confirm('¿Estás seguro de que deseas sincronizar el gasto total y las órdenes de todos los clientes? Esto recalculará basado en el historial de ventas.')) return;
+        setSyncing(true);
+        try {
+            const res = await api.post('/api/customers/admin/sync-stats/', {}, {
+                baseURL: process.env.REACT_APP_LUXE_SERVICE
+            });
+            if (res.data.status === 'success') {
+                alert(res.data.message || 'Sincronización completada exitosamente.');
+                fetchCustomers(pagination.page, searchTerm);
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error al sincronizar gastos y órdenes.');
+        } finally {
+            setSyncing(false);
+        }
+    };
+
     // --- UI Helpers ---
     const getTierBadge = (tier) => {
         const styles = {
@@ -324,6 +344,9 @@ const Clientes = () => {
 
                         <button type="button" className="btn-boutique danger" onClick={handleResetStats} title="Desarrollo: Poner gastos a 0">
                             <i className="bi bi-trash"></i> Vaciar Gastos
+                        </button>
+                        <button type="button" className="btn-boutique outline" onClick={handleSyncStats} disabled={syncing} title="Sincronizar las estadísticas reales de compras con el cliente">
+                            <i className={`bi bi-arrow-repeat ${syncing ? 'fa-spin' : ''}`}></i> {syncing ? 'Sincronizando...' : 'Sincronizar'}
                         </button>
                         <button type="button" className="btn-boutique outline" onClick={() => setIsImportModalOpen(true)}>
                             <i className="bi bi-file-earmark-spreadsheet"></i> Importar Excel

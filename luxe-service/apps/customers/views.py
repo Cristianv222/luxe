@@ -712,6 +712,57 @@ def reset_customer_stats(request):
         return Response({'status': 'error', 'message': str(e)}, status=500)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def sync_customer_all_stats(request):
+    """
+    Sincroniza el total gastado y número de órdenes para todos los clientes 
+    basado en las órdenes registradas en el sistema.
+    POST /api/customers/admin/sync-stats/
+    """
+    try:
+        from django.db.models import Sum, Count, Max
+        from apps.loyalty.sync_logic import sync_loyalty_cumulative
+        
+        customers = Customer.objects.all()
+        updated_count = 0
+        
+        for c in customers:
+            # 1. Recalcular estadísticas básicas de órdenes
+            paid_orders = c.orders.filter(payment_status='paid').exclude(status='cancelled')
+            
+            if paid_orders.exists():
+                stats = paid_orders.aggregate(
+                    total_amnt=Sum('total'),
+                    order_count=Count('id'),
+                    last_date=Max('created_at')
+                )
+                c.total_spent = stats['total_amnt'] or 0
+                c.total_orders = stats['order_count'] or 0
+                c.last_order_date = stats['last_date']
+                c.average_order_value = c.total_spent / c.total_orders if c.total_orders > 0 else 0
+            else:
+                c.total_spent = 0
+                c.total_orders = 0
+                c.average_order_value = 0
+                c.last_order_date = None
+
+            # Guardar estadísticas del cliente
+            c.save(update_fields=['total_spent', 'total_orders', 'last_order_date', 'average_order_value'])
+            
+            # 2. Sincronizar Puntos de Lealtad usando la nueva lógica centralizada
+            sync_loyalty_cumulative(c)
+            
+            updated_count += 1
+            
+        return Response({
+            'status': 'success',
+            'message': f'Sincronización FINAL completada: {updated_count} clientes. Puntos recalculados según Gasto Total.'
+        })
+    except Exception as e:
+        logger.error(f"Error sync stats: {e}")
+        return Response({'status': 'error', 'message': str(e)}, status=500)
+
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])  # Debería ser IsAdminUser en prod
 def import_customers_excel(request):
     """
@@ -925,7 +976,8 @@ def admin_customer_detail(request, customer_id):
                 'discount_rate': discount,
                 # Campos adicionales para compatibilidad
                 'customer': customer.id,
-                'customer_name': customer.get_full_name()
+                'customer_name': customer.get_full_name(),
+                'loyalty_points': balance # Ensure loyalty points are included
             }
         
         # Fallback sistema antiguo
