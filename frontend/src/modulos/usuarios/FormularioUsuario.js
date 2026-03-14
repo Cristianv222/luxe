@@ -22,7 +22,7 @@ const FormularioUsuario = ({ userToEdit, onSave, onCancel }) => {
     useEffect(() => {
         const fetchRoles = async () => {
             try {
-                const response = await api.get('/api/roles/choices/');
+                const response = await api.get('/api/roles/roles/choices/');
                 setRoles(response.data);
             } catch (err) {
                 console.error('Error cargando roles', err);

@@ -6,7 +6,7 @@ import { useSidebar } from '../../context/SidebarContext';
 const BarraLateralLuxe = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { logout } = useContext(AuthContext);
+    const { logout, user } = useContext(AuthContext);
     const { isSidebarOpen, openSidebar, closeSidebar } = useSidebar();
 
     const isActive = (path) => location.pathname === path ? 'active' : '';
@@ -16,7 +16,7 @@ const BarraLateralLuxe = () => {
         navigate('/');
     };
 
-    const navLinks = [
+    const allNavLinks = [
         { path: '/luxe', icon: 'bi-grid', label: 'Panel Principal' },
         { path: '/luxe/pos', icon: 'bi-shop', label: 'Punto de Venta' },
         { path: '/luxe/orders', icon: 'bi-receipt', label: 'Órdenes' },
@@ -32,6 +32,20 @@ const BarraLateralLuxe = () => {
         { path: '/luxe/whatsapp-config', icon: 'bi-whatsapp', label: 'WhatsApp' },
         { path: '/luxe/sri-config', icon: 'bi-file-earmark-text', label: 'Facturación SRI' },
     ];
+
+    // Filter menu based on role
+    const getVisibleLinks = () => {
+        const role = user?.role_details?.name;
+        
+        if (role === 'EMPLOYEE') {
+            const allowedPaths = ['/luxe', '/luxe/pos', '/luxe/orders', '/luxe/loyalty-management'];
+            return allNavLinks.filter(item => allowedPaths.includes(item.path));
+        }
+        
+        return allNavLinks;
+    };
+
+    const navLinks = getVisibleLinks();
 
     return (
         <>

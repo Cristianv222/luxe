@@ -23,9 +23,30 @@ from .services import LoyaltyService
 
 class LoyaltyAdminViewSet(viewsets.ModelViewSet):
     """
-    ViewSet para configuración de reglas (Solo Admin)
+    ViewSet para configuración de reglas (Admin y Staff interno)
     """
-    permission_classes = [permissions.IsAdminUser]
+    def get_permissions(self):
+        # Para acciones de modificación, requerir ser Admin o Superusuario
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'reprocess_past_orders']:
+            return [permissions.IsAdminUser()]
+        
+        # Para ver (list/retrieve), permitir a empleados internos
+        return [permissions.IsAuthenticated()]
+
+    def check_permissions(self, request):
+        super().check_permissions(request)
+        
+        # Si la acción es segura (GET), verificar que sea staff o empleado
+        if request.method in permissions.SAFE_METHODS:
+            is_internal = False
+            if request.user.is_staff or request.user.is_superuser:
+                is_internal = True
+            elif hasattr(request.user, 'role') and request.user.role:
+                if request.user.role.name in ['EMPLOYEE', 'CASHIER', 'ADMIN_LUXE']:
+                    is_internal = True
+            
+            if not is_internal:
+                self.permission_denied(request, message="No tienes permisos para ver esta configuración.")
 
     @action(detail=False, methods=['POST'])
     def reprocess_past_orders(self, request):

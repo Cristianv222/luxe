@@ -6,7 +6,7 @@ import '../modulos/luxe/Luxe.css'; // Import global boutique styles
 const BarraLateral = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { logout } = useContext(AuthContext);
+    const { logout, user } = useContext(AuthContext);
     const [isOpen, setIsOpen] = useState(false);
 
     const handleLogout = () => {
@@ -19,7 +19,7 @@ const BarraLateral = () => {
 
     const closeSidebar = () => setIsOpen(false);
 
-    const menuItems = [
+    const allMenuItems = [
         { path: '/luxe', icon: 'bi-grid', label: 'Inicio' },
         { path: '/luxe/pos', icon: 'bi-shop', label: 'Punto de Venta' },
         { path: '/luxe/orders', icon: 'bi-receipt', label: 'Órdenes' },
@@ -36,6 +36,21 @@ const BarraLateral = () => {
         { path: '/luxe/sri-config', icon: 'bi-file-earmark-text', label: 'Facturación SRI' },
         { path: '/users', icon: 'bi-people', label: 'Usuarios del Sistema' },
     ];
+
+    // Filter menu based on role
+    const getVisibleItems = () => {
+        const role = user?.role_details?.name;
+        
+        if (role === 'EMPLOYEE') {
+            const allowedPaths = ['/luxe', '/luxe/pos', '/luxe/orders', '/luxe/loyalty-management'];
+            return allMenuItems.filter(item => allowedPaths.includes(item.path));
+        }
+        
+        // Default: show everything for ADMIN or other roles (unless we want to be more restrictive)
+        return allMenuItems;
+    };
+
+    const menuItems = getVisibleItems();
 
     return (
         <>

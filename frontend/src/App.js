@@ -40,9 +40,17 @@ const PrivateRoute = ({ children }) => {
     return <Navigate to="/login" />;
   }
 
-  // Si es cliente, no puede acceder a rutas privadas y se redirige al home
+  // Si es cliente, no puede acceder a rutas administrativas
   if (user.role_details?.name === 'CLIENTE') {
     return <Navigate to="/" />;
+  }
+
+  // Si es empleado, solo permitir ciertas rutas fuera de /luxe (como dashboard si existiera)
+  // Por ahora, si intenta acceder a /users, lo mandamos a /luxe
+  const role = user.role_details?.name;
+  const currentPath = window.location.pathname;
+  if (role === 'EMPLOYEE' && (currentPath === '/users' || currentPath.startsWith('/users'))) {
+    return <Navigate to="/luxe" />;
   }
 
   return <Diseno>{children}</Diseno>;
@@ -55,8 +63,25 @@ const LuxeRoute = ({ children }) => {
   if (loading) return <div>Cargando...</div>;
   if (!user) return <Navigate to="/login" />;
 
+  const role = user.role_details?.name;
+  const currentPath = window.location.pathname;
+
+  // Si es empleado, restringir acceso a rutas de configuración
+  if (role === 'EMPLOYEE') {
+    const allowedLuxePaths = ['/luxe', '/luxe/pos', '/luxe/orders', '/luxe/loyalty-management'];
+    
+    // Verificar si la ruta actual está permitida
+    const isAllowed = allowedLuxePaths.some(path => 
+        currentPath === path || currentPath.startsWith(path + '/')
+    );
+    
+    if (!isAllowed) {
+        return <Navigate to="/luxe" />;
+    }
+  }
+
   // Si es Super Admin (por rol o por flag de superusuario), mantener el diseño general
-  if (user.role_details?.name === 'SUPER_ADMIN' || user.is_superuser) {
+  if (role === 'SUPER_ADMIN' || user.is_superuser) {
     return <Diseno>{children}</Diseno>;
   }
 

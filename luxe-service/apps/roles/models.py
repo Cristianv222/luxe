@@ -8,6 +8,7 @@ class Role(models.Model):
         ('ADMIN_RESTAURANT', 'Administrador Restaurante'),
         ('ADMIN_HOTEL', 'Administrador Hotel'),
         ('ADMIN_POOL', 'Administrador Piscinas'),
+        ('EMPLOYEE', 'Empleado'),
         ('CASHIER', 'Cajero'),
         ('COOK', 'Cocinero'),
         ('WAITER', 'Mesero'),
