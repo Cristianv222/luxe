@@ -133,6 +133,30 @@ const Clientes = () => {
         }
     };
 
+    const handleWhatsApp = (customer) => {
+        let phone = customer.phone?.replace(/\D/g, '');
+        if (!phone) {
+            alert('Este cliente no tiene un número registrado.');
+            return;
+        }
+
+        // Si el número tiene 9 dígitos y empieza con 9, o 10 y empieza con 09, es de Ecuador.
+        // Formatear para WhatsApp (añadir 593 si no lo tiene)
+        if (phone.length === 10 && phone.startsWith('0')) {
+            phone = '593' + phone.substring(1);
+        } else if (phone.length === 9 && phone.startsWith('9')) {
+            phone = '593' + phone;
+        }
+
+        let message = "";
+        if (birthdayFilter) {
+            const text = `¡Feliz cumpleaños, ${customer.first_name}! 🎂 Te deseamos lo mejor en tu día. Luxury Boutique te quiere regalar un descuento por tu cumpleaños: `;
+            message = `?text=${encodeURIComponent(text)}`;
+        }
+
+        window.open(`https://wa.me/${phone}${message}`, '_blank');
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSubmitting(true);
@@ -440,6 +464,14 @@ const Clientes = () => {
                                                 </td>
                                                 <td style={{ textAlign: 'right' }}>
                                                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                                        <button
+                                                            className="btn-boutique outline icon-only"
+                                                            title="Enviar WhatsApp"
+                                                            onClick={() => handleWhatsApp(customer)}
+                                                            style={{ color: '#25D366', borderColor: 'rgba(37, 211, 102, 0.3)' }}
+                                                        >
+                                                            <i className="bi bi-whatsapp"></i>
+                                                        </button>
                                                         <button className="btn-boutique outline icon-only" title="Ver Detalle" onClick={() => openDetailModal(customer.id)}>
                                                             <i className="bi bi-eye"></i>
                                                         </button>

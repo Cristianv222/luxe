@@ -10,22 +10,34 @@ const GestionPuntos = () => {
     const [isRedeeming, setIsRedeeming] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [isSearching, setIsSearching] = useState(false);
+    const [pagination, setPagination] = useState({ page: 1, total_pages: 1, total: 0 });
 
     useEffect(() => {
         loadData();
     }, []);
 
-    const loadData = async (search = '') => {
+    const loadData = async (search = '', page = 1) => {
         try {
-            setLoading(!isSearching); // Only full loading state if not searching
+            setLoading(!isSearching);
             const [accountsRes, rewardsRes] = await Promise.all([
                 api.get('/api/loyalty/accounts/', { 
                     baseURL: '/api/luxe',
-                    params: { search }
+                    params: { search, page }
                 }),
                 api.get('/api/loyalty/config/reward-rules/', { baseURL: '/api/luxe' })
             ]);
-            setLoyaltyAccounts(accountsRes.data.results || accountsRes.data);
+            
+            if (accountsRes.data.results) {
+                setLoyaltyAccounts(accountsRes.data.results);
+                setPagination({
+                    page: page,
+                    total_pages: accountsRes.data.total_pages || Math.ceil(accountsRes.data.count / 20),
+                    total: accountsRes.data.count
+                });
+            } else {
+                setLoyaltyAccounts(accountsRes.data);
+                setPagination({ page: 1, total_pages: 1, total: accountsRes.data.length });
+            }
             setRewardRules(rewardsRes.data.results || rewardsRes.data);
         } catch (error) {
             console.error("Error loading loyalty data", error);
@@ -169,6 +181,29 @@ const GestionPuntos = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {pagination.total_pages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem', gap: '10px', alignItems: 'center' }}>
+                        <button 
+                            className="btn-boutique outline" 
+                            disabled={pagination.page === 1}
+                            onClick={() => loadData(searchTerm, pagination.page - 1)}
+                        >
+                            Anterior
+                        </button>
+                        <span style={{ fontWeight: 600, color: '#A09086' }}>
+                            Página {pagination.page} de {pagination.total_pages}
+                        </span>
+                        <button 
+                            className="btn-boutique outline" 
+                            disabled={pagination.page === pagination.total_pages}
+                            onClick={() => loadData(searchTerm, pagination.page + 1)}
+                        >
+                            Siguiente
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* DETAIL MODAL */}

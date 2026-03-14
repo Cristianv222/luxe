@@ -110,6 +110,7 @@ const PuntosVenta = () => {
 
     const [paymentMethods, setPaymentMethods] = useState([]);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
+    const [loyaltyAccount, setLoyaltyAccount] = useState(null);
 
     // Variant Selection State
     const [selectedProductForVariant, setSelectedProductForVariant] = useState(null);
@@ -546,10 +547,97 @@ const PuntosVenta = () => {
         }
     };
 
-    const selectCustomer = (customer) => {
+    const selectCustomer = async (customer) => {
         setSelectedCustomer(customer);
         setCustomers([]);
         setCustomerSearch('');
+        setLoyaltyAccount(null);
+
+        // Verificar si tiene cupones por canjear
+        try {
+            const cedula = customer.cedula || customer.identification_number;
+            if (cedula) {
+                const res = await api.post('/api/loyalty/accounts/check_balance_public/', 
+                    { cedula }, 
+                    { baseURL: '/api/luxe' }
+                );
+                
+                const loyaltyData = res.data;
+                setLoyaltyAccount(loyaltyData);
+                
+                if (loyaltyData.coupons && loyaltyData.coupons.length > 0) {
+                    const coupon = loyaltyData.coupons[0]; // Tomar el más reciente o importante
+                    
+                    showAlert(
+                        'info', 
+                        '¡Recompensa Disponible!', 
+                        `El cliente tiene un regalo pendiente: "${coupon.reward_name}". ¿Desea canjearlo ahora?`,
+                        () => {
+                            setDiscountCode(coupon.code);
+                            // Llamar directamente pasando el ID del cliente actual
+                            handleApplyDiscountFromCoupon(coupon.code, customer.id);
+                        },
+                        true,
+                        'CANJEAR AHORA'
+                    );
+                }
+            }
+        } catch (err) {
+            console.error("Error al verificar lealtad en POS:", err);
+        }
+    };
+
+    // Función auxiliar para redimir una recompensa (gastar puntos por cupón)
+    const handleRedeemReward = async (rewardId) => {
+        if (!selectedCustomer) return;
+        setProcessingOrder(true);
+        try {
+            const res = await api.post('/api/loyalty/accounts/redeem_reward/', {
+                reward_rule_id: rewardId,
+                customer_id: selectedCustomer.id
+            }, { baseURL: '/api/luxe' });
+            
+            const coupon = res.data;
+            showAlert('success', '¡Felicidades!', `Has canjeado "${coupon.reward_name}". El código es: ${coupon.code}`);
+            
+            // Refrescar datos de lealtad
+            const cedula = selectedCustomer.cedula || selectedCustomer.identification_number;
+            const loyaltyRes = await api.post('/api/loyalty/accounts/check_balance_public/', { cedula }, { baseURL: '/api/luxe' });
+            setLoyaltyAccount(loyaltyRes.data);
+            
+            // Auto-aplicar el cupón recién generado
+            handleApplyDiscountFromCoupon(coupon.code, selectedCustomer.id);
+            
+        } catch (err) {
+            console.error("Error canjeando recompensa:", err);
+            showAlert('error', 'Error', err.response?.data?.error || 'No se pudo canjear la recompensa');
+        } finally {
+            setProcessingOrder(false);
+        }
+    };
+
+    // Función auxiliar para aplicar cupón directamente desde el objeto
+    const handleApplyDiscountFromCoupon = async (code, customerId = null) => {
+        try {
+            // Usar el ID pasado o el del estado si ya se actualizó
+            const finalCustomerId = customerId || (selectedCustomer && selectedCustomer.id);
+            const res = await api.post('/api/pos/discounts/validate/', {
+                discount_code: code,
+                customer_id: finalCustomerId || null,
+                order_amount: calculateSubtotal
+            }, { baseURL: '/api/luxe' });
+
+            if (res.data.valid) {
+                setAppliedDiscount(res.data.discount);
+                setDiscountCode(code);
+                showAlert('success', 'Descuento Aplicado', `¡Éxito! ${res.data.message}`);
+            } else {
+                showAlert('error', 'Código Inválido', res.data.error || 'El cupón no pudo ser validado.');
+            }
+        } catch (err) {
+            console.error("Error aplicando cupón automático:", err);
+            showAlert('error', 'Error', 'No se pudo validar el cupón de lealtad.');
+        }
     };
 
     const handleCreateCustomer = async (e) => {
@@ -1195,6 +1283,49 @@ const PuntosVenta = () => {
                                             ))}
                                         </select>
                                     </div>
+                                    
+                                    {/* SECCIÓN DE RECOMPENSAS DISPONIBLES (NUEVO) */}
+                                    {selectedCustomer && (
+                                        <div style={{ padding: '0.5rem', border: '1px dashed #cbd5e1', borderRadius: '10px', backgroundColor: '#fafffd' }}>
+                                            <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 'bold', fontSize: '0.8rem', color: '#059669' }}>
+                                                🎁 RECOMPENSAS PENDIENTES {loyaltyAccount && <small style={{ color: '#059669' }}>({loyaltyAccount.points_balance} pts)</small>}
+                                            </label>
+                                            
+                                            <div style={{ maxHeight: '80px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                {/* 1. Cupones ya canjeados (listos para usar) */}
+                                                {loyaltyAccount?.coupons?.map(coupon => (
+                                                    <div key={coupon.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ecfdf5', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem', border: '1px solid #d1fae5' }}>
+                                                        <span style={{ fontWeight: '600', color: '#065f46' }}>{coupon.reward_name}</span>
+                                                        <button 
+                                                            disabled={!!appliedDiscount || processingOrder}
+                                                            onClick={() => handleApplyDiscountFromCoupon(coupon.code, selectedCustomer.id)}
+                                                            style={{ padding: '2px 8px', backgroundColor: '#059669', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}
+                                                        >
+                                                            Aplicar
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                
+                                                {/* 2. Recompensas que puede canjear ahora con sus puntos */}
+                                                {loyaltyAccount?.available_rewards?.map(reward => (
+                                                    <div key={reward.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff7ed', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem', border: '1px solid #ffedd5' }}>
+                                                        <span style={{ fontWeight: '600', color: '#9a3412' }}>{reward.name} ({reward.points_cost} pts)</span>
+                                                        <button 
+                                                            disabled={processingOrder}
+                                                            onClick={() => handleRedeemReward(reward.id)}
+                                                            style={{ padding: '2px 8px', backgroundColor: '#ea580c', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}
+                                                        >
+                                                            Canjear
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                
+                                                {(!loyaltyAccount?.coupons?.length && !loyaltyAccount?.available_rewards?.length) && (
+                                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8', textAlign: 'center' }}>Sin beneficios hoy</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* SECCIÓN DE DESCUENTOS MEJORADA */}
