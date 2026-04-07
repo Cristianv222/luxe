@@ -3,6 +3,7 @@ import api from '../../services/api';
 import Modal from '../../comun/Modal';
 import Categorias from './Categorias';
 import SubCategorias from './SubCategorias';
+import useWebSockets from '../../utils/useWebSockets';
 import './Luxe.css';
 import './Loyalty.css';
 
@@ -135,6 +136,26 @@ const Inventario = () => {
         }
     }, [activeTab]);
 
+    // Real-time WebSocket listener
+    useWebSockets((data) => {
+        if (data.type === 'PRODUCT_UPDATED' || data.type === 'PRODUCT_CREATED') {
+            console.log("Real-time update received:", data);
+            if (activeTab === 'products') {
+                // Pequeño delay para asegurar que S3/Spaces haya terminado de propagar
+                setTimeout(() => {
+                    fetchProducts(searchQuery, pagination.page, false);
+                }, 800);
+            }
+        }
+    });
+
+    const getImageUrl = (url) => {
+        if (!url) return null;
+        const baseUrl = url.startsWith('http') ? url : `${process.env.REACT_APP_LUXE_SERVICE}${url}`;
+        // Cache busting: añadir timestamp para forzar recarga de imagen si cambió
+        return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}v=${new Date().getTime()}`;
+    };
+
     // Búsqueda con debounce simple
     useEffect(() => {
         if (activeTab === 'products') {
@@ -191,6 +212,24 @@ const Inventario = () => {
         } catch (err) {
             console.error(err);
             alert("Error al eliminar imagen");
+        }
+    };
+
+    const handleDeleteMainImage = async () => {
+        if (!editingProduct || !editingProduct.image) return;
+        if (!window.confirm("¿Eliminar imagen principal (portada)?")) return;
+        
+        try {
+            await api.post(`/api/menu/products/${editingProduct.id}/delete_main_image/`, {}, {
+                baseURL: process.env.REACT_APP_LUXE_SERVICE
+            });
+            // Update local state
+            setEditingProduct(prev => ({ ...prev, image: null }));
+            alert("Imagen eliminada");
+            fetchProducts(searchQuery, pagination.page, false);
+        } catch (err) {
+            console.error(err);
+            alert("Error al eliminar imagen principal");
         }
     };
 
@@ -766,7 +805,7 @@ const Inventario = () => {
                                                         }}>
                                                             {product.image ? (
                                                                 <img
-                                                                    src={product.image.startsWith('http') ? product.image : `${process.env.REACT_APP_LUXE_SERVICE}${product.image}`}
+                                                                    src={getImageUrl(product.image)}
                                                                     alt={product.name}
                                                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                                 />
@@ -1059,6 +1098,26 @@ const Inventario = () => {
                                 <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
                                     Esta es la imagen que se mostrará en las listas de productos.
                                 </small>
+                                
+                                {editingProduct && editingProduct.image && (
+                                    <div style={{ marginTop: '10px', width: '100px', height: '100px', position: 'relative', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
+                                        <img
+                                            src={getImageUrl(editingProduct.image)}
+                                            alt="Cover"
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleDeleteMainImage}
+                                            style={{
+                                                position: 'absolute', top: 0, right: 0, background: 'rgba(255,0,0,0.7)',
+                                                color: 'white', border: 'none', padding: '2px 5px', cursor: 'pointer', fontSize: '12px'
+                                            }}
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="form-group-boutique" style={{ marginTop: '15px' }}>

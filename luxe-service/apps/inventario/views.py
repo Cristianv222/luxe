@@ -22,6 +22,7 @@ from .serializers import (
     ComboCreateUpdateSerializer,
 )
 from .views_inventory import InventoryExportExcelView, InventoryExportPDFView, InventoryImportExcelView
+from apps.notifications.utils import send_websocket_notification
 
 
 # ============================================================================
@@ -284,6 +285,14 @@ class ProductViewSet(viewsets.ModelViewSet):
         parse_and_create_variants(product, product.available_sizes)
             
         headers = self.get_success_headers(serializer.data)
+        
+        # Real-time notification
+        send_websocket_notification(
+            message=f"Nuevo producto: {product.name}",
+            type_notification="PRODUCT_CREATED",
+            payload=serializer.data
+        )
+        
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def update(self, request, *args, **kwargs):
@@ -303,6 +312,13 @@ class ProductViewSet(viewsets.ModelViewSet):
         if getattr(instance, '_prefetched_objects_cache', None):
             instance._prefetched_objects_cache = {}
 
+        # Real-time notification
+        send_websocket_notification(
+            message=f"Producto actualizado: {instance.name}",
+            type_notification="PRODUCT_UPDATED",
+            payload=serializer.data
+        )
+
         return Response(serializer.data)
 
     @action(detail=True, methods=['delete'])
@@ -318,6 +334,17 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except ProductImage.DoesNotExist:
             return Response({'error': 'Image not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    @action(detail=True, methods=['post'])
+    def delete_main_image(self, request, pk=None):
+        """Delete main product image"""
+        product = self.get_object()
+        if product.image:
+            # Eliminar el archivo físico (opcional, ImageField.delete hace esto)
+            product.image.delete(save=False)
+            product.image = None
+            product.save()
+        return Response({'message': 'Imagen principal eliminada'}, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['get'])
     def featured(self, request):

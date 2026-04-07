@@ -29,3 +29,9 @@ xhtml2pdf==0.2.15
 # DigitalOcean Spaces / S3 Storage
 boto3>=1.34.0
 django-storages>=1.14.0
+
+# WebSockets (Django Channels)
+channels==4.0.0
+channels-redis==4.1.0
+daphne==4.0.0
+uvicorn==0.27.1
