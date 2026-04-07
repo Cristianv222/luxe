@@ -45,7 +45,9 @@ services:
     tmpfs:
       - /tmp
       - /home/appuser
-    command: python manage.py runserver 0.0.0.0:8000 --noreload
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             exec daphne -b 0.0.0.0 -p 8000 luxe_service.asgi:application"
     volumes:
       - ./luxe-service:/app
       - ./luxe-service/media:/app/media

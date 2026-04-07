@@ -14,6 +14,7 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -38,6 +39,7 @@ INSTALLED_APPS = [
     'apps.loyalty',
     'apps.integrations', # New light integration service
     'apps.sri', # SRI Integration
+    'apps.notifications', # WebSockets
     # Storage
     'storages',
 ]
@@ -74,6 +76,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'luxe_service.wsgi.application'
+ASGI_APPLICATION = 'luxe_service.asgi.application'
 
 # Database
 DATABASES = {
@@ -204,6 +207,18 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+
+# ============================================
+# CHANNEL LAYERS (WebSockets)
+# ============================================
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [os.getenv('REDIS_URL', 'redis://redis:6379/0')],
+        },
+    },
+}
 
 # ============================================
 # SERVICIOS

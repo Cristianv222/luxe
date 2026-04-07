@@ -118,17 +118,7 @@ services:
     command: >-
           sh -c "python manage.py migrate --noinput &&
           python manage.py collectstatic --noinput &&
-          exec gunicorn
-          --bind 0.0.0.0:8000
-          --workers 3
-          --timeout 120
-          --max-requests 1000
-          --max-requests-jitter 100
-          --limit-request-line 4094
-          --limit-request-fields 100
-          --access-logfile -
-          --error-logfile -
-          luxe_service.wsgi:application"
+          exec daphne -b 0.0.0.0 -p 8000 luxe_service.asgi:application"
     volumes:
       - luxe-static:/app/staticfiles
       - media-volume:/app/media
