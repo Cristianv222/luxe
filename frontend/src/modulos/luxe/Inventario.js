@@ -68,6 +68,11 @@ const Inventario = () => {
         inventory_account: ''
     });
 
+    // Configuración de IVA Masivo
+    const [customIvaRate, setCustomIvaRate] = useState('0');
+    const [ivaStats, setIvaStats] = useState(null);
+    const [ivaLoading, setIvaLoading] = useState(false);
+
     const fetchProducts = async (query = '', page = 1, showLoading = true) => {
         if (showLoading) setLoading(true);
         try {
@@ -133,6 +138,8 @@ const Inventario = () => {
             fetchProducts(searchQuery, 1);
             fetchCategories();
             fetchSubCategories();
+        } else if (activeTab === 'iva') {
+            fetchIvaStats();
         }
     }, [activeTab]);
 
@@ -415,6 +422,51 @@ const Inventario = () => {
         }
     };
 
+    // Handlers para Configuración de IVA Masivo
+    const fetchIvaStats = async () => {
+        try {
+            const response = await api.get('/api/menu/config/tax-rate/bulk-update/', {
+                baseURL: process.env.REACT_APP_LUXE_SERVICE
+            });
+            setIvaStats(response.data);
+        } catch (err) {
+            console.error('Error fetching IVA stats:', err);
+        }
+    };
+
+    const handleBulkUpdateIva = async (targetRate) => {
+        const rateNum = parseFloat(targetRate);
+        if (isNaN(rateNum) || rateNum < 0 || rateNum > 100) {
+            alert('Por favor ingrese un porcentaje de IVA válido entre 0 y 100.');
+            return;
+        }
+
+        const confirmMsg = rateNum === 0
+            ? '⚠️ ¿Está seguro de que desea actualizar el IVA a 0% para TODOS los productos del inventario?'
+            : `⚠️ ¿Está seguro de que desea actualizar el IVA al ${rateNum}% para TODOS los productos del inventario?`;
+
+        if (!window.confirm(confirmMsg)) return;
+
+        setIvaLoading(true);
+        try {
+            const response = await api.post('/api/menu/config/tax-rate/bulk-update/', {
+                tax_rate: rateNum
+            }, {
+                baseURL: process.env.REACT_APP_LUXE_SERVICE
+            });
+
+            alert(response.data.message || `IVA actualizado al ${rateNum}% exitosamente.`);
+            fetchIvaStats();
+            fetchProducts(searchQuery, pagination.page, false);
+        } catch (err) {
+            console.error('Error updating bulk IVA:', err);
+            const errMsg = err.response?.data?.error || err.message || 'Error al actualizar el IVA.';
+            alert(errMsg);
+        } finally {
+            setIvaLoading(false);
+        }
+    };
+
     const handlePageChange = (newPage) => {
         if (newPage < 1 || newPage > pagination.totalPages) return;
         fetchProducts(searchQuery, newPage);
@@ -605,11 +657,204 @@ const Inventario = () => {
                 >
                     <i className="bi bi-gear" style={{ marginRight: '8px' }}></i> Configuración
                 </button>
+                <button
+                    className={`ff-tab ${activeTab === 'iva' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('iva')}
+                >
+                    <i className="bi bi-percent" style={{ marginRight: '8px' }}></i> Configuración de IVA
+                </button>
             </div>
 
             {/* Content Categories */}
             {activeTab === 'categories' && <Categorias />}
             {activeTab === 'subcategories' && <SubCategorias />}
+
+            {/* IVA Config Content */}
+            {activeTab === 'iva' && (
+                <div className="boutique-card" style={{ maxWidth: '850px', margin: '2rem auto' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1.2rem', borderBottom: '1px solid #E4D8CB', paddingBottom: '0.8rem' }}>
+                        <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(160, 144, 134, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B5E54', fontSize: '1.4rem' }}>
+                            <i className="bi bi-percent"></i>
+                        </div>
+                        <div>
+                            <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#2C2C2C' }}>Configuración Masiva de IVA</h2>
+                            <p style={{ margin: '3px 0 0 0', color: '#A09086', fontSize: '0.9rem' }}>
+                                Aplica tarifas de impuesto (IVA) de forma global a todos los productos del catálogo.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Stats Summary */}
+                    {ivaStats && (
+                        <div style={{
+                            background: '#F7F5F2',
+                            borderRadius: '12px',
+                            padding: '1.2rem',
+                            marginBottom: '1.8rem',
+                            border: '1px solid #E8E2DA'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+                                <span style={{ fontWeight: 600, color: '#4A403A', fontSize: '0.95rem' }}>
+                                    <i className="bi bi-info-circle" style={{ marginRight: '6px' }}></i> Estado Actual del Inventario
+                                </span>
+                                <span style={{ fontSize: '0.9rem', color: '#8B7E74' }}>
+                                    Total de Productos: <strong>{ivaStats.total_products}</strong>
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                {ivaStats.distribution && ivaStats.distribution.length > 0 ? (
+                                    ivaStats.distribution.map((dist, idx) => (
+                                        <div
+                                            key={idx}
+                                            style={{
+                                                background: 'white',
+                                                padding: '0.5rem 0.9rem',
+                                                borderRadius: '8px',
+                                                border: '1px solid #E4D8CB',
+                                                fontSize: '0.85rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px'
+                                            }}
+                                        >
+                                            <span style={{ fontWeight: 'bold', color: parseFloat(dist.tax_rate) === 0 ? '#16a34a' : '#2563eb' }}>
+                                                {parseFloat(dist.tax_rate)}% IVA
+                                            </span>
+                                            <span style={{ color: '#666' }}>({dist.total} productos)</span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <span style={{ color: '#888', fontSize: '0.85rem' }}>Sin productos registrados.</span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Section 1: Direct 0% Button */}
+                    <div style={{
+                        background: '#FFFFFF',
+                        border: '1px solid #E4D8CB',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        marginBottom: '1.5rem',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+                            <div style={{ flex: '1 1 320px' }}>
+                                <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', color: '#2C2C2C', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <i className="bi bi-slash-circle" style={{ color: '#16a34a' }}></i> Fijar IVA a 0% en Todos los Productos
+                                </h3>
+                                <p style={{ margin: 0, color: '#666', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                                    Actualiza instantáneamente todos los productos para que no graven IVA (tarifa 0%).
+                                </p>
+                            </div>
+                            <div>
+                                <button
+                                    type="button"
+                                    className="btn-boutique"
+                                    onClick={() => handleBulkUpdateIva(0)}
+                                    disabled={ivaLoading}
+                                    style={{
+                                        background: '#16a34a',
+                                        color: 'white',
+                                        padding: '0.7rem 1.4rem',
+                                        fontWeight: 600,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        boxShadow: '0 4px 12px rgba(22, 163, 74, 0.25)',
+                                        cursor: ivaLoading ? 'not-allowed' : 'pointer'
+                                    }}
+                                >
+                                    <i className="bi bi-check-circle"></i> {ivaLoading ? 'Actualizando...' : 'Actualizar Todo a 0%'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 2: Custom Percentage */}
+                    <div style={{
+                        background: '#FFFFFF',
+                        border: '1px solid #E4D8CB',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        marginBottom: '1.5rem',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                    }}>
+                        <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', color: '#2C2C2C', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <i className="bi bi-sliders" style={{ color: '#8B7E74' }}></i> Actualizar IVA a Porcentaje Personalizado
+                        </h3>
+                        <p style={{ margin: '0 0 1.2rem 0', color: '#666', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                            Especifica cualquier porcentaje de IVA (ej: 0%, 5%, 8%, 12%, 15%) para aplicarlo a todo el inventario.
+                        </p>
+
+                        {/* Presets */}
+                        <div style={{ marginBottom: '1.2rem' }}>
+                            <label style={{ display: 'block', fontSize: '0.85rem', color: '#8B7E74', marginBottom: '0.4rem', fontWeight: 600 }}>
+                                Selecciones rápidas:
+                            </label>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                {[0, 5, 8, 12, 15].map((preset) => (
+                                    <button
+                                        key={preset}
+                                        type="button"
+                                        className={`btn-boutique ${String(customIvaRate) === String(preset) ? 'primary' : 'outline'}`}
+                                        onClick={() => setCustomIvaRate(String(preset))}
+                                        style={{
+                                            padding: '0.35rem 0.9rem',
+                                            fontSize: '0.85rem',
+                                            borderRadius: '20px'
+                                        }}
+                                    >
+                                        {preset}%
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Input and Action */}
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                            <div className="form-group-boutique" style={{ margin: 0, flex: '1 1 200px' }}>
+                                <label style={{ fontSize: '0.85rem' }}>Porcentaje de IVA a aplicar (%)</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        max="100"
+                                        placeholder="Ej: 15, 12, 0"
+                                        value={customIvaRate}
+                                        onChange={(e) => setCustomIvaRate(e.target.value)}
+                                        style={{ paddingRight: '2rem' }}
+                                    />
+                                    <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#A09086', fontWeight: 'bold' }}>
+                                        %
+                                    </span>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                className="btn-boutique primary"
+                                onClick={() => handleBulkUpdateIva(customIvaRate)}
+                                disabled={ivaLoading}
+                                style={{
+                                    padding: '0.75rem 1.5rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}
+                            >
+                                <i className="bi bi-arrow-repeat"></i> {ivaLoading ? 'Aplicando...' : `Aplicar ${customIvaRate || 0}% a Todos`}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style={{ padding: '0.9rem 1.2rem', background: '#FEF9F3', borderLeft: '4px solid #D97706', borderRadius: '4px', fontSize: '0.85rem', color: '#92400E' }}>
+                        <i className="bi bi-lightbulb" style={{ marginRight: '6px' }}></i>
+                        <strong>Nota:</strong> Los cambios de tarifa de IVA se reflejarán de inmediato en la facturación electrónica SRI, en el módulo de ventas POS y en la ficha de cada producto.
+                    </div>
+                </div>
+            )}
 
             {/* Config Content */}
             {activeTab === 'config' && (
@@ -689,11 +934,21 @@ const Inventario = () => {
             {/* Products Content */}
             {activeTab === 'products' && (
                 <>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', marginBottom: '1.5rem' }}>
+                        <button
+                            type="button"
+                            className="btn-boutique outline"
+                            onClick={() => handleBulkUpdateIva(0)}
+                            title="Actualizar el IVA de todos los productos al 0%"
+                            disabled={ivaLoading}
+                            style={{ borderColor: '#A09086', color: '#5A4E46' }}
+                        >
+                            <i className="bi bi-percent"></i> Fijar IVA a 0% (Todos)
+                        </button>
                         <button className="btn-boutique success" onClick={() => {
                             setEditingProduct(null);
                             setNewProduct({
-                                name: '', code: '', barcode: '', description: '', price: '', cost_price: '', last_purchase_cost: '', tax_rate: '15',
+                                name: '', code: '', barcode: '', description: '', price: '', cost_price: '', last_purchase_cost: '', tax_rate: '0',
                                 category: '', line: '', subgroup: '', image: null, is_active: true, is_available: true,
                                 track_stock: false, stock_quantity: 0, min_stock_alert: 5,
                                 unit_measure: 'Unidad', accounting_sales_account: '', accounting_cost_account: '', accounting_inventory_account: '',

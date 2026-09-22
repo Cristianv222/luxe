@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
-from .views_config import BulkUpdateAccountsView, ClearInventoryView
+from .views_config import BulkUpdateAccountsView, ClearInventoryView, BulkUpdateTaxRateView
 
 # Crear el router para los ViewSets
 router = DefaultRouter()
@@ -24,6 +24,7 @@ urlpatterns = [
     
     # Configuración Global (priority before router)
     path('config/accounts/bulk-update/', BulkUpdateAccountsView.as_view(), name='bulk-update-accounts'),
+    path('config/tax-rate/bulk-update/', BulkUpdateTaxRateView.as_view(), name='bulk-update-tax-rate'),
     path('config/inventory/clear/', ClearInventoryView.as_view(), name='clear-inventory'),
 
     # Incluir las rutas del router
