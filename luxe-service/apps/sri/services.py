@@ -83,13 +83,25 @@ class SRIIntegrationService:
             if 0 < tax_rate < 1:
                 tax_rate = tax_rate * 100
             
-            # Determinar el código de impuesto según SRI Ecuador
+            # Determinar código de porcentaje según SRI Ecuador (Tabla 17)
             if tax_rate == 0:
-                tax_code = "0"  # IVA 0%
-            elif tax_rate > 0:
-                tax_code = "2"  # IVA 12% o 15%
+                tax_percentage_code = "0"  # Tarifa 0%
+            elif abs(tax_rate - 15) < 0.1:
+                tax_percentage_code = "4"  # Tarifa 15%
+            elif abs(tax_rate - 12) < 0.1:
+                tax_percentage_code = "2"  # Tarifa 12%
+            elif abs(tax_rate - 5) < 0.1:
+                tax_percentage_code = "5"  # Tarifa 5%
+            elif abs(tax_rate - 14) < 0.1:
+                tax_percentage_code = "3"  # Tarifa 14%
+            elif abs(tax_rate - 13) < 0.1:
+                tax_percentage_code = "10" # Tarifa 13%
             else:
-                tax_code = "0"  # Por defecto, sin IVA
+                tax_percentage_code = "0" if tax_rate == 0 else "4"
+
+            # En SRI Ecuador (Tabla 16), el código de tipo de impuesto para IVA siempre es "2"
+            # (No existe código 0 como tipo de impuesto en el SRI)
+            tax_code = "2"
             
             # El unit_price del item YA INCLUYE IVA
             unit_price_with_tax = float(item.unit_price)
@@ -137,11 +149,43 @@ class SRIIntegrationService:
                 "quantity": qty,
                 "unit_price": round(effective_unit_price, 6),  # Precio ya con descuento
                 "discount": 0,  # Siempre 0: descuento absorbido en unit_price
-                "tax_code": tax_code
+                "tax_code": tax_code,  # Tipo Impuesto SRI: 2 = IVA
+                "tax_percentage_code": tax_percentage_code,
+                "tax_percentage": tax_rate,
+                "tax_rate": tax_rate,
+                "tax_amount": round(effective_unit_price * qty * (tax_rate / 100), 4) if tax_rate > 0 else 0,
             }
             items.append(item_data)
 
-        # 3. Construir Payload JSON según documentación
+        # 3. Preparar Pagos según SRI
+        payments = []
+        if hasattr(order, 'payments') and order.payments.exists():
+            for p in order.payments.all():
+                method_code = '01'
+                if p.payment_method:
+                    p_type = getattr(p.payment_method, 'payment_type', '').lower()
+                    p_name = getattr(p.payment_method, 'name', '').lower()
+                    if 'credit' in p_type or 'credito' in p_name:
+                        method_code = '19'
+                    elif 'debit' in p_type or 'debito' in p_name:
+                        method_code = '16'
+                    elif 'transfer' in p_type or 'transferencia' in p_name:
+                        method_code = '20'
+                    elif 'cash' in p_type or 'efectivo' in p_name:
+                        method_code = '01'
+                
+                payments.append({
+                    "payment_method": method_code,
+                    "amount": round(float(p.amount), 2)
+                })
+        
+        if not payments:
+            payments.append({
+                "payment_method": "01",
+                "amount": round(float(order.total), 2)
+            })
+
+        # 4. Construir Payload JSON según documentación
         from django.utils import timezone
         import pytz
         
@@ -159,7 +203,8 @@ class SRIIntegrationService:
             "customer_email": email,
             "customer_phone": phone,
             "send_email": True,  # Enviar email al cliente
-            "items": items
+            "items": items,
+            "payments": payments
         }
 
         # Si el token NO es VSR (Token Usuario), agregar company_id
@@ -167,7 +212,7 @@ class SRIIntegrationService:
         if config.company_id and not config.auth_token.startswith('vsr_'):
             payload["company"] = config.company_id
 
-        # 4. Configurar Headers
+        # 5. Configurar Headers
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Token {config.auth_token}"
