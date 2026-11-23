@@ -44,14 +44,12 @@ services:
       nofile:
         soft: 65536
         hard: 65536
-      nproc:
-        soft: 100
-        hard: 200
     deploy:
       resources:
         limits:
           cpus: '1.0'
           memory: 512M
+          pids: 150
         reservations:
           cpus:   '0.25'
           memory: 128M
@@ -87,14 +85,12 @@ services:
       nofile:
         soft: 65536
         hard: 65536
-      nproc:
-        soft: 100
-        hard: 200
     deploy:
       resources:
         limits:
           cpus: '0.5'
           memory: 128M
+          pids: 64
         reservations:
           cpus:   '0.10'
           memory: 64M
@@ -177,14 +173,12 @@ services:
       nofile:
         soft: 65536
         hard: 65536
-      nproc:
-        soft: 100
-        hard: 200
     deploy:
       resources:
         limits:
           cpus: '1.0'
           memory: 768M
+          pids: 128
         reservations:
           cpus:   '0.25'
           memory: 256M

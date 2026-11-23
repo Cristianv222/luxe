@@ -312,22 +312,61 @@ const PuntosVenta = () => {
             // Preseleccionar si solo hay una opción
             const uniqueSizes = [...new Set(product.variants.map(v => v.size?.id).filter(Boolean))];
             const uniqueColors = [...new Set(product.variants.map(v => v.color?.id).filter(Boolean))];
-            if (uniqueSizes.length === 1) setSelectedSizeId(uniqueSizes[0]);
+            if (uniqueSizes.length === 1) setSelectedSizeId(String(uniqueSizes[0]));
             else setSelectedSizeId('');
-            if (uniqueColors.length === 1) setSelectedColorId(uniqueColors[0]);
+            if (uniqueColors.length === 1) setSelectedColorId(String(uniqueColors[0]));
             else setSelectedColorId('');
         } else {
             addToCart(product);
         }
-    }, []);
+    }, [addToCart]);
+
+    const handleVariantSizeChange = (newSizeId) => {
+        setSelectedSizeId(newSizeId);
+        if (!selectedProductForVariant) return;
+
+        if (newSizeId) {
+            const matchingVariants = selectedProductForVariant.variants.filter(
+                v => String(v.size?.id) === String(newSizeId)
+            );
+            const validColorIds = matchingVariants.map(v => String(v.color?.id)).filter(Boolean);
+
+            if (selectedColorId && !validColorIds.includes(String(selectedColorId))) {
+                setSelectedColorId(validColorIds.length === 1 ? validColorIds[0] : '');
+            } else if (!selectedColorId && validColorIds.length === 1) {
+                setSelectedColorId(validColorIds[0]);
+            }
+        }
+    };
+
+    const handleVariantColorChange = (newColorId) => {
+        setSelectedColorId(newColorId);
+        if (!selectedProductForVariant) return;
+
+        if (newColorId) {
+            const matchingVariants = selectedProductForVariant.variants.filter(
+                v => String(v.color?.id) === String(newColorId)
+            );
+            const validSizeIds = matchingVariants.map(v => String(v.size?.id)).filter(Boolean);
+
+            if (selectedSizeId && !validSizeIds.includes(String(selectedSizeId))) {
+                setSelectedSizeId(validSizeIds.length === 1 ? validSizeIds[0] : '');
+            } else if (!selectedSizeId && validSizeIds.length === 1) {
+                setSelectedSizeId(validSizeIds[0]);
+            }
+        }
+    };
 
     const confirmVariantSelection = () => {
         if (!selectedProductForVariant) return;
 
         const productToAdd = { ...selectedProductForVariant };
+        const hasSizes = selectedProductForVariant.variants.some(v => v.size);
+        const hasColors = selectedProductForVariant.variants.some(v => v.color);
+
         const exactVariant = selectedProductForVariant.variants.find(v =>
-            (!selectedSizeId || String(v.size?.id) === String(selectedSizeId)) &&
-            (!selectedColorId || String(v.color?.id) === String(selectedColorId))
+            (!hasSizes || String(v.size?.id) === String(selectedSizeId)) &&
+            (!hasColors || String(v.color?.id) === String(selectedColorId))
         );
 
         if (exactVariant) {
@@ -340,6 +379,7 @@ const PuntosVenta = () => {
             productToAdd.color_id = exactVariant.color?.id;
             productToAdd.cart_name_suffix = [exactVariant.size?.name, exactVariant.color?.name].filter(Boolean).join(' | ');
             if (exactVariant.price) productToAdd.price = exactVariant.price;
+            if (exactVariant.stock_quantity !== undefined) productToAdd.stock_quantity = exactVariant.stock_quantity;
         } else {
             showAlert('warning', 'Variante no encontrada', 'Seleccione una combinación válida.');
             return;
@@ -1633,61 +1673,168 @@ const PuntosVenta = () => {
             )}
 
             {/* Modal para Selección de Variante */}
-            {selectedProductForVariant && selectedProductForVariant.variants && selectedProductForVariant.variants.length > 0 && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, animation: 'fadeIn 0.2s ease-out' }}>
-                    <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', maxWidth: '450px', width: '90%', boxShadow: '0 25px 50px rgba(0,0,0,0.3)', animation: 'slideUp 0.3s ease-out' }}>
-                        <h3 style={{ margin: '0 0 20px', color: '#1e293b', fontSize: '1.25rem' }}>Seleccionar Variante: {selectedProductForVariant.name}</h3>
+            {selectedProductForVariant && selectedProductForVariant.variants && selectedProductForVariant.variants.length > 0 && (() => {
+                const hasSizes = selectedProductForVariant.variants.some(v => v.size);
+                const hasColors = selectedProductForVariant.variants.some(v => v.color);
 
-                        {/* Selector Talla */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Talla:</label>
-                            <select
-                                value={selectedSizeId}
-                                onChange={(e) => setSelectedSizeId(e.target.value)}
-                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                            >
-                                <option value="">Seleccione una talla</option>
-                                {[...new Set(selectedProductForVariant.variants.map(v => v.size?.id).filter(Boolean))].map(sizeId => {
-                                    const sizeName = selectedProductForVariant.variants.find(v => v.size?.id === sizeId).size.name;
-                                    return <option key={sizeId} value={sizeId}>{sizeName}</option>
-                                })}
-                            </select>
-                        </div>
+                // Filtrar tallas disponibles según el color seleccionado (o todas si no hay color seleccionado)
+                const variantsForSizes = selectedColorId
+                    ? selectedProductForVariant.variants.filter(v => String(v.color?.id) === String(selectedColorId))
+                    : selectedProductForVariant.variants;
 
-                        {/* Selector Color */}
-                        <div style={{ marginBottom: '25px' }}>
-                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Color:</label>
-                            <select
-                                value={selectedColorId}
-                                onChange={(e) => setSelectedColorId(e.target.value)}
-                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                            >
-                                <option value="">Seleccione un color</option>
-                                {[...new Set(selectedProductForVariant.variants.map(v => v.color?.id).filter(Boolean))].map(colorId => {
-                                    const colorName = selectedProductForVariant.variants.find(v => v.color?.id === colorId).color.name;
-                                    return <option key={colorId} value={colorId}>{colorName}</option>
-                                })}
-                            </select>
-                        </div>
+                const sizeMap = new Map();
+                variantsForSizes.forEach(v => {
+                    if (v.size && !sizeMap.has(String(v.size.id))) {
+                        sizeMap.set(String(v.size.id), v.size);
+                    }
+                });
+                const availableSizes = Array.from(sizeMap.values());
 
-                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                            <button
-                                onClick={closeVariantModal}
-                                style={{ padding: '10px 20px', backgroundColor: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-                            >
-                                CANCELAR
-                            </button>
-                            <button
-                                onClick={confirmVariantSelection}
-                                style={{ padding: '10px 20px', backgroundColor: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-                                disabled={!selectedSizeId && !selectedColorId}
-                            >
-                                AGREGAR AL CARRITO
-                            </button>
+                // Filtrar colores disponibles según la talla seleccionada (o todos si no hay talla seleccionada)
+                const variantsForColors = selectedSizeId
+                    ? selectedProductForVariant.variants.filter(v => String(v.size?.id) === String(selectedSizeId))
+                    : selectedProductForVariant.variants;
+
+                const colorMap = new Map();
+                variantsForColors.forEach(v => {
+                    if (v.color && !colorMap.has(String(v.color.id))) {
+                        colorMap.set(String(v.color.id), v.color);
+                    }
+                });
+                const availableColors = Array.from(colorMap.values());
+
+                // Variante exacta encontrada con las selecciones actuales
+                const exactVariant = selectedProductForVariant.variants.find(v =>
+                    (!hasSizes || String(v.size?.id) === String(selectedSizeId)) &&
+                    (!hasColors || String(v.color?.id) === String(selectedColorId))
+                );
+
+                const isSelectionComplete = (!hasSizes || Boolean(selectedSizeId)) && (!hasColors || Boolean(selectedColorId));
+                const isOutOfStock = exactVariant && exactVariant.stock_quantity <= 0;
+                const canAddToCart = isSelectionComplete && exactVariant && !isOutOfStock;
+
+                return (
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, animation: 'fadeIn 0.2s ease-out' }}>
+                        <div onClick={e => e.stopPropagation()} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '30px', maxWidth: '460px', width: '90%', boxShadow: '0 25px 50px rgba(0,0,0,0.3)', animation: 'slideUp 0.3s ease-out' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px' }}>
+                                <div>
+                                    <span style={{ fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#6366f1' }}>Seleccionar Variante</span>
+                                    <h3 style={{ margin: '4px 0 0', color: '#1e293b', fontSize: '1.25rem', lineHeight: '1.3' }}>{selectedProductForVariant.name}</h3>
+                                </div>
+                                <button
+                                    onClick={closeVariantModal}
+                                    style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.2rem', padding: '4px' }}
+                                >
+                                    <i className="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+
+                            {/* Selector Talla */}
+                            {hasSizes && (
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                        <label style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>Talla:</label>
+                                        {selectedColorId && (
+                                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                                (Filtrado por color seleccionado)
+                                            </span>
+                                        )}
+                                    </div>
+                                    <select
+                                        value={selectedSizeId}
+                                        onChange={(e) => handleVariantSizeChange(e.target.value)}
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem', backgroundColor: '#f8fafc', color: '#1e293b', outline: 'none' }}
+                                    >
+                                        <option value="">-- Seleccione una talla --</option>
+                                        {availableSizes.map(size => (
+                                            <option key={size.id} value={size.id}>{size.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Selector Color */}
+                            {hasColors && (
+                                <div style={{ marginBottom: '20px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                        <label style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>Color:</label>
+                                        {selectedSizeId && (
+                                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                                (Filtrado por talla seleccionada)
+                                            </span>
+                                        )}
+                                    </div>
+                                    <select
+                                        value={selectedColorId}
+                                        onChange={(e) => handleVariantColorChange(e.target.value)}
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.95rem', backgroundColor: '#f8fafc', color: '#1e293b', outline: 'none' }}
+                                    >
+                                        <option value="">-- Seleccione un color --</option>
+                                        {availableColors.map(color => (
+                                            <option key={color.id} value={color.id}>{color.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Detalle de stock y precio */}
+                            <div style={{ marginBottom: '22px' }}>
+                                {!isSelectionComplete ? (
+                                    <div style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#f1f5f9', color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <i className="bi bi-info-circle"></i>
+                                        <span>Seleccione {hasSizes && !selectedSizeId ? 'una talla' : ''} {hasSizes && !selectedSizeId && hasColors && !selectedColorId ? 'y ' : ''} {hasColors && !selectedColorId ? 'un color' : ''} para ver disponibilidad</span>
+                                    </div>
+                                ) : isOutOfStock ? (
+                                    <div style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <i className="bi bi-exclamation-triangle-fill"></i>
+                                        <span><strong>Agotado:</strong> Esta combinación no tiene unidades disponibles en stock.</span>
+                                    </div>
+                                ) : exactVariant ? (
+                                    <div style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', color: '#065f46', fontSize: '0.875rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span><strong>Precio:</strong> ${Number(exactVariant.price || selectedProductForVariant.price).toFixed(2)}</span>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                            <i className="bi bi-check-circle-fill"></i>
+                                            <span>Stock: <strong>{exactVariant.stock_quantity}</strong> disp.</span>
+                                        </span>
+                                    </div>
+                                ) : null}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                                <button
+                                    type="button"
+                                    onClick={closeVariantModal}
+                                    style={{ padding: '10px 20px', backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}
+                                >
+                                    CANCELAR
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={confirmVariantSelection}
+                                    disabled={!canAddToCart}
+                                    style={{
+                                        padding: '10px 22px',
+                                        backgroundColor: !canAddToCart ? '#94a3b8' : '#0f172a',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        fontWeight: '700',
+                                        cursor: !canAddToCart ? 'not-allowed' : 'pointer',
+                                        transition: 'all 0.2s',
+                                        opacity: !canAddToCart ? 0.7 : 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px'
+                                    }}
+                                >
+                                    <i className="bi bi-cart-plus"></i>
+                                    {isOutOfStock ? 'SIN STOCK' : 'AGREGAR AL CARRITO'}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
         </>
     );
 };

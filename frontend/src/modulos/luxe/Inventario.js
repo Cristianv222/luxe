@@ -145,7 +145,7 @@ const Inventario = () => {
 
     // Real-time WebSocket listener
     useWebSockets((data) => {
-        if (data.type === 'PRODUCT_UPDATED' || data.type === 'PRODUCT_CREATED') {
+        if (data.type === 'PRODUCT_UPDATED' || data.type === 'PRODUCT_CREATED' || data.type === 'PRODUCT_DELETED') {
             console.log("Real-time update received:", data);
             if (activeTab === 'products') {
                 // Pequeño delay para asegurar que S3/Spaces haya terminado de propagar
@@ -310,6 +310,28 @@ const Inventario = () => {
         } catch (err) {
             console.error('Error toggling active:', err);
             alert('Error al actualizar estado');
+        }
+    };
+
+    const handleDeleteProduct = async (product) => {
+        if (!product) return;
+        const confirmMsg = `¿Estás seguro de eliminar el producto "${product.name}"?\n\nEsta acción eliminará el producto del inventario.`;
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            await api.delete(`/api/menu/products/${product.id}/`, {
+                baseURL: process.env.REACT_APP_LUXE_SERVICE
+            });
+            alert(`Producto "${product.name}" eliminado correctamente.`);
+            if (isModalOpen && editingProduct?.id === product.id) {
+                setIsModalOpen(false);
+                setEditingProduct(null);
+            }
+            fetchProducts(searchQuery, pagination.page, false);
+        } catch (err) {
+            console.error('Error deleting product:', err);
+            const errorMsg = err.response?.data?.error || err.response?.data?.detail || 'Error al eliminar el producto.';
+            alert(errorMsg);
         }
     };
 
@@ -1047,6 +1069,22 @@ const Inventario = () => {
                                                             >
                                                                 <i className={`bi ${product.is_active ? 'bi-heartbreak' : 'bi-heart-pulse-fill'}`}></i>
                                                             </button>
+
+                                                            {/* DELETE BUTTON */}
+                                                            <button
+                                                                className="btn-boutique outline"
+                                                                onClick={() => handleDeleteProduct(product)}
+                                                                style={{
+                                                                    padding: '0.3rem 0.6rem',
+                                                                    fontSize: '0.8rem',
+                                                                    borderColor: '#fca5a5',
+                                                                    color: '#dc2626',
+                                                                    background: 'transparent'
+                                                                }}
+                                                                title="Eliminar producto permanentemente"
+                                                            >
+                                                                <i className="bi bi-trash"></i>
+                                                            </button>
                                                         </div>
                                                     </td>
                                                     <td style={{ width: '60px' }}>
@@ -1413,9 +1451,28 @@ const Inventario = () => {
                                 )}
                             </div>
 
-                            <div className="modal-footer-boutique" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', borderTop: '1px solid #E4D8CB', paddingTop: '1.5rem' }}>
-                                <button type="button" className="btn-boutique dark" onClick={() => setIsModalOpen(false)}>Cancelar</button>
-                                <button type="submit" className="btn-boutique primary" style={{ minWidth: '120px' }}><i className="bi bi-save"></i> Guardar Cambios</button>
+                            <div className="modal-footer-boutique" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginTop: '1.5rem', borderTop: '1px solid #E4D8CB', paddingTop: '1.5rem' }}>
+                                {editingProduct ? (
+                                    <button
+                                        type="button"
+                                        className="btn-boutique"
+                                        onClick={() => handleDeleteProduct(editingProduct)}
+                                        style={{
+                                            backgroundColor: '#fee2e2',
+                                            color: '#dc2626',
+                                            borderColor: '#fca5a5',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '6px'
+                                        }}
+                                    >
+                                        <i className="bi bi-trash"></i> Eliminar Producto
+                                    </button>
+                                ) : <div />}
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <button type="button" className="btn-boutique dark" onClick={() => setIsModalOpen(false)}>Cancelar</button>
+                                    <button type="submit" className="btn-boutique primary" style={{ minWidth: '120px' }}><i className="bi bi-save"></i> Guardar Cambios</button>
+                                </div>
                             </div>
                         </form>
                     </Modal>

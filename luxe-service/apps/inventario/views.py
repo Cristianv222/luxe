@@ -321,6 +321,30 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         return Response(serializer.data)
 
+    def destroy(self, request, *args, **kwargs):
+        from django.db.models import ProtectedError
+        instance = self.get_object()
+        product_name = instance.name
+        product_id = str(instance.id)
+        try:
+            self.perform_destroy(instance)
+            send_websocket_notification(
+                message=f"Producto eliminado: {product_name}",
+                type_notification="PRODUCT_DELETED",
+                payload={'id': product_id, 'name': product_name}
+            )
+            return Response(
+                {'message': f'Producto "{product_name}" eliminado correctamente.'},
+                status=status.HTTP_200_OK
+            )
+        except ProtectedError:
+            return Response(
+                {
+                    'error': f'No se puede eliminar "{product_name}" porque tiene ventas u órdenes registradas en el sistema. Puede ocultarlo o desactivarlo para retirarlo de la venta.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
     @action(detail=True, methods=['delete'])
     def delete_image(self, request, pk=None):
         """Delete specific gallery image"""
