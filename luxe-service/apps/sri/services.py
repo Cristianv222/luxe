@@ -25,7 +25,7 @@ class SRIIntegrationService:
             
         identification = identification.strip()
         
-        if identification == "9999999999999":
+        if not identification or identification == "9999999999999":
             return "07"
         elif len(identification) == 13:
             return "04"
@@ -33,6 +33,35 @@ class SRIIntegrationService:
             return "05"
         else:
             return "06" # Por defecto pasaporte si no cuadra cédula/ruc
+
+    @staticmethod
+    def resolve_customer_data(customer):
+        """
+        Resuelve y normaliza los datos del comprador para el SRI.
+        Regla SRI (Error 69): cuando el tipo de identificación es '07'
+        (Consumidor Final / 9999999999999), la razón social DEBE ser
+        exactamente 'CONSUMIDOR FINAL'.
+        """
+        if customer:
+            ident_type = SRIIntegrationService.identify_customer_type(customer.cedula)
+            if ident_type != "07":
+                return {
+                    "ident_type": ident_type,
+                    "ident_number": customer.cedula.strip(),
+                    "name": customer.get_full_name() or "CONSUMIDOR FINAL",
+                    "email": customer.email or "",
+                    "phone": customer.phone or "",
+                    "address": customer.address or "S/D",
+                }
+
+        return {
+            "ident_type": "07",
+            "ident_number": "9999999999999",
+            "name": "CONSUMIDOR FINAL",
+            "email": "",
+            "phone": "",
+            "address": "S/D",
+        }
 
     @staticmethod
     def emit_invoice(order):
@@ -47,22 +76,13 @@ class SRIIntegrationService:
         from datetime import datetime
         
         # 1. Preparar Datos del Cliente
-        customer = order.customer
-        if customer:
-            ident_type = SRIIntegrationService.identify_customer_type(customer.cedula)
-            ident_number = customer.cedula or "9999999999999"
-            name = customer.get_full_name() or "CONSUMIDOR FINAL"
-            email = customer.email or ""
-            phone = customer.phone or ""
-            address = customer.address or "S/D"
-        else:
-            # Consumidor Final
-            ident_type = "07"
-            ident_number = "9999999999999"
-            name = "CONSUMIDOR FINAL"
-            email = ""
-            phone = ""
-            address = "S/D"
+        customer_data = SRIIntegrationService.resolve_customer_data(order.customer)
+        ident_type = customer_data["ident_type"]
+        ident_number = customer_data["ident_number"]
+        name = customer_data["name"]
+        email = customer_data["email"]
+        phone = customer_data["phone"]
+        address = customer_data["address"]
 
         # 2. Preparar Items según formato API Vendo
         # IMPORTANTE: Los precios en el sistema YA INCLUYEN IVA
